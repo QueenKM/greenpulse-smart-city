@@ -1,3 +1,5 @@
+import { formatCityTime, formatCityDate } from "./time.mjs";
+
 export const initialLifecycle = {
   status: "idle",
   operator: "Control Room Operator #02",
@@ -5,10 +7,13 @@ export const initialLifecycle = {
   duration: 60,
   routeGuidance: true,
   note: "",
+  nextReviewAt: null,
   logs: [],
 };
 
 export function lifecycleReducer(state, action) {
+  const timestamp = action.timestamp ?? Date.now();
+  const recordedAt = new Date(timestamp);
   const log = (event, next) => ({
     ...state,
     ...next,
@@ -16,7 +21,9 @@ export function lifecycleReducer(state, action) {
       ...state.logs,
       {
         event,
-        time: action.time || "10:01:42",
+        time: action.time || formatCityTime(recordedAt),
+        date: formatCityDate(recordedAt),
+        timestamp,
         operator: action.operator || state.operator,
         detail:
           action.type === "APPROVE"
@@ -37,6 +44,7 @@ export function lifecycleReducer(state, action) {
             duration: action.duration || 60,
             routeGuidance: action.routeGuidance !== false,
             note: action.note || "",
+            nextReviewAt: timestamp + 5 * 60 * 1000,
           })
         : state;
     case "PAUSE":

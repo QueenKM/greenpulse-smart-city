@@ -47,6 +47,7 @@ import {
   Zap,
 } from "lucide-react";
 import CityMap from "./CityMap";
+import { formatCityTime } from "../time.mjs";
 import "./DomainScreens.css";
 
 const tipStyle = {
@@ -80,14 +81,20 @@ const DomainTitle = ({ eyebrow, title, description, children }) => (
 );
 
 export function TrafficScreen() {
+  const [anchor] = useState(() => new Date());
   const data = [
-    { time: "09:00", live: 38, model: 40 },
-    { time: "09:20", live: 47, model: 48 },
-    { time: "09:40", live: 58, model: 60 },
-    { time: "10:00", live: 72, model: 74 },
-    { time: "10:38", model: 82 },
-    { time: "11:00", model: 87 },
-  ];
+    { offset: -60, live: 38, model: 40 },
+    { offset: -40, live: 47, model: 48 },
+    { offset: -20, live: 58, model: 60 },
+    { offset: 0, live: 72, model: 74 },
+    { offset: 38, model: 82 },
+    { offset: 60, model: 87 },
+  ].map(({ offset, ...values }) => ({
+    ...values,
+    time: formatCityTime(new Date(anchor.getTime() + offset * 60_000), {
+      seconds: false,
+    }),
+  }));
   return (
     <motion.div {...stagger} className="ds-screen traffic-screen">
       <DomainTitle
@@ -148,8 +155,8 @@ export function TrafficScreen() {
                   tickLine={false}
                 />
                 <ReferenceArea
-                  x1="10:00"
-                  x2="11:00"
+                  x1={data[3].time}
+                  x2={data[5].time}
                   fill="#a78bfa"
                   fillOpacity={0.035}
                 />
@@ -165,7 +172,7 @@ export function TrafficScreen() {
                   }}
                 />
                 <ReferenceLine
-                  x="10:00"
+                  x={data[3].time}
                   stroke="#4d6976"
                   strokeDasharray="3 5"
                 />
@@ -204,7 +211,8 @@ export function TrafficScreen() {
           </div>
           <div className="ds-chart-caption">
             <span>
-              <Clock3 size={13} /> Demonstration time 10:00
+              <Clock3 size={13} /> Synthetic observations ·{" "}
+              {formatCityTime(anchor, { seconds: false })}
             </span>
             <span>
               Forecast horizon <strong>+60 min</strong>
@@ -228,7 +236,7 @@ export function TrafficScreen() {
           </p>
           <div className="ds-inline-warning">
             <TriangleAlert size={16} />
-            <span>Threshold breach expected at 10:38</span>
+            <span>Threshold breach expected at {data[4].time}</span>
           </div>
           <div className="ds-confidence">
             <span>Model confidence</span>
@@ -795,7 +803,7 @@ export function DecisionLog({ lifecycle = "idle", logs = [] }) {
   ].includes(lifecycle)
     ? [
         {
-          time: "10:00:00",
+          time: "—",
           action: "Intervention approved",
           detail: "Adaptive signal timing + targeted route guidance",
           operator: "Control Room Operator #02",
@@ -828,7 +836,7 @@ export function DecisionLog({ lifecycle = "idle", logs = [] }) {
           {entries.map((entry, i) => (
             <div className="decision-entry" key={i}>
               <div className="decision-entry-time">
-                {entry.time || "10:00:00"}
+                {entry.time || "—"}
                 <span>{entry.date || "DEMONSTRATION"}</span>
               </div>
               <div className="decision-entry-dot">
@@ -1103,6 +1111,7 @@ export function ImpactScreen({ lifecycle = "idle", onNavigate }) {
 }
 
 export function AlertCenter({ onOpen }) {
+  const [anchor] = useState(() => new Date());
   const alerts = [
     {
       id: "INC-2026-1109-H03",
@@ -1112,7 +1121,7 @@ export function AlertCenter({ onOpen }) {
       place: "Historic Centre H-03",
       detail:
         "Observed congestion 72%. Modelled congestion reaches 82% in 38 minutes.",
-      time: "10:00",
+      time: formatCityTime(anchor, { seconds: false }),
       action: "Review incident",
       icon: TrafficCone,
       page: "Overview",
@@ -1125,7 +1134,9 @@ export function AlertCenter({ onOpen }) {
       place: "South Market / Riverside",
       detail:
         "Modelled apparent temperature could peak at 40.3°C. Cooling coverage is 62%.",
-      time: "09:48",
+      time: formatCityTime(new Date(anchor.getTime() - 12 * 60_000), {
+        seconds: false,
+      }),
       action: "View heat exposure",
       icon: Thermometer,
       page: "Urban Heat",
@@ -1138,7 +1149,9 @@ export function AlertCenter({ onOpen }) {
       place: "Air-quality monitoring network",
       detail:
         "Backup station excluded from operational feeds. AQ-04 remains healthy.",
-      time: "09:30",
+      time: formatCityTime(new Date(anchor.getTime() - 30 * 60_000), {
+        seconds: false,
+      }),
       action: "Inspect data health",
       icon: Database,
       page: "Data Health",

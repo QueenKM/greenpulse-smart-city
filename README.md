@@ -1,6 +1,6 @@
 # GreenPulse — Urban Decision Intelligence
 
-A presentation-led React + Vite target-state Smart City Command Center. All values are synthetic demonstration data. The city model is illustrative and does not use real GIS data. No municipal systems are connected.
+A presentation-led React + Vite target-state Smart City Command Center. All operational values are synthetic demonstration data. The city model is illustrative and does not use real GIS data. No municipal systems are connected.
 
 ## Run
 
@@ -19,6 +19,8 @@ npm run build
 Node 22 or newer is recommended. Typography is bundled locally; maps require no external tile service.
 
 ## Present
+
+The clock shows the actual date and time from the viewer’s device in **Europe/Sofia**, updates every second, and adjusts for summer/winter time. Reset Demo does not reset the clock. Synthetic event timestamps, forecast times, and decision records use the same timezone; the original incident identifiers remain fixed demonstration case IDs.
 
 Start **Presentation Demo** in the sidebar. The seven steps follow Alert → Evidence → Prediction → Scenarios → Human approval → Intervention → Measured impact. Continue from the evidence drawer with **Next Step**. At approval, the presenter must explicitly choose **Approve & Activate**. The progression controls cannot bypass this gate.
 

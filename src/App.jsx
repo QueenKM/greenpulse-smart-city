@@ -56,6 +56,12 @@ import {
   HandoverDialog,
 } from "./components/Dialogs";
 import { lifecycleReducer, initialLifecycle } from "./lifecycle.mjs";
+import {
+  formatCityTime,
+  formatCityDate,
+  formatCityTimeZone,
+  CITY_TIME_ZONE,
+} from "./time.mjs";
 
 const ID = "INC-2026-1109-H03";
 const sections = [
@@ -134,6 +140,26 @@ const layerNames = [
   ["heritage", "Heritage", Building2],
   ["sensors", "Sensors", Radio],
 ];
+
+function LocalClock({ now }) {
+  return (
+    <div className="demo-clock" title={CITY_TIME_ZONE}>
+      <span className="eyebrow">CURRENT LOCAL TIME</span>
+      <strong>
+        <time dateTime={now.toISOString()} aria-label="Current time in Sofia">
+          {formatCityTime(now)}
+        </time>
+        <small>{formatCityTimeZone(now)}</small>
+      </strong>
+      <small>
+        <time dateTime={now.toISOString()} aria-label="Current date in Sofia">
+          {formatCityDate(now)}
+        </time>{" "}
+        · SOFIA
+      </small>
+    </div>
+  );
+}
 
 function Tag({ tone = "cyan", children, dot = false }) {
   return (
@@ -353,7 +379,11 @@ function ActivePanel({ state, dispatch, onHandover, onClose, onImpact }) {
         </div>
         <div>
           <dt>Next review</dt>
-          <dd>10:05</dd>
+          <dd>
+            {state.nextReviewAt
+              ? formatCityTime(new Date(state.nextReviewAt), { seconds: false })
+              : "—"}
+          </dd>
         </div>
       </dl>
       <div className="active-controls">
@@ -382,14 +412,21 @@ function ActivePanel({ state, dispatch, onHandover, onClose, onImpact }) {
   );
 }
 
-const seedEvents = [
-  ["10:01:42", "Traffic T14 speed", "↓ 17 km/h", "cyan"],
-  ["10:01:18", "AQ-04 NO₂", "→ 47 µg/m³", "cyan"],
-  ["10:00:51", "Incident H03", "prediction updated", "purple"],
-  ["10:00:33", "Parking P3 occupancy", "→ 93%", "cyan"],
-  ["09:59:58", "AI prediction", "recalculated", "purple"],
-  ["09:59:41", "AVL feed", "healthy", "cyan"],
-];
+function seedEvents() {
+  const timestamp = Date.now();
+  return [
+    [0, "Traffic T14 speed", "↓ 17 km/h", "cyan"],
+    [24, "AQ-04 NO₂", "→ 47 µg/m³", "cyan"],
+    [51, "Incident H03", "prediction updated", "purple"],
+    [69, "Parking P3 occupancy", "→ 93%", "cyan"],
+    [104, "AI prediction", "recalculated", "purple"],
+    [121, "AVL feed", "healthy", "cyan"],
+  ].map(([age, ...event]) => [
+    formatCityTime(new Date(timestamp - age * 1000)),
+    ...event,
+  ]);
+}
+
 function OperationsBottom({ onHealth, lifecycle }) {
   const [events, setEvents] = useState(seedEvents);
   useEffect(() => {
@@ -403,9 +440,7 @@ function OperationsBottom({ onHealth, lifecycle }) {
         ["AVL feed", "healthy", "cyan"],
       ];
       const e = entries[(n - 1) % entries.length];
-      const t = new Date(Date.UTC(2026, 10, 9, 10, 1, 42) + n * 8000)
-        .toISOString()
-        .slice(11, 19);
+      const t = formatCityTime();
       setEvents((v) => [[t, ...e], ...v].slice(0, 6));
     }, 8000);
     return () => clearInterval(timer);
@@ -420,7 +455,7 @@ function OperationsBottom({ onHealth, lifecycle }) {
           </span>
           <span className="stream-live">
             <i />
-            SYNTHETIC REPLAY
+            SYNTHETIC EVENTS
           </span>
         </div>
         <div className="events-viewport">
@@ -494,23 +529,24 @@ export default function App() {
   const [demo, setDemo] = useState(false),
     [step, setStep] = useState(0),
     [toast, setToast] = useState("");
-  const [replaySeconds, setReplaySeconds] = useState(0);
-  const replayClock = new Date(
-    Date.UTC(2026, 10, 9, 10, 1, 42) + replaySeconds * 1000,
-  )
-    .toISOString()
-    .slice(11, 19);
+  const [now, setNow] = useState(() => new Date());
+  const currentTime = formatCityTime(now);
   useEffect(() => {
-    const timer = setInterval(() => setReplaySeconds((s) => s + 1), 1000);
-    return () => clearInterval(timer);
+    const syncClock = () => setNow(new Date());
+    const timer = setInterval(syncClock, 1000);
+    document.addEventListener("visibilitychange", syncClock);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", syncClock);
+    };
   }, []);
-  const replayTimeRef = useRef(replayClock);
-  replayTimeRef.current = replayClock;
+  const currentTimeRef = useRef(currentTime);
+  currentTimeRef.current = currentTime;
   const active = ["active", "paused"].includes(state.status);
   useEffect(() => {
     if (state.status !== "active") return;
     const t = setInterval(
-      () => dispatch({ type: "TICK", time: replayTimeRef.current }),
+      () => dispatch({ type: "TICK", time: currentTimeRef.current }),
       1000,
     );
     return () => clearInterval(t);
@@ -519,7 +555,10 @@ export default function App() {
     if (state.status !== "measuring") return;
     const t = setTimeout(
       () =>
-        dispatch({ type: "MEASUREMENT_COMPLETE", time: replayTimeRef.current }),
+        dispatch({
+          type: "MEASUREMENT_COMPLETE",
+          time: currentTimeRef.current,
+        }),
       5000,
     );
     return () => clearTimeout(t);
@@ -547,7 +586,6 @@ export default function App() {
   };
   const compare = () => navigate("Digital Twin");
   const reset = () => {
-    setReplaySeconds(0);
     dispatch({ type: "RESET" });
     setApproval(false);
     setHandover(false);
@@ -584,7 +622,7 @@ export default function App() {
     if (next === 5) setPage("Overview");
     if (next === 6) {
       setPage("KPI & Impact");
-      if (active) dispatch({ type: "CLOSE", time: replayTimeRef.current });
+      if (active) dispatch({ type: "CLOSE", time: currentTimeRef.current });
     }
   };
   const nextStep = () => {
@@ -894,14 +932,7 @@ export default function App() {
                   <small>active alerts</small>
                 </span>
               </button>
-              <div className="demo-clock">
-                <span className="eyebrow">DEMONSTRATION TIME</span>
-                <strong>
-                  {replayClock}
-                  <small>CET</small>
-                </strong>
-                <small>09 NOV 2026 · REPLAY</small>
-              </div>
+              <LocalClock now={now} />
             </div>
           ) : (
             <div className="heading-context">
@@ -909,6 +940,7 @@ export default function App() {
                 {page === "Digital Twin" ? "SIMULATED" : "DEMONSTRATION"}
               </Tag>
               <span>Historic Centre · H-03</span>
+              <LocalClock now={now} />
             </div>
           )}
         </header>
@@ -993,7 +1025,7 @@ export default function App() {
                   <ActivePanel
                     state={state}
                     dispatch={(action) =>
-                      dispatch({ ...action, time: replayTimeRef.current })
+                      dispatch({ ...action, time: currentTimeRef.current })
                     }
                     onHandover={() => setHandover(true)}
                     onClose={() => setCloseConfirm(true)}
@@ -1056,7 +1088,7 @@ export default function App() {
           dispatch({
             type: "APPROVE",
             humanApproved: true,
-            time: replayClock,
+            time: currentTime,
             duration: options?.duration,
             routeGuidance: options?.routeGuidance,
             note: options?.note,
@@ -1076,7 +1108,7 @@ export default function App() {
         open={handover}
         onClose={() => setHandover(false)}
         onConfirm={(operator, note) => {
-          dispatch({ type: "HANDOVER", operator, note, time: replayClock });
+          dispatch({ type: "HANDOVER", operator, note, time: currentTime });
           setHandover(false);
           setToast(`Accountability transferred to ${operator}.`);
         }}
@@ -1125,7 +1157,7 @@ export default function App() {
               <button
                 className="button primary"
                 onClick={() => {
-                  dispatch({ type: "CLOSE", time: replayTimeRef.current });
+                  dispatch({ type: "CLOSE", time: currentTimeRef.current });
                   setCloseConfirm(false);
                   navigate("KPI & Impact");
                 }}
