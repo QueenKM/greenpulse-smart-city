@@ -1,4 +1,4 @@
-import React, { useId, useState } from "react";
+import React, { useId, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowDownRight,
@@ -82,6 +82,25 @@ export default function DigitalTwin({ onApprove, lifecycle = "idle" }) {
   const [selected, setSelected] = useState("B");
   const [divider, setDivider] = useState(50);
   const uid = useId();
+  const mapRef = useRef(null);
+  const dragging = useRef(false);
+  const updateDivider = (event) => {
+    const bounds = mapRef.current?.getBoundingClientRect();
+    if (!bounds?.width) return;
+    setDivider(
+      Math.round(
+        Math.max(
+          0,
+          Math.min(100, ((event.clientX - bounds.left) / bounds.width) * 100),
+        ),
+      ),
+    );
+  };
+  const endComparisonDrag = (event) => {
+    dragging.current = false;
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
+  };
   const scenario = scenarios.find((s) => s.id === selected);
   const approved = [
     "active",
@@ -98,7 +117,7 @@ export default function DigitalTwin({ onApprove, lifecycle = "idle" }) {
   return (
     <div className="twin-screen">
       <div className="twin-intro">
-        <p>Compare interventions before acting in the physical city.</p>
+        <p>Real Leuven geography · synthetic operating conditions</p>
         <span className="twin-model-note">
           <span className="twin-dot" /> SIMULATED <i />
           60-minute projection
@@ -107,6 +126,7 @@ export default function DigitalTwin({ onApprove, lifecycle = "idle" }) {
       <div className="twin-workspace">
         <section
           className="twin-map-stage"
+          ref={mapRef}
           aria-label="Before and after city comparison"
         >
           <div className="twin-map-before">
@@ -141,8 +161,10 @@ export default function DigitalTwin({ onApprove, lifecycle = "idle" }) {
           </div>
           <div className="twin-map-top">
             <div>
-              <span className="twin-overline">HISTORIC CENTRE · H-03</span>
-              <h2>One city. Better possibilities.</h2>
+              <span className="twin-overline">
+                LEUVEN · HISTORIC CENTRE · H-03
+              </span>
+              <h2>See the decision before it happens.</h2>
             </div>
             <span className="twin-projection-label">
               <GitCompareArrows size={13} /> BEFORE / AFTER
@@ -150,11 +172,15 @@ export default function DigitalTwin({ onApprove, lifecycle = "idle" }) {
           </div>
           <div className="twin-map-label twin-before-label">
             <span /> BEFORE
-            <span className="twin-label-detail">No intervention</span>
+            <span className="twin-label-detail">
+              Simulated baseline · no action
+            </span>
           </div>
           <div className="twin-map-label twin-after-label">
             <span /> AFTER
-            <span className="twin-label-detail">Scenario {selected}</span>
+            <span className="twin-label-detail">
+              Simulated Scenario {selected}
+            </span>
           </div>
           <div className="twin-divider" style={{ left: `${divider}%` }}>
             <span className="twin-divider-handle">
@@ -165,12 +191,25 @@ export default function DigitalTwin({ onApprove, lifecycle = "idle" }) {
             id={uid}
             className="twin-comparison-input"
             type="range"
-            min="8"
-            max="92"
+            min="0"
+            max="100"
+            step="1"
             value={divider}
             onChange={(event) => setDivider(Number(event.target.value))}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              dragging.current = true;
+              event.currentTarget.focus();
+              event.currentTarget.setPointerCapture?.(event.pointerId);
+              updateDivider(event);
+            }}
+            onPointerMove={(event) => {
+              if (dragging.current) updateDivider(event);
+            }}
+            onPointerUp={endComparisonDrag}
+            onPointerCancel={endComparisonDrag}
             aria-label="Drag to compare before and after"
-            aria-valuetext={`${divider}% before, ${100 - divider}% after`}
+            aria-valuetext={`${divider}% simulated baseline, ${100 - divider}% simulated scenario ${selected}`}
           />
           <div className="twin-map-bottom">
             <div className="twin-comparison-legend">
@@ -193,8 +232,28 @@ export default function DigitalTwin({ onApprove, lifecycle = "idle" }) {
                 {selected === "A" ? "0" : selected === "B" ? "21" : "26"}
                 <small> pp</small>
               </b>
-              <small>congestion vs no action</small>
+              <small>modelled congestion reduction</small>
             </span>
+          </div>
+          <div
+            className="twin-map-source"
+            aria-label="Geographic data attribution"
+          >
+            <a
+              href="https://www.openstreetmap.org/copyright"
+              target="_blank"
+              rel="noreferrer"
+            >
+              © OpenStreetMap contributors
+            </a>
+            <span>·</span>
+            <a
+              href="https://opendatacommons.org/licenses/odbl/1-0/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              ODbL
+            </a>
           </div>
         </section>
 
@@ -247,8 +306,12 @@ export default function DigitalTwin({ onApprove, lifecycle = "idle" }) {
               <div className="twin-constraint">
                 <ShieldCheck size={16} />
                 <span>
-                  Heritage constraints respected
-                  <small>Temporary, reversible interventions only</small>
+                  {selected === "C"
+                    ? "Accessibility trade-off requires review"
+                    : "Heritage-compatible scenario design"}
+                  <small>
+                    Synthetic decision criteria · no municipal validation
+                  </small>
                 </span>
               </div>
             </motion.div>
@@ -283,8 +346,8 @@ export default function DigitalTwin({ onApprove, lifecycle = "idle" }) {
               </button>
             )}
             <p>
-              <LockKeyhole size={11} /> Human approval is required before
-              activation.
+              <LockKeyhole size={11} /> Human approval required. No city systems
+              connected.
             </p>
           </div>
         </aside>
@@ -298,7 +361,7 @@ export default function DigitalTwin({ onApprove, lifecycle = "idle" }) {
           <div>
             <span className="twin-overline">INTERVENTION OPTIONS</span>
             <span className="twin-scenario-subtitle">
-              A transparent trade-off, before a real-world decision.
+              A transparent comparison of synthetic interventions.
             </span>
           </div>
           <span className="twin-scenario-horizon">

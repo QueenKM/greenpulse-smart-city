@@ -47,7 +47,11 @@ import {
   Zap,
 } from "lucide-react";
 import CityMap from "./CityMap";
-import { formatCityTime } from "../time.mjs";
+import {
+  formatCityTime,
+  formatCityDate,
+  formatCityTimeZone,
+} from "../time.mjs";
 import "./DomainScreens.css";
 
 const tipStyle = {
@@ -91,6 +95,7 @@ export function TrafficScreen() {
     { offset: 60, model: 87 },
   ].map(({ offset, ...values }) => ({
     ...values,
+    timestamp: anchor.getTime() + offset * 60_000,
     time: formatCityTime(new Date(anchor.getTime() + offset * 60_000), {
       seconds: false,
     }),
@@ -140,8 +145,16 @@ export function TrafficScreen() {
                   strokeDasharray="3 6"
                 />
                 <XAxis
-                  dataKey="time"
-                  tick={{ fill: "#78919e", fontSize: 12 }}
+                  dataKey="timestamp"
+                  type="number"
+                  scale="time"
+                  domain={["dataMin", "dataMax"]}
+                  ticks={data.map((point) => point.timestamp)}
+                  tickFormatter={(value) =>
+                    formatCityTime(new Date(value), { seconds: false })
+                  }
+                  tick={{ fill: "#91aab9", fontSize: 12 }}
+                  minTickGap={18}
                   axisLine={false}
                   tickLine={false}
                   dy={10}
@@ -155,8 +168,8 @@ export function TrafficScreen() {
                   tickLine={false}
                 />
                 <ReferenceArea
-                  x1={data[3].time}
-                  x2={data[5].time}
+                  x1={data[3].timestamp}
+                  x2={data[5].timestamp}
                   fill="#a78bfa"
                   fillOpacity={0.035}
                 />
@@ -172,12 +185,16 @@ export function TrafficScreen() {
                   }}
                 />
                 <ReferenceLine
-                  x={data[3].time}
+                  x={data[3].timestamp}
                   stroke="#4d6976"
                   strokeDasharray="3 5"
                 />
                 <Tooltip
                   contentStyle={tipStyle}
+                  labelFormatter={(value) => {
+                    const date = new Date(Number(value));
+                    return `${formatCityDate(date)} · ${formatCityTime(date, { seconds: false })} ${formatCityTimeZone(date)}`;
+                  }}
                   formatter={(v, k) => [
                     `${v}%`,
                     k === "live" ? "Live observation" : "Modelled forecast",
@@ -362,12 +379,12 @@ const sources = [
   },
   {
     name: "Historic GIS",
-    detail: "Heritage and street geometry",
+    detail: "OpenStreetMap · Leuven geometry",
     state: "Reference",
     fresh: "Reference dataset",
     quality: null,
     tone: "purple",
-    note: "Static reference · excluded from feed count",
+    note: "Bundled OSM snapshot · excluded from synthetic feed count",
   },
 ];
 export function DataHealth() {
@@ -509,8 +526,9 @@ export function DataHealth() {
           <div className="health-note">
             <CircleHelp size={16} />
             <p>
-              Historic GIS is a reference dataset. It supports the city model
-              but is not counted as an operational feed.
+              Historic GIS uses a real Leuven OpenStreetMap reference snapshot.
+              It supports the urban model but is not counted as an operational
+              feed.
             </p>
           </div>
           <div className="source-detail" aria-live="polite">
@@ -547,7 +565,9 @@ export function HeatScreen() {
               traffic: false,
               air: false,
             }}
-            onSelect={() => setPoint(point ? "" : "Cooling point C-03")}
+            onSelect={(item) =>
+              setPoint(item?.type === "cooling" ? item : null)
+            }
           />
           <div className="heat-map-heading">
             <Tag tone="purple">MODELLED HEAT EXPOSURE</Tag>
@@ -557,8 +577,8 @@ export function HeatScreen() {
             <div className="cooling-selection">
               <Snowflake size={18} />
               <div>
-                <strong>{point}</strong>
-                <small>Public library · accessible refuge</small>
+                <strong>{point.title}</strong>
+                <small>{point.value} · simulated deployment</small>
               </div>
               <button
                 aria-label="Close cooling point"
@@ -981,9 +1001,7 @@ export function ImpactScreen({ lifecycle = "idle", onNavigate }) {
         eyebrow="GOVERNANCE / CLOSED-LOOP LEARNING"
         title="Did the intervention work?"
         description="H-03 · Adaptive signal timing + targeted route guidance · 60-minute observation window"
-      >
-        <Tag tone="green">MEASURED · SYNTHETIC OUTCOME</Tag>
-      </DomainTitle>
+      />
       <div className="impact-composition">
         <div className="impact-chart-area">
           <div className="ds-section-heading">
@@ -991,15 +1009,18 @@ export function ImpactScreen({ lifecycle = "idle", onNavigate }) {
               <span className="eyebrow">PREDICTED vs ACTUAL</span>
               <h2>Improvement, verified.</h2>
             </div>
-            <div className="ds-chart-key">
-              <span className="purple">
-                <i />
-                PREDICTED
-              </span>
-              <span className="green">
-                <i />
-                ACTUAL
-              </span>
+            <div className="impact-chart-evidence">
+              <Tag tone="green">MEASURED · SYNTHETIC OUTCOME</Tag>
+              <div className="ds-chart-key">
+                <span className="purple">
+                  <i />
+                  PREDICTED
+                </span>
+                <span className="green">
+                  <i />
+                  ACTUAL
+                </span>
+              </div>
             </div>
           </div>
           <div className="impact-bar-chart">
@@ -1044,18 +1065,45 @@ export function ImpactScreen({ lifecycle = "idle", onNavigate }) {
                   fill="#A78BFA"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={46}
-                  fillOpacity={0.5}
                   onClick={(d, i) => setMetric(i)}
-                />
+                >
+                  {impactData.map((entry, index) => (
+                    <Cell
+                      key={entry.name}
+                      fillOpacity={index === metric ? 0.8 : 0.2}
+                    />
+                  ))}
+                </Bar>
                 <Bar
                   dataKey="actual"
                   fill="#34D399"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={46}
                   onClick={(d, i) => setMetric(i)}
-                />
+                >
+                  {impactData.map((entry, index) => (
+                    <Cell
+                      key={entry.name}
+                      fillOpacity={index === metric ? 1 : 0.3}
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
+          </div>
+          <div className="impact-focus" role="status" aria-live="polite">
+            <strong>{impactData[metric].name}</strong>
+            <span>
+              Actual reduction was{" "}
+              <b>
+                {(
+                  impactData[metric].predicted - impactData[metric].actual
+                ).toFixed(1)}{" "}
+                percentage points
+              </b>{" "}
+              below the forecast.
+            </span>
+            <small>Select a metric to focus the comparison</small>
           </div>
         </div>
         <aside className="impact-error">
@@ -1079,6 +1127,7 @@ export function ImpactScreen({ lifecycle = "idle", onNavigate }) {
         {impactData.map((x, i) => (
           <button
             className={metric === i ? "selected" : ""}
+            aria-pressed={metric === i}
             onClick={() => setMetric(i)}
             key={x.name}
           >

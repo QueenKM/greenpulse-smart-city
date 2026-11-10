@@ -2,8 +2,8 @@
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: 25px minmax(260px, 1fr) 233px;
-  gap: 15px;
+  grid-template-rows: 24px minmax(0, 1fr) 198px;
+  gap: 13px;
   color: #e4edf2;
 }
 .twin-intro {
@@ -12,46 +12,50 @@
   justify-content: space-between;
   gap: 16px;
 }
-.twin-intro p {
+.screen-content .twin-screen .twin-intro > p {
   margin: 0;
-  color: #9bafb9;
-  font-size: 13px;
+  color: #7896a8;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+.screen-content .twin-screen .twin-intro > p:after {
+  content: none;
 }
 .twin-model-note {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   white-space: nowrap;
-  font-size: 10px;
-  letter-spacing: 0.09em;
   color: #fbbf24;
+  font-size: 10px;
+  letter-spacing: 0.07em;
 }
 .twin-model-note > i {
-  height: 11px;
   width: 1px;
+  height: 11px;
   background: #34414a;
-  margin: 0 4px;
+  margin: 0 2px;
 }
 .twin-dot {
   width: 5px;
   height: 5px;
-  border-radius: 50%;
   background: #fbbf24;
+  border-radius: 50%;
 }
 .twin-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 315px;
+  grid-template-columns: minmax(0, 1fr) 304px;
   min-height: 0;
-  gap: 18px;
+  gap: 20px;
 }
 .twin-map-stage {
   position: relative;
-  overflow: hidden;
   min-height: 0;
-  border: 1px solid #24333d;
-  border-radius: 10px;
-  background: #071419;
+  overflow: hidden;
   isolation: isolate;
+  border: 1px solid #29404b;
+  border-radius: 8px;
+  background: #071419;
 }
 .twin-map-before,
 .twin-map-after {
@@ -70,92 +74,95 @@
   content: "";
   position: absolute;
   inset: 0;
-  pointer-events: none;
   z-index: 2;
+  pointer-events: none;
   background: linear-gradient(
     180deg,
-    #050d12e8 0%,
-    #050d1220 26%,
-    transparent 58%,
-    #050d12cc 100%
+    #050d12db,
+    #050d1210 28%,
+    transparent 56%,
+    #050d12a3
   );
 }
 .twin-map-top {
   position: absolute;
   z-index: 5;
-  top: 22px;
-  left: 24px;
-  right: 22px;
+  top: 20px;
+  left: 22px;
+  right: 20px;
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: start;
+  gap: 12px;
   pointer-events: none;
 }
 .twin-overline {
-  font-size: 10px;
-  letter-spacing: 0.13em;
-  color: #879ba7;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: #8aa1af;
 }
 .twin-map-top h2 {
-  margin: 7px 0 0;
-  font-size: 22px;
-  letter-spacing: -0.6px;
+  margin: 8px 0 0;
+  font-size: 23px;
+  line-height: 1.25;
   font-weight: 500;
-  color: #e6f1f5;
+  letter-spacing: -0.65px;
+  color: #e0eff5;
 }
 .twin-projection-label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 7px 8px;
+  background: #071419ad;
+  border: 1px solid #46616e66;
+  border-radius: 3px;
+  color: #b7c9d3;
   font-size: 9px;
-  letter-spacing: 0.09em;
-  color: #b2c4cd;
-  border: 1px solid #3a4c55;
-  background: #071419b5;
-  padding: 7px 9px;
-  border-radius: 4px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 .twin-map-label {
   position: absolute;
-  top: 37%;
   z-index: 6;
+  top: 107px;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.09em;
   pointer-events: none;
 }
 .twin-before-label {
-  left: 24px;
+  left: 22px;
   color: #fb7185;
 }
 .twin-after-label {
-  right: 24px;
+  right: 20px;
   color: #38bdf8;
 }
 .twin-map-label > span:first-child {
-  width: 5px;
-  height: 5px;
-  background: currentColor;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
+  background: currentColor;
 }
 .twin-label-detail {
-  display: block;
   position: absolute;
-  top: 19px;
+  top: 18px;
+  display: block;
   white-space: nowrap;
+  color: #90a9b7;
   font-size: 10px;
   font-weight: 400;
   letter-spacing: 0;
-  color: #b1bec5;
 }
 .twin-before-label .twin-label-detail {
-  left: 12px;
+  left: 10px;
 }
 .twin-after-label .twin-label-detail {
   right: 0;
@@ -164,44 +171,43 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 1px;
   z-index: 7;
+  width: 1px;
   pointer-events: none;
   background: linear-gradient(
-    180deg,
     transparent,
-    #b9d0dd77 23%,
-    #d0e9f3bb 50%,
-    #b9d0dd77 78%,
+    #abc9d982 20%,
+    #d0edf5c7 50%,
+    #abc9d982 80%,
     transparent
   );
 }
 .twin-divider-handle {
   position: absolute;
-  top: 50%;
+  top: 48%;
   left: 0;
   transform: translate(-50%, -50%);
   width: 30px;
-  height: 42px;
-  border-radius: 6px;
-  background: #142631e8;
-  box-shadow: 0 4px 25px #0006;
-  border: 1px solid #64808f;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #cee0e8;
+  border: 1px solid #6f97a9;
+  border-radius: 5px;
+  background: #122b38ed;
+  color: #cce8f3;
+  box-shadow: 0 4px 24px #0007;
 }
 .twin-comparison-input {
   position: absolute;
-  z-index: 8;
   inset: 0;
+  z-index: 8;
   width: 100%;
   height: 100%;
+  margin: 0;
   opacity: 0;
   cursor: ew-resize;
-  margin: 0;
-  touch-action: pan-y;
+  touch-action: none;
 }
 .twin-map-stage:focus-within .twin-divider-handle {
   outline: 2px solid #38bdf8;
@@ -209,31 +215,31 @@
 }
 .twin-map-bottom {
   position: absolute;
-  bottom: 17px;
-  left: 24px;
-  right: 22px;
+  left: 22px;
+  right: 20px;
+  bottom: 119px;
   z-index: 9;
-  pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  pointer-events: none;
 }
 .twin-comparison-legend {
   display: flex;
-  gap: 15px;
   flex-wrap: wrap;
+  gap: 14px;
 }
 .twin-comparison-legend > span {
-  font-size: 9px;
-  color: #99aeb9;
   display: flex;
-  gap: 6px;
   align-items: center;
+  gap: 5px;
+  color: #93adbd;
+  font-size: 10px;
 }
 .twin-comparison-legend i {
-  display: inline-block;
-  width: 13px;
+  display: block;
+  width: 12px;
   height: 2px;
   border-radius: 1px;
 }
@@ -247,33 +253,34 @@
   background: #38bdf8;
 }
 .twin-drag-caption {
-  font-size: 9px;
-  color: #7d929f;
+  color: #6a8a9e;
+  font-size: 10px;
   white-space: nowrap;
 }
 .twin-improvement {
   position: absolute;
-  right: 24px;
-  bottom: 52px;
+  right: 20px;
+  bottom: 42px;
+  z-index: 6;
   display: flex;
   align-items: center;
   gap: 9px;
-  z-index: 6;
-  padding: 12px 15px;
-  background: #071419db;
-  border: 1px solid #38bdf82b;
-  border-radius: 7px;
-  pointer-events: none;
+  padding: 11px 13px;
+  border: 1px solid #38bdf82e;
+  border-radius: 5px;
+  background: #071722e3;
   color: #38bdf8;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(9px);
+  pointer-events: none;
 }
 .twin-improvement > span {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 .twin-improvement b {
-  font-size: 25px;
+  color: #82d5f8;
+  font-size: 26px;
   line-height: 1.1;
   font-weight: 500;
 }
@@ -281,39 +288,66 @@
   font-size: 13px;
 }
 .twin-improvement > span > small {
+  color: #789cac;
   font-size: 9px;
-  color: #9cb1bc;
+}
+.twin-map-source {
+  position: absolute;
+  z-index: 12;
+  right: 12px;
+  bottom: 9px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 5px;
+  border-radius: 2px;
+  background: #06131bd9;
+  color: #627f90;
+  font-size: 9px;
+  pointer-events: auto;
+}
+.twin-map-source a {
+  color: #8ba5b5;
+  text-decoration: none;
+}
+.twin-map-source a:hover {
+  color: #d8edf5;
+  text-decoration: underline;
+}
+.twin-map-source a:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 3px;
 }
 .twin-rationale {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
   min-height: 0;
-  background: linear-gradient(135deg, #111d2b66, #0b192000);
-  padding: 16px 0 0 19px;
-  border-left: 1px solid #25333d;
+  padding: 10px 0 0 18px;
+  border-left: 1px solid #253641;
+  background: linear-gradient(135deg, #101d2a66, transparent);
 }
 .twin-rationale-top {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
 .twin-rationale-top > .twin-overline {
   color: #a78bfa;
-  letter-spacing: 0.09em;
   font-size: 9px;
+  letter-spacing: 0.07em;
 }
 .twin-modelled {
-  font-size: 8px;
-  letter-spacing: 0.1em;
   padding: 4px 5px;
-  background: #a78bfa0d;
-  color: #a78bfa;
   border: 1px solid #a78bfa30;
   border-radius: 3px;
+  background: #a78bfa0d;
+  color: #a78bfa;
+  font-size: 9px;
+  letter-spacing: 0.07em;
 }
 .twin-rationale-inner {
-  flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -322,140 +356,142 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin: 21px 0 11px;
+  gap: 10px;
+  margin: 2px 0 11px;
 }
 .twin-rationale-title .twin-overline {
   font-size: 9px;
 }
 .twin-rationale-title h2 {
-  font-size: 21px;
+  margin: 6px 0 0;
+  font-size: 22px;
+  line-height: 1.2;
   font-weight: 500;
-  margin: 7px 0 0;
   letter-spacing: -0.5px;
 }
 .twin-big-score {
   display: flex;
   align-items: baseline;
-  color: #bba6fc;
   gap: 3px;
+  color: #bba6fc;
 }
 .twin-big-score > b {
-  font-size: 34px;
-  font-weight: 500;
+  font-size: 36px;
   line-height: 1;
+  font-weight: 500;
 }
 .twin-big-score > span {
-  font-size: 10px;
   color: #80949f;
+  font-size: 10px;
 }
 .twin-rationale-description {
+  flex-shrink: 0;
+  margin: 0 0 13px;
+  color: #95aebb;
   font-size: 11px;
-  line-height: 1.65;
-  color: #9db0bb;
-  margin: 0 0 18px;
+  line-height: 1.6;
 }
 .twin-score-bars {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
   flex: 1;
-  justify-content: center;
+  flex-direction: column;
+  justify-content: space-evenly;
+  gap: 9px;
+  min-height: 130px;
 }
 .twin-score-item > div:first-child {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 10px;
-  color: #a6b8c2;
-  margin-bottom: 6px;
   gap: 10px;
+  margin-bottom: 5px;
+  color: #9fb6c3;
+  font-size: 11px;
 }
 .twin-score-item b {
-  font-size: 10px;
-  color: #d4dfea;
+  color: #d5e0ec;
+  font-size: 11px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 .twin-score-track {
-  height: 3px;
   width: 100%;
-  background: #25333c;
-  border-radius: 5px;
+  height: 3px;
   overflow: hidden;
+  border-radius: 5px;
+  background: #233640;
 }
 .twin-score-track i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #7c68b8, #b5a0ef);
   border-radius: 5px;
+  background: linear-gradient(90deg, #7962b2, #b9a0f4);
 }
 .twin-constraint {
   display: flex;
-  align-items: center;
-  gap: 9px;
-  color: #91a6b2;
-  padding: 14px 0;
-  margin-top: 10px;
-}
-.twin-constraint > svg {
-  color: #a78bfa;
   flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  margin-top: 11px;
+  padding: 8px 0 0;
+  border-top: 1px solid #ffffff08;
+  color: #a78bfa;
 }
 .twin-constraint > span {
+  color: #9fb9c8;
   font-size: 10px;
-  color: #bdccd4;
 }
 .twin-constraint small {
   display: block;
-  font-size: 9px;
-  color: #778d99;
   margin-top: 4px;
+  color: #617f91;
+  font-size: 9px;
 }
 .twin-approval-area {
   padding-top: 0;
+  background: #061019;
 }
 .twin-approve-button {
+  width: 100%;
   height: 39px;
-  border-radius: 5px;
-  border: 1px solid #38bdf84a;
-  background: #13384b;
-  color: #b8e8ff;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 0 13px;
-  width: 100%;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid #38bdf84a;
+  border-radius: 5px;
+  background: #123648;
+  color: #b8e8ff;
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
   transition:
     background 0.2s,
-    transform 0.2s,
-    border-color 0.2s;
+    border-color 0.2s,
+    transform 0.2s;
 }
 .twin-approve-button:hover {
-  background: #194960;
   border-color: #38bdf88f;
+  background: #19465d;
   transform: translateY(-1px);
 }
 .twin-approve-button > span {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
 }
 .twin-approve-button:disabled {
-  cursor: default;
-  color: #34d399;
   background: #12342c;
   border-color: #34d39944;
+  color: #34d399;
+  cursor: default;
   transform: none;
 }
 .twin-choose-recommended {
-  color: #bca9f1;
-  border-color: #a78bfa44;
   background: #252039;
+  border-color: #a78bfa44;
+  color: #bca9f1;
 }
 .twin-choose-recommended:hover {
   background: #33284b;
@@ -466,64 +502,67 @@
   align-items: center;
   justify-content: center;
   gap: 5px;
-  font-size: 9px;
-  color: #7d929f;
   margin: 8px 0 0;
+  color: #67889a;
+  font-size: 9px;
+  line-height: 1.4;
 }
 .twin-scenarios {
-  min-height: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 .twin-scenario-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 11px;
+  gap: 16px;
+  margin-bottom: 9px;
 }
 .twin-scenario-heading > div {
   display: flex;
-  gap: 14px;
   align-items: center;
+  gap: 13px;
 }
 .twin-scenario-subtitle {
+  color: #658397;
   font-size: 10px;
-  color: #748b98;
 }
 .twin-scenario-horizon {
-  font-size: 8px;
-  letter-spacing: 0.1em;
-  color: #6e8794;
+  color: #5b7a8e;
+  font-size: 9px;
+  letter-spacing: 0.07em;
 }
 .twin-scenario-columns,
 .twin-scenario-row {
   display: grid;
-  grid-template-columns: minmax(190px, 1.65fr) 0.8fr 1fr 0.9fr 1.25fr 1fr;
+  grid-template-columns: minmax(185px, 1.65fr) 0.8fr 0.95fr 0.85fr 1.15fr 1fr;
   gap: 15px;
   align-items: center;
 }
 .twin-scenario-columns {
-  font-size: 8px;
-  letter-spacing: 0.09em;
-  color: #718994;
-  padding: 0 17px 8px;
+  padding: 0 16px 7px;
+  color: #658397;
+  font-size: 9px;
+  letter-spacing: 0.06em;
 }
 .twin-scenario-columns > span:last-child {
+  padding-right: 18px;
   text-align: right;
-  padding-right: 22px;
 }
 .twin-scenario-row {
   position: relative;
-  min-height: 51px;
-  flex: 1;
   width: 100%;
-  background: #0a171d;
+  min-height: 48px;
+  display: grid;
+  flex: 1;
+  padding: 4px 16px;
   border: 1px solid transparent;
-  border-top-color: #1c2b33;
-  padding: 5px 17px;
-  color: #bfced6;
-  text-align: left;
+  border-top-color: #1b303d;
+  background: #08161e;
+  color: #bfd1dc;
   font: inherit;
+  text-align: left;
   cursor: pointer;
   transition:
     background 0.2s,
@@ -531,95 +570,95 @@
     transform 0.2s;
 }
 .twin-scenario-row:last-child {
-  border-bottom: 1px solid #1c2b33;
+  border-bottom: 1px solid #1b303d;
 }
 .twin-scenario-row:hover {
-  background: #11232b;
+  background: #102631;
   transform: translateX(2px);
 }
 .twin-scenario-row.is-selected {
-  border: 1px solid #a78bfa40;
-  border-radius: 5px;
-  background: linear-gradient(90deg, #a78bfa0d, #0f1a26);
   z-index: 1;
+  border: 1px solid #a78bfa40;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #a78bfa0d, #0e1b29);
 }
 .twin-scenario-row.is-selected:before {
   content: "";
   position: absolute;
   left: 0;
-  top: 12px;
-  bottom: 12px;
+  top: 11px;
+  bottom: 11px;
   width: 2px;
   background: #a78bfa;
 }
 .twin-scenario-name {
   display: flex;
-  gap: 12px;
   align-items: center;
+  gap: 11px;
 }
 .twin-scenario-letter {
-  font-size: 10px;
-  color: #8296a3;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 25px;
-  height: 25px;
-  border: 1px solid #32424d;
-  border-radius: 50%;
   flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #304755;
+  border-radius: 50%;
+  color: #829caa;
+  font-size: 10px;
 }
 .is-selected .twin-scenario-letter {
-  color: #baa9ed;
   border-color: #a78bfa66;
   background: #a78bfa0a;
+  color: #baa9ed;
 }
 .twin-scenario-name b {
+  color: #d5e6f0;
   font-size: 12px;
   font-weight: 500;
-  color: #dbe7ee;
   white-space: nowrap;
 }
 .twin-scenario-name small {
-  font-size: 8px;
-  letter-spacing: 0.06em;
-  color: #a78bfa;
   display: flex;
   align-items: center;
   gap: 4px;
   margin-top: 4px;
+  color: #a78bfa;
+  font-size: 8px;
+  letter-spacing: 0.06em;
 }
 .twin-row-value {
-  font-size: 18px;
-  letter-spacing: -0.5px;
-  color: #b5c7d2;
+  color: #adcadb;
+  font-size: 19px;
+  letter-spacing: -0.4px;
   font-variant-numeric: tabular-nums;
 }
 .twin-row-value > small {
+  margin-left: 4px;
+  color: #6c8a9e;
   font-size: 10px;
   letter-spacing: 0;
-  margin-left: 4px;
-  color: #7f97a5;
 }
 .is-selected .twin-row-value {
-  color: #e5edf8;
+  color: #e3edf8;
 }
 .twin-accessibility {
-  font-size: 9px;
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #859ba8;
+  color: #7895a6;
+  font-size: 10px;
   letter-spacing: 0.05em;
 }
 .twin-accessibility > i {
   width: 4px;
   height: 4px;
-  background: currentColor;
   border-radius: 50%;
+  background: currentColor;
 }
 .twin-accessibility.low {
-  color: #ad9adf;
+  color: #af9ddd;
 }
 .twin-accessibility.medium {
   color: #fbbf24;
@@ -631,23 +670,23 @@
   gap: 6px;
 }
 .twin-row-score > span:not(.twin-score-ring) {
-  font-size: 9px;
-  color: #667f8d;
+  color: #5d8095;
+  font-size: 10px;
 }
 .twin-row-score > svg {
-  color: #6c8492;
-  margin-left: 7px;
+  margin-left: 6px;
+  color: #66869b;
 }
 .is-selected .twin-row-score > svg {
   color: #a78bfa;
 }
 .twin-score-ring {
-  display: inline-flex;
   position: relative;
-  width: 37px;
-  height: 37px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 34px;
+  height: 34px;
 }
 .twin-score-ring svg {
   position: absolute;
@@ -658,20 +697,20 @@
 }
 .twin-score-ring circle {
   fill: none;
-  stroke: #263640;
+  stroke: #233b49;
   stroke-width: 2;
 }
 .twin-score-ring circle + circle {
-  stroke: #67818f;
+  stroke: #608399;
   stroke-linecap: round;
 }
 .twin-score-ring.is-selected circle + circle {
   stroke: #a78bfa;
 }
 .twin-score-ring b {
+  color: #b3d0e1;
   font-size: 12px;
   font-weight: 500;
-  color: #c1d1da;
 }
 .twin-score-ring.is-selected b {
   color: #c6b7f6;
@@ -681,34 +720,30 @@
 }
 @media (min-width: 1700px) {
   .twin-screen {
-    grid-template-rows: 28px minmax(300px, 1fr) 255px;
-    gap: 20px;
+    grid-template-rows: 26px minmax(0, 1fr) 214px;
+    gap: 17px;
   }
   .twin-workspace {
-    grid-template-columns: minmax(0, 1fr) 365px;
+    grid-template-columns: minmax(0, 1fr) 338px;
     gap: 24px;
   }
   .twin-rationale {
-    padding: 22px 0 0 25px;
-  }
-  .twin-rationale-top > .twin-overline {
-    font-size: 10px;
-  }
-  .twin-rationale-title {
-    margin: 25px 0 16px;
+    padding-left: 22px;
+    gap: 16px;
   }
   .twin-rationale-title h2 {
-    font-size: 24px;
+    font-size: 25px;
   }
   .twin-big-score > b {
-    font-size: 40px;
+    font-size: 41px;
   }
   .twin-rationale-description {
-    font-size: 12px;
-    margin-bottom: 23px;
+    font-size: 13px;
+    margin-bottom: 17px;
   }
   .twin-score-bars {
-    gap: 16px;
+    min-height: 160px;
+    gap: 12px;
   }
   .twin-score-item > div:first-child,
   .twin-score-item b {
@@ -720,79 +755,167 @@
   .twin-constraint > span {
     font-size: 11px;
   }
-  .twin-constraint small {
-    font-size: 10px;
-  }
-  .twin-approve-button {
-    height: 42px;
-    font-size: 12px;
-  }
+  .twin-constraint small,
   .twin-approval-area > p {
     font-size: 10px;
   }
+  .twin-approve-button {
+    height: 43px;
+    font-size: 13px;
+  }
+  .twin-map-top h2 {
+    font-size: 28px;
+  }
+  .twin-map-top {
+    top: 26px;
+    left: 27px;
+    right: 25px;
+  }
+  .twin-map-label {
+    top: 123px;
+    font-size: 11px;
+  }
+  .twin-before-label {
+    left: 27px;
+  }
+  .twin-after-label {
+    right: 25px;
+  }
+  .twin-label-detail {
+    font-size: 11px;
+  }
+  .twin-map-bottom {
+    left: 27px;
+    right: 25px;
+  }
+  .twin-comparison-legend > span {
+    font-size: 11px;
+  }
+  .twin-map-source {
+    font-size: 10px;
+  }
+  .twin-improvement {
+    right: 25px;
+    bottom: 47px;
+    padding: 13px 16px;
+  }
+  .twin-improvement b {
+    font-size: 30px;
+  }
+  .twin-improvement > span > small {
+    font-size: 10px;
+  }
   .twin-scenario-row {
-    min-height: 58px;
+    min-height: 53px;
   }
   .twin-scenario-name b {
     font-size: 14px;
   }
   .twin-row-value {
-    font-size: 22px;
+    font-size: 23px;
   }
-  .twin-scenario-columns {
-    font-size: 9px;
-  }
-  .twin-scenario-subtitle {
-    font-size: 11px;
-  }
-  .twin-map-top h2 {
-    font-size: 27px;
-  }
-  .twin-map-top {
-    top: 27px;
-    left: 29px;
-  }
-  .twin-improvement b {
-    font-size: 30px;
+  .twin-scenario-columns,
+  .twin-scenario-horizon {
+    font-size: 10px;
   }
 }
 @media (max-height: 820px) and (min-width: 1101px) {
   .twin-screen {
-    grid-template-rows: 20px minmax(235px, 1fr) 195px;
+    grid-template-rows: 20px minmax(0, 1fr) 180px;
     gap: 10px;
   }
+  .twin-workspace {
+    grid-template-columns: minmax(0, 1fr) 285px;
+    gap: 17px;
+  }
   .twin-rationale {
-    padding-top: 7px;
+    padding-top: 3px;
+    padding-left: 15px;
+    gap: 8px;
   }
   .twin-rationale-title {
-    margin: 12px 0 8px;
+    margin-bottom: 8px;
   }
   .twin-rationale-title h2 {
-    font-size: 18px;
+    font-size: 19px;
+  }
+  .twin-big-score > b {
+    font-size: 31px;
   }
   .twin-rationale-description {
-    font-size: 10px;
-    line-height: 1.5;
-    margin-bottom: 9px;
+    font-size: 11px;
+    line-height: 1.45;
+    margin-bottom: 8px;
   }
   .twin-score-bars {
+    min-height: 116px;
     gap: 7px;
   }
   .twin-score-item > div:first-child {
-    margin-bottom: 4px;
+    margin-bottom: 3px;
+    font-size: 10px;
+  }
+  .twin-score-item b {
+    font-size: 10px;
   }
   .twin-constraint {
-    padding: 8px 0;
-    margin-top: 4px;
+    margin-top: 6px;
+    padding-top: 6px;
   }
   .twin-constraint small {
     display: none;
   }
+  .twin-constraint > span {
+    font-size: 9px;
+  }
   .twin-approve-button {
     height: 34px;
+    font-size: 11px;
   }
   .twin-approval-area > p {
     margin-top: 5px;
+    font-size: 8px;
+  }
+  .twin-map-top {
+    top: 16px;
+    left: 18px;
+    right: 18px;
+  }
+  .twin-map-top h2 {
+    font-size: 20px;
+  }
+  .twin-map-label {
+    top: 91px;
+    font-size: 9px;
+  }
+  .twin-before-label {
+    left: 18px;
+  }
+  .twin-after-label {
+    right: 18px;
+  }
+  .twin-label-detail {
+    font-size: 9px;
+    top: 16px;
+  }
+  .twin-map-bottom {
+    bottom: 111px;
+    left: 18px;
+    right: 18px;
+  }
+  .twin-comparison-legend > span,
+  .twin-drag-caption {
+    font-size: 9px;
+  }
+  .twin-improvement {
+    right: 18px;
+    bottom: 40px;
+    padding: 9px 11px;
+  }
+  .twin-improvement b {
+    font-size: 23px;
+  }
+  .twin-improvement > span > small {
     font-size: 8px;
   }
   .twin-scenario-heading {
@@ -801,72 +924,43 @@
   .twin-scenario-row {
     min-height: 43px;
   }
-  .twin-scenario-name b {
-    font-size: 11px;
-  }
   .twin-row-value {
     font-size: 17px;
   }
   .twin-score-ring {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
   }
   .twin-scenario-columns {
-    padding-bottom: 6px;
-  }
-  .twin-map-top {
-    top: 16px;
-    left: 18px;
-  }
-  .twin-map-top h2 {
-    font-size: 19px;
-  }
-  .twin-map-bottom {
-    bottom: 14px;
-    left: 18px;
-  }
-  .twin-improvement {
-    bottom: 43px;
-    padding: 8px 12px;
-  }
-  .twin-improvement b {
-    font-size: 22px;
+    padding-bottom: 5px;
+    font-size: 8px;
   }
 }
 @media (max-width: 1250px) {
   .twin-workspace {
     grid-template-columns: minmax(0, 1fr) 280px;
-    gap: 13px;
+    gap: 14px;
   }
   .twin-rationale {
     padding-left: 14px;
   }
   .twin-map-top h2 {
-    font-size: 19px;
+    font-size: 20px;
   }
   .twin-projection-label {
-    font-size: 8px;
-    padding: 6px;
+    display: none;
   }
   .twin-scenario-columns,
   .twin-scenario-row {
     grid-template-columns: minmax(160px, 1.5fr) 0.8fr 0.9fr 0.85fr 1.1fr 1fr;
     gap: 10px;
   }
-  .twin-scenario-name {
-    gap: 9px;
-  }
-  .twin-scenario-subtitle {
-    display: none;
-  }
+  .twin-scenario-subtitle,
   .twin-drag-caption {
     display: none;
   }
   .twin-comparison-legend {
     gap: 10px;
-  }
-  .twin-rationale-top > .twin-overline {
-    font-size: 8px;
   }
 }
 @media (max-width: 1100px) {
@@ -874,24 +968,79 @@
     height: auto;
     min-height: 100%;
     grid-template-rows: auto auto auto;
-    gap: 15px;
+    gap: 18px;
   }
   .twin-workspace {
-    grid-template-columns: minmax(0, 1fr) 280px;
-    min-height: 390px;
+    min-height: 430px;
   }
   .twin-scenarios {
-    min-height: 230px;
+    min-height: 210px;
   }
-  .twin-map-top {
-    top: 18px;
-    left: 18px;
+  .twin-scenario-horizon {
+    display: none;
+  }
+  .twin-rationale-title h2 {
+    font-size: 20px;
+  }
+}
+@media (max-width: 850px) {
+  .twin-workspace {
+    grid-template-columns: minmax(0, 1fr) 260px;
+    min-height: 450px;
+  }
+  .twin-rationale {
+    padding-left: 14px;
+    gap: 12px;
   }
   .twin-map-top h2 {
-    font-size: 19px;
+    font-size: 21px;
+    max-width: 270px;
   }
-  .twin-projection-label {
+  .twin-map-label {
+    top: 120px;
+  }
+  .twin-comparison-legend {
     display: none;
+  }
+  .twin-map-source {
+    left: 12px;
+    right: auto;
+    font-size: 8px;
+  }
+  .screen-content .twin-screen .twin-intro > p {
+    font-size: 10px;
+  }
+  .twin-model-note {
+    font-size: 9px;
+  }
+}
+@media (max-width: 760px) {
+  .twin-intro {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .twin-workspace {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    min-height: 0;
+  }
+  .twin-map-stage {
+    height: 425px;
+  }
+  .twin-map-top {
+    top: 20px;
+    left: 18px;
+    right: 18px;
+  }
+  .twin-map-top h2 {
+    max-width: 260px;
+    font-size: 23px;
+  }
+  .twin-map-top .twin-overline {
+    font-size: 9px;
+  }
+  .twin-map-label {
+    top: 119px;
   }
   .twin-before-label {
     left: 18px;
@@ -899,53 +1048,29 @@
   .twin-after-label {
     right: 18px;
   }
-  .twin-map-bottom {
-    left: 18px;
-    right: 18px;
-  }
-  .twin-improvement {
-    right: 18px;
-  }
-  .twin-intro p {
-    font-size: 12px;
-  }
-  .twin-model-note {
+  .twin-label-detail {
     font-size: 9px;
   }
-  .twin-scenario-horizon {
-    font-size: 7px;
+  .twin-improvement {
+    right: 15px;
+    top: 170px;
+    bottom: auto;
+    padding: 9px;
+    gap: 6px;
   }
-  .twin-scenario-columns {
-    font-size: 7px;
+  .twin-improvement b {
+    font-size: 24px;
   }
-  .twin-accessibility {
+  .twin-improvement > span > small {
+    max-width: 85px;
     font-size: 8px;
-  }
-  .twin-rationale-title h2 {
-    font-size: 19px;
-  }
-  .twin-rationale-title {
-    margin: 18px 0 12px;
-  }
-}
-@media (max-width: 760px) {
-  .twin-intro {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 9px;
-  }
-  .twin-workspace {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-  .twin-map-stage {
-    height: 390px;
+    line-height: 1.4;
   }
   .twin-rationale {
-    padding: 18px;
-    border: 1px solid #25333d;
-    border-radius: 8px;
-    min-height: 390px;
+    min-height: 410px;
+    padding: 20px;
+    border: 1px solid #253d4b;
+    border-radius: 6px;
   }
   .twin-rationale-top > .twin-overline {
     font-size: 10px;
@@ -953,27 +1078,30 @@
   .twin-rationale-description {
     font-size: 12px;
   }
+  .twin-score-bars {
+    min-height: 145px;
+    gap: 12px;
+  }
   .twin-score-item > div:first-child,
   .twin-score-item b {
     font-size: 12px;
   }
-  .twin-score-bars {
-    gap: 13px;
-  }
   .twin-constraint > span {
     font-size: 11px;
   }
-  .twin-constraint small {
-    font-size: 10px;
-  }
-  .twin-approve-button {
-    font-size: 12px;
-  }
+  .twin-constraint small,
   .twin-approval-area > p {
     font-size: 10px;
   }
+  .twin-approve-button {
+    height: 42px;
+    font-size: 12px;
+  }
   .twin-scenario-columns {
     display: none;
+  }
+  .twin-scenarios {
+    min-height: 430px;
   }
   .twin-scenario-row {
     grid-template-columns: 1fr 1fr 1fr;
@@ -991,55 +1119,29 @@
   }
   .twin-row-value {
     grid-row: 2;
-    font-size: 22px;
+    font-size: 23px;
   }
   .twin-mobile-label {
     display: block;
-    font-size: 9px;
-    letter-spacing: 0;
-    color: #718b99;
     margin-bottom: 4px;
+    color: #7394a7;
+    font-size: 10px;
+    letter-spacing: 0;
   }
   .twin-accessibility {
-    position: absolute;
-    right: 15px;
-    bottom: 14px;
     display: none;
   }
   .twin-scenario-heading {
     margin-bottom: 12px;
   }
-  .twin-scenario-horizon {
-    display: none;
-  }
-  .twin-scenarios {
-    min-height: 440px;
-  }
-  .twin-scenario-row.is-selected {
-    border-radius: 6px;
+  .twin-scenario-heading .twin-overline {
+    font-size: 10px;
   }
   .twin-scenario-name b {
     font-size: 13px;
   }
-  .twin-scenario-letter {
-    width: 26px;
-    height: 26px;
-  }
-  .twin-scenario-name small {
-    font-size: 8px;
-  }
-  .twin-score-ring {
-    width: 36px;
-    height: 36px;
-  }
   .twin-scenario-row:hover {
     transform: none;
-  }
-  .twin-map-top h2 {
-    font-size: 21px;
-  }
-  .twin-map-label {
-    top: 37%;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -1,6 +1,6 @@
 # GreenPulse — Urban Decision Intelligence
 
-A presentation-led React + Vite target-state Smart City Command Center. All operational values are synthetic demonstration data. The city model is illustrative and does not use real GIS data. No municipal systems are connected.
+A presentation-led React + Vite target-state Smart City Command Center. All operational values are synthetic demonstration data. The Leuven urban model uses real OpenStreetMap street and building geometry. All incidents, sensor positions, measurements, heat zones, forecasts and interventions are synthetic; they are not Leuven operational data. No municipal systems are connected.
 
 ## Run
 
@@ -32,11 +32,22 @@ The global **CURRENT / MVP / TARGET** control explains operating-model maturity.
 
 - `src/App.jsx`: persistent shell, Overview, presentation coordinator
 - `src/lifecycle.mjs`: explicit human-approved intervention state transitions
-- `src/components/CityMap.jsx`: deterministic layered vector city model
+- `src/components/CityMap.jsx`: lazy map loader and recoverable loading state
+- `src/components/GeographicCityMap.jsx`: geographic renderer for the bundled real Leuven OSM snapshot
 - `src/components/DigitalTwin.jsx`: scenarios, rationale, before/after comparison
 - `src/components/Dialogs.jsx`: accessible approval, evidence, and handover drawers
 - `src/components/DomainScreens.jsx`: traffic, heat, data health, roadmap, log, impact, alerts
 - `tests/`: lifecycle and DOM interaction checks. Motion is replaced by a deterministic adapter in DOM tests; these checks do not verify browser layout or animation.
+
+## Geographic context and provenance
+
+Every map persistently displays **LEUVEN URBAN MODEL / Illustrative operational scenario / Synthetic demonstration data**. Real geometry provides spatial context only. The prototype is not connected to Leuven municipal systems and is not a calibrated or surveyed digital twin.
+
+The snapshot includes real central Leuven street hierarchy, pedestrian areas, building footprints, water features and green spaces. Source: [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright), licensed under [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/). Source feature identifiers are retained. Download the normalized database from `data/leuven-urban-model.json` in the deployed app, or inspect `src/data/city-model.json`. That database remains ODbL; application code is separate.
+
+Only explicit OSM height values produce building extrusions. Missing heights remain flat footprints; floor counts are not converted into invented measured heights. Historic features show mapped sites, not an authoritative legal heritage boundary. Synthetic traffic colors are applied only to roads that permit the modelled road mode; pedestrian routes remain distinct. The displayed sensor positions and cooling response points are proposed demonstration placements, not a real inventory.
+
+To regenerate from an OSM API XML extract covering the documented bbox, run `python scripts/build-city-model.py /path/to/leuven-osm.xml`. The snapshot is bundled locally, so maps do not depend on tile servers during a presentation.
 
 ## Data semantics
 

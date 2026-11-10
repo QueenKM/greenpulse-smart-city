@@ -3523,3 +3523,12 @@ button:hover .muted {
     font-size: 10px;
   }
 }
+/* Leuven map presentation: operational legend and source remain separate. */
+.map-surface.geo-context .map-heading h2 {
+  font-size: 20px;
+}
+@media (min-width: 1680px) {
+  .map-surface.geo-context .map-heading h2 {
+    font-size: 24px;
+  }
+}

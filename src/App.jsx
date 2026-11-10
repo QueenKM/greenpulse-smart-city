@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useRef, useState } from "react";
+import React, { useCallback, useEffect, useReducer, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
@@ -92,7 +92,7 @@ const sections = [
   ],
 ];
 const subtitles = {
-  Overview: "One city. A clearer picture.",
+  Overview: "Leuven, Belgium. A clearer operational picture.",
   "Alert Center": "Prioritise what needs a human decision.",
   "City Map": "A shared operational picture of the city.",
   "Data Health": "Trust begins at the source.",
@@ -141,7 +141,17 @@ const layerNames = [
   ["sensors", "Sensors", Radio],
 ];
 
-function LocalClock({ now }) {
+function LocalClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const syncClock = () => setNow(new Date());
+    const timer = setInterval(syncClock, 1000);
+    document.addEventListener("visibilitychange", syncClock);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", syncClock);
+    };
+  }, []);
   return (
     <div className="demo-clock" title={CITY_TIME_ZONE}>
       <span className="eyebrow">CURRENT LOCAL TIME</span>
@@ -211,7 +221,7 @@ function IncidentPanel({ onCompare, selected, onEvidence }) {
       </h2>
       <p className="incident-location">
         <Navigation size={13} />
-        Historic Centre <span>H-03</span>
+        Leuven · Historic Centre <span>H-03</span>
       </p>
       <div className="incident-status">
         <Clock3 size={14} />
@@ -529,24 +539,12 @@ export default function App() {
   const [demo, setDemo] = useState(false),
     [step, setStep] = useState(0),
     [toast, setToast] = useState("");
-  const [now, setNow] = useState(() => new Date());
-  const currentTime = formatCityTime(now);
-  useEffect(() => {
-    const syncClock = () => setNow(new Date());
-    const timer = setInterval(syncClock, 1000);
-    document.addEventListener("visibilitychange", syncClock);
-    return () => {
-      clearInterval(timer);
-      document.removeEventListener("visibilitychange", syncClock);
-    };
-  }, []);
-  const currentTimeRef = useRef(currentTime);
-  currentTimeRef.current = currentTime;
+  const selectMapIncident = useCallback(() => setSelected(true), []);
   const active = ["active", "paused"].includes(state.status);
   useEffect(() => {
     if (state.status !== "active") return;
     const t = setInterval(
-      () => dispatch({ type: "TICK", time: currentTimeRef.current }),
+      () => dispatch({ type: "TICK", time: formatCityTime() }),
       1000,
     );
     return () => clearInterval(t);
@@ -557,7 +555,7 @@ export default function App() {
       () =>
         dispatch({
           type: "MEASUREMENT_COMPLETE",
-          time: currentTimeRef.current,
+          time: formatCityTime(),
         }),
       5000,
     );
@@ -622,7 +620,7 @@ export default function App() {
     if (next === 5) setPage("Overview");
     if (next === 6) {
       setPage("KPI & Impact");
-      if (active) dispatch({ type: "CLOSE", time: currentTimeRef.current });
+      if (active) dispatch({ type: "CLOSE", time: formatCityTime() });
     }
   };
   const nextStep = () => {
@@ -932,15 +930,15 @@ export default function App() {
                   <small>active alerts</small>
                 </span>
               </button>
-              <LocalClock now={now} />
+              <LocalClock />
             </div>
           ) : (
             <div className="heading-context">
               <Tag tone={page === "Digital Twin" ? "amber" : "cyan"} dot>
                 {page === "Digital Twin" ? "SIMULATED" : "DEMONSTRATION"}
               </Tag>
-              <span>Historic Centre · H-03</span>
-              <LocalClock now={now} />
+              <span>Leuven · Historic Centre · H-03</span>
+              <LocalClock />
             </div>
           )}
         </header>
@@ -952,7 +950,7 @@ export default function App() {
               className={`overview-layout ${page === "City Map" ? "map-page" : ""}`}
             >
               <div className="operations-stage">
-                <section className="map-surface">
+                <section className="map-surface geo-context">
                   <div className="map-heading">
                     <div>
                       <span className="eyebrow">
@@ -960,17 +958,17 @@ export default function App() {
                         CITY OPERATIONS
                       </span>
                       <h2>
-                        Historic Centre<span>H-03</span>
+                        Leuven historic centre<span>H-03</span>
                       </h2>
                     </div>
                     <div className="map-heading-note">
                       <ScanLine size={14} />
-                      Operational perspective
+                      Belgium · OSM geography
                     </div>
                   </div>
                   <CityMap
                     layers={layers}
-                    onSelect={() => setSelected(true)}
+                    onSelect={selectMapIncident}
                     after={false}
                   />
                   <LayerBar layers={layers} setLayers={setLayers} />
@@ -989,13 +987,13 @@ export default function App() {
                     </span>
                     <span className="heritage-key">
                       <i />
-                      Protected heritage
+                      Mapped historic sites
                     </span>
                   </div>
                   <div className="map-location-note">
                     <span className="location-cross">+</span>
                     <span>
-                      HISTORIC CENTRE <b>H-03</b>
+                      LEUVEN HISTORIC CENTRE <b>H-03</b>
                     </span>
                     <Tag
                       tone={
@@ -1025,7 +1023,7 @@ export default function App() {
                   <ActivePanel
                     state={state}
                     dispatch={(action) =>
-                      dispatch({ ...action, time: currentTimeRef.current })
+                      dispatch({ ...action, time: formatCityTime() })
                     }
                     onHandover={() => setHandover(true)}
                     onClose={() => setCloseConfirm(true)}
@@ -1072,8 +1070,9 @@ export default function App() {
             Human-led decisions. AI-supported intelligence.
           </span>
           <span>
-            Illustrative city model<span className="footer-sep">/</span>No live
-            municipal systems connected
+            Leuven · OpenStreetMap geography
+            <span className="footer-sep">/</span>No live municipal systems
+            connected
           </span>
           <span>
             GREENPULSE<span className="footer-version">CONTROL ROOM · 02</span>
@@ -1088,7 +1087,7 @@ export default function App() {
           dispatch({
             type: "APPROVE",
             humanApproved: true,
-            time: currentTime,
+            time: formatCityTime(),
             duration: options?.duration,
             routeGuidance: options?.routeGuidance,
             note: options?.note,
@@ -1108,7 +1107,12 @@ export default function App() {
         open={handover}
         onClose={() => setHandover(false)}
         onConfirm={(operator, note) => {
-          dispatch({ type: "HANDOVER", operator, note, time: currentTime });
+          dispatch({
+            type: "HANDOVER",
+            operator,
+            note,
+            time: formatCityTime(),
+          });
           setHandover(false);
           setToast(`Accountability transferred to ${operator}.`);
         }}
@@ -1157,7 +1161,7 @@ export default function App() {
               <button
                 className="button primary"
                 onClick={() => {
-                  dispatch({ type: "CLOSE", time: currentTimeRef.current });
+                  dispatch({ type: "CLOSE", time: formatCityTime() });
                   setCloseConfirm(false);
                   navigate("KPI & Impact");
                 }}

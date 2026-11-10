@@ -2839,3 +2839,103 @@
     margin-top: 2px;
   }
 }
+
+/* Keep semantic evidence visible when the shell supplies the page title. */
+.ds-screen .impact-chart-evidence {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.ds-screen .impact-chart-evidence > .ds-tag {
+  font-size: 10px;
+  letter-spacing: 0.75px;
+}
+.ds-screen .impact-focus {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 0 15px;
+  border-top: 1px solid #203640;
+  color: #9ab1bf;
+  font-size: 12px;
+  line-height: 1.65;
+  flex-wrap: wrap;
+}
+.ds-screen .impact-focus > strong {
+  font-size: 12px;
+  font-weight: 600;
+  color: #d5e5ed;
+}
+.ds-screen .impact-focus > span > b {
+  font-weight: 500;
+  color: #bdd8e2;
+}
+.ds-screen .impact-focus > small {
+  margin-left: auto;
+  font-size: 10px;
+  color: #648394;
+}
+.ds-screen .impact-bar-chart .recharts-rectangle {
+  transition: fill-opacity 0.2s ease;
+  cursor: pointer;
+}
+.ds-screen .ds-chart-key {
+  font-size: 10px;
+}
+.ds-screen .ds-chart-caption {
+  flex-wrap: wrap;
+  line-height: 1.6;
+  font-size: 11px;
+}
+@media (max-height: 820px) and (min-width: 851px) {
+  .ds-screen .impact-focus {
+    padding: 8px 0 10px;
+    font-size: 11px;
+    gap: 5px 10px;
+  }
+  .ds-screen .impact-focus > small {
+    display: none;
+  }
+  .ds-screen .impact-chart-evidence {
+    gap: 9px;
+  }
+  .ds-screen .impact-chart-evidence > .ds-tag {
+    font-size: 9px;
+  }
+  .ds-screen .impact-bar-chart {
+    min-height: 200px;
+  }
+  .ds-screen .ds-chart-caption {
+    font-size: 10px;
+    padding: 10px 0;
+  }
+}
+@media (max-width: 650px) {
+  .ds-screen .impact-chart-evidence {
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .ds-screen .impact-chart-evidence > .ds-tag {
+    font-size: 10px;
+  }
+  .ds-screen .impact-focus {
+    gap: 7px;
+    font-size: 12px;
+  }
+  .ds-screen .impact-focus > strong {
+    width: 100%;
+  }
+  .ds-screen .impact-focus > small {
+    margin-left: 0;
+    width: 100%;
+  }
+  .ds-screen .ds-chart-caption {
+    justify-content: flex-start;
+    gap: 6px 15px;
+  }
+  .ds-screen .ds-chart-caption > span:last-child {
+    width: 100%;
+  }
+}

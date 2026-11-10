@@ -80,6 +80,31 @@ test(
     t.after(cleanup);
     render(React.createElement(App));
     assert.ok(screen.getByText("TARGET-STATE PROTOTYPE"));
+    await waitFor(() => assert.ok(document.querySelector(".geo-camera")), {
+      timeout: 3000,
+    });
+    assert.ok(screen.getByText("LEUVEN URBAN MODEL"));
+    assert.ok(screen.getByText("Illustrative operational scenario"));
+    const geographyCamera = document.querySelector(".geo-camera");
+    const originalCamera = geographyCamera.getAttribute("transform");
+    click("Zoom in");
+    assert.notEqual(geographyCamera.getAttribute("transform"), originalCamera);
+    click("Reset map view");
+    assert.equal(geographyCamera.getAttribute("transform"), originalCamera);
+    click("Show mapped 3D building heights");
+    assert.ok(screen.getByRole("button", { name: "Show 2D map" }));
+    click("Show 2D map");
+    click("Map data sources");
+    assert.ok(screen.getByRole("region", { name: "Map data provenance" }));
+    assert.ok(screen.getByText("9,119"));
+    click("Close map data sources");
+    click("Scenario air-quality station AQ-04");
+    assert.ok(
+      screen.getByText(
+        "Synthetic demonstration data · no physical device is represented.",
+      ),
+    );
+    click("Close sensor details");
     assert.equal(screen.queryByText("Signal Plan H03"), null);
     for (const name of [
       "Alert Center",
