@@ -1,21 +1,1163 @@
-import React,{useState}from'react';import{motion,AnimatePresence}from'framer-motion';import{Activity,AlertTriangle,BarChart3,BrainCircuit,Building2,Car,ChevronRight,Clock3,Database,History,Layers3,Leaf,Map,MapPin,Menu,Navigation,Play,ShieldCheck,Sparkles,ThermometerSun,Users,X,Radio,BookOpen,Pause,Square,UserRound,RefreshCw}from'lucide-react';import{Area,AreaChart,Bar,BarChart,CartesianGrid,Legend,Line,ResponsiveContainer,Tooltip,XAxis,YAxis}from'recharts';
-const ID='INC-2026-1109-H03',steps=['Alert','Evidence','Prediction','Scenarios','Approval','Intervention','Impact'],pages=['Overview','Overview','Mobility & Emissions','Digital Twin','Digital Twin','Overview','KPI & Impact'];
-const traffic=[{t:'08:00',live:38,model:40},{t:'08:30',live:47,model:48},{t:'09:00',live:58,model:60},{t:'09:30',live:72,model:74},{t:'10:00',model:82},{t:'10:30',model:87}],impact=[{kpi:'Congestion',pred:12,actual:10.8},{kpi:'PM2.5',pred:8,actual:7.1},{kpi:'Travel time',pred:14,actual:12.6}],scenarios=[['Do nothing',87,34,33,41],['Adaptive signals',66,29,25,88],['Traffic diversion',61,28,23,81]],life=['Detected','Validated','Simulated','Awaiting Approval','Active','Monitoring','Measuring','Measured','Closed'];
-const nav=[['OPERATIONS',[['Overview',Activity],['Alert Center',AlertTriangle],['City Map',Map],['Data Health',Database]]],['DECISION INTELLIGENCE',[['Mobility & Emissions',Car],['Heat & Climate',ThermometerSun],['Digital Twin',Layers3]]],['GOVERNANCE',[['Decision Log',History],['KPI & Impact',BarChart3]]]];
-const feeds=[['Traffic T12–T18','Healthy','18 sec','98%'],['AQ-04','Healthy','52 sec','98%'],['Parking P1–P4','Healthy','27 sec','97%'],['AVL','Healthy','14 sec','96%'],['Weather W-01','Healthy','2 min','99%'],['AQ-07','Maintenance','21 min','0%'],['Visitor flow','Delayed','11 min','82%'],['Historic GIS','Reference','6 h','100%']];
-function P({children,t='cyan'}){return <span className={'pill '+t}>{children}</span>}function Type({v}){return <P t={{LIVE:'cyan',MODELLED:'purple',SIMULATED:'amber',MEASURED:'green'}[v]}>{v}</P>}function Card({l,v,m,t='cyan',type}){return <div className="card"><span>{l}</span><b className={t}>{v}</b><small>{m}</small>{type&&<Type v={type}/>}</div>}
-function City({onHot,after}){const[layer,setLayer]=useState('Risks');return <div className="city"><div className="streets"/><div className={'wash '+layer.toLowerCase()}/><button className={'hot '+(after?'after':'')} onClick={onHot}/><i className="warm"/><i className="ok"/><i className="heritage"/><div className="maptags"><P><Navigation size={12}/>ILLUSTRATIVE CITY MODEL</P><P t="purple">HERITAGE LAYER</P></div><div className="layers">{['Risks','Traffic','Heat','Heritage'].map(x=><button className={layer===x?'on':''} onClick={()=>setLayer(x)}>{x}</button>)}</div><div className="mapnote"><Building2 size={16}/><b>Historic Centre H-03</b><small>Protected streets · temporary interventions only</small></div></div>}
-function Health(){return <div className="panel"><h3>Data Health</h3><small>14/17 operational feeds · quality 96%</small>{feeds.map(f=><div className="feed"><span>{f[0]}<small>{f[1]} · {f[2]}</small></span><b>{f[3]}</b></div>)}</div>}function Events(){return <div className="panel"><h3>Live Event Stream <Radio size={15}/></h3>{[['10:01:42','Traffic T14 speed ↓ 17 km/h'],['10:01:18','AQ-04 NO₂ → 47 µg/m³'],['10:00:51','Signal Plan H03 monitoring'],['09:59:58','Prediction recalculated']].map(e=><div className="event"><code>{e[0]}</code>{e[1]}</div>)}</div>}
-function Scenarios({select}){return <div className="scenarios">{scenarios.map((s,i)=><div className={'panel scenario '+(i===1?'best':'')}>{i===1&&<P t="green"><Sparkles size={12}/>Recommended</P>}<h3>{s[0]}</h3>{[['Congestion',s[1]+'%'],['PM2.5',s[2]+' µg/m³'],['Travel time',s[3]+' min']].map(r=><div className="row"><span>{r[0]}</span><b>{r[1]}</b></div>)}<div className="row"><span>Decision score</span><b>{s[4]}/100</b></div>{i===1&&<button className="primary" onClick={select}>Select scenario</button>}</div>)}</div>}
-export default function App(){const[page,setPage]=useState('Overview'),[mobile,setMobile]=useState(false),[state,setState]=useState('Awaiting Approval'),[hot,setHot]=useState(false),[approval,setApproval]=useState(false),[intervention,setIntervention]=useState(false),[measuring,setMeasuring]=useState(false),[evidence,setEvidence]=useState(false),[demo,setDemo]=useState(false),[step,setStep]=useState(0),[after,setAfter]=useState(false);const active=['Active','Monitoring','Paused','Handed over'].includes(state);const go=n=>{setPage(n);setMobile(false);setDemo(false)};function next(){if(step===6){setDemo(false);setStep(0);setPage('Overview');return}let n=step+1;setStep(n);setPage(pages[n]);setHot(n===1);if(n===4){setState('Awaiting Approval');setApproval(true)}if(n===5){setApproval(false);setState('Monitoring');setIntervention(true)}if(n===6){setIntervention(false);setState('Measured')}}
-return <div className="app">{mobile&&<button className="scrim" onClick={()=>setMobile(false)}/>}<aside className={mobile?'open':''}><div className="brand"><i>G</i><div><b>GreenPulse</b><small>Target-state Control Room</small></div>{mobile&&<button onClick={()=>setMobile(false)}><X/></button>}</div>{nav.map(g=><section><label>{g[0]}</label>{g[1].map(([n,I])=><button className={page===n?'sel':''} onClick={()=>go(n)}><I size={16}/>{n}<ChevronRight size={14}/></button>)}</section>)}<button className="demo" onClick={()=>{setDemo(true);setStep(0);setPage('Overview');setState('Detected')}}><Play size={15}/>Presentation Demo</button></aside><main><header><div><button className="menu" onClick={()=>setMobile(true)}><Menu/></button><small>URBAN DECISION INTELLIGENCE</small><h1>{page}</h1></div><div><button className="evidence" onClick={()=>setEvidence(!evidence)}>Evidence</button><P>14/17 feeds</P>{active&&<P t="green">1 intervention</P>}<code>10:01:42</code></div></header>{demo&&<div className="demobar"><div>{steps.map((x,i)=><React.Fragment><i className={i<=step?'on':''}>{i+1}</i>{i<6&&<em/>}</React.Fragment>)}</div><b>Step {step+1}: {steps[step]}</b><button onClick={next}>{step===6?'Finish demo':'Next step'} →</button></div>}<div className="incident"><P t="red">{ID}</P><b>Traffic & Air Quality Deterioration</b><span>Historic Centre · H-03</span><P t={active||state==='Measured'?'green':state==='Awaiting Approval'?'amber':'cyan'}>{state}</P></div>
-{page==='Overview'&&<><div className="metrics"><Card l="Traffic speed" v="19 km/h" m="T12–T18 · 18 sec" t="red" type="LIVE"/><Card l="Congestion forecast" v="82%" m="in 38 minutes" t="purple" type="MODELLED"/><Card l="PM2.5" v="27 µg/m³" m="AQ-04 · 52 sec" t="red" type="LIVE"/><Card l="Data quality" v="96%" m="1 degraded feed"/><Card l="Active alerts" v="3" m={state} t="amber"/></div><div className="maingrid"><div className="mapwrap"><City onHot={()=>setHot(true)}/>{hot&&<div className="drawer"><button onClick={()=>setHot(false)}><X/></button><P t="amber">{state}</P><h3>Historic Centre · H-03</h3><div className="twocol"><Card l="Congestion" v="72%" m="LIVE" t="red"/><Card l="Forecast" v="82%" m="MODELLED" t="purple"/></div><button className="primary" onClick={()=>{setPage('Digital Twin');setHot(false);setState('Simulated')}}>Compare scenarios</button></div>}</div><div className="stack">{active?<div className="panel active"><P>ACTIVE INTERVENTION</P><h3>Signal Plan H03</h3><code>00:47:32 remaining</code><div className="row"><span>Owner</span><b>Mobility</b></div><div className="row"><span>State</span><b>{state}</b></div><button onClick={()=>setIntervention(true)}>Manage</button></div>:<div className="panel pending"><P t="amber">PENDING DECISION</P><h3>Signal Plan H03</h3><small>No intervention active.</small><button onClick={()=>setPage('Digital Twin')}>Review scenarios</button></div>}<Health/><Events/></div></div></>}
-{page==='Alert Center'&&<div className="panel"><h2>Incident Lifecycle</h2><div className="life">{life.map(x=><i className={state===x?'current':''}>{x}</i>)}</div></div>}{page==='City Map'&&<City onHot={()=>setHot(true)}/>} {page==='Data Health'&&<div className="split"><Health/><Events/></div>}
-{page==='Mobility & Emissions'&&<div className="split"><div className="panel"><h2>Observed vs forecast congestion</h2><div className="chart"><ResponsiveContainer><AreaChart data={traffic}><CartesianGrid stroke="#17323a" vertical={false}/><XAxis dataKey="t" stroke="#64748b"/><YAxis stroke="#64748b"/><Tooltip/><Legend/><Area dataKey="live" stroke="#38bdf8" fill="#38bdf820"/><Line dataKey="model" stroke="#a78bfa" strokeDasharray="6 5"/></AreaChart></ResponsiveContainer></div></div><Events/></div>}
-{page==='Heat & Climate'&&<><div className="four"><Card l="Current temperature" v="33.7°C" m="W-01 · 2 min" t="amber" type="LIVE"/><Card l="Peak apparent temp." v="40.3°C" m="forecast 16:00" t="purple" type="MODELLED"/><Card l="Population exposed" v="18.4k" m="zone estimate" t="purple" type="MODELLED"/><Card l="Cooling access" v="62%" m="current" type="LIVE"/></div><div className="panel heat"><P t="amber">MVP RESPONSE BUNDLE</P><h3>Cooling points + citizen alerts + outdoor operations adjustment</h3><div className="twocol"><Card l="Current access" v="62%" m="baseline" type="LIVE"/><Card l="Simulated access" v="81%" m="target-state scenario" t="amber" type="SIMULATED"/></div></div></>}
-{page==='Digital Twin'&&<><div className="panel"><h2>Scenario comparison <Type v="SIMULATED"/></h2><Scenarios select={()=>{setState('Awaiting Approval');setApproval(true)}}/></div><div className="split"><div><div className="toggle"><button className={!after?'on':''} onClick={()=>setAfter(false)}>Before</button><button className={after?'on':''} onClick={()=>setAfter(true)}>After</button></div><City after={after}/></div><div className="panel"><h3>Why Scenario B?</h3>{[['Environmental',91],['Mobility',88],['Accessibility',94],['Historic compatibility',100],['Implementation effort',63]].map(x=><div className="score"><span>{x[0]}<b>{x[1]}</b></span><i><em style={{width:x[1]+'%'}}/></i></div>)}</div></div></>}
-{page==='Decision Log'&&<div className="panel"><div className="life">{life.map(x=><i className={state===x?'current':''}>{x}</i>)}</div><div className="log">{[['09:14','Detected','GreenPulse'],['09:15','Validated','Duty Operator'],['09:18','Simulated','Digital Twin'],['09:21','Awaiting Approval','Operator #02'],[active?'09:23':'—',active?state:'Pending','Mobility Operations']].map(x=><div><code>{x[0]}</code><b>{x[1]}</b><span>{x[2]}</span></div>)}</div></div>}
-{page==='KPI & Impact'&&<>{measuring&&<div className="panel measure"><RefreshCw/><h2>Measuring outcome…</h2><button onClick={()=>{setMeasuring(false);setState('Measured')}}>Complete measurement</button></div>}{!measuring&&state==='Measured'&&<><div className="four"><Card l="Congestion reduction" v="−10.8%" m="predicted −12%" t="green" type="MEASURED"/><Card l="PM2.5 reduction" v="−7.1%" m="predicted −8%" t="green" type="MEASURED"/><Card l="Travel time" v="−12.6%" m="predicted −14%" t="green" type="MEASURED"/><Card l="Prediction error" v="1.2 pp" m="closed-loop learning"/></div><div className="panel"><h2>Predicted vs Actual</h2><div className="chart"><ResponsiveContainer><BarChart data={impact}><CartesianGrid stroke="#17323a" vertical={false}/><XAxis dataKey="kpi" stroke="#64748b"/><YAxis stroke="#64748b"/><Tooltip/><Legend/><Bar dataKey="pred" fill="#a78bfa"/><Bar dataKey="actual" fill="#34d399"/></BarChart></ResponsiveContainer></div></div></>}</>}
-<AnimatePresence>{approval&&<motion.div className="modalbg" initial={{opacity:0}} animate={{opacity:1}}><div className="modal"><button onClick={()=>setApproval(false)}><X/></button><P t="green">Scenario B · 88/100</P><h2>Approve intervention</h2>{[['Incident',ID],['Action','Adaptive signals + route guidance'],['Operator','Control Room #02'],['Owner','Mobility Operations'],['Escalation','NO₂ > 60 µg/m³']].map(x=><div className="row"><span>{x[0]}</span><b>{x[1]}</b></div>)}<button className="primary" onClick={()=>{setApproval(false);setState('Active');setIntervention(true)}}>Approve & Activate</button></div></motion.div>}</AnimatePresence>
-<AnimatePresence>{intervention&&<motion.div className="modalbg" initial={{opacity:0}} animate={{opacity:1}}><div className="modal"><button onClick={()=>setIntervention(false)}><X/></button><P>ACTIVE · {state}</P><h2>Signal Plan H03</h2>{[['Operator','Control Room #02'],['Supporting dept.','Environment'],['Next review','10:05'],['Escalation','NO₂ > 60']].map(x=><div className="row"><span>{x[0]}</span><b>{x[1]}</b></div>)}<div className="actions"><button onClick={()=>setState('Paused')}><Pause/>Pause</button><button onClick={()=>setState('Handed over')}><UserRound/>Handover</button><button className="primary" onClick={()=>{setIntervention(false);setMeasuring(true);setState('Measuring');setPage('KPI & Impact')}}><Square/>Close</button></div></div></motion.div>}</AnimatePresence>
-<AnimatePresence>{evidence&&<motion.div className="evidencePanel" initial={{x:30}} animate={{x:0}}><button onClick={()=>setEvidence(false)}><X/></button><P t="purple"><BookOpen size={12}/>EVIDENCE → DESIGN</P><h3>Benchmark rationale</h3>{[['Tartu','Integrated digital services','Interoperability principle'],['Leuven','Climate-neutral governance','Cross-department coordination'],['Pavia','Heritage-sensitive Digital Twin','Historic constraint layer']].map(x=><div><b>{x[0]}</b><small>{x[1]}</small><span>→ {x[2]}</span></div>)}</motion.div>}</AnimatePresence></main></div>}
+import React, { useEffect, useReducer, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Activity,
+  ArrowDown,
+  ArrowRight,
+  ArrowUpRight,
+  Bell,
+  BookOpen,
+  Building2,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  CircleHelp,
+  Clock3,
+  Database,
+  Fingerprint,
+  Gauge,
+  GitBranch,
+  Globe2,
+  Layers3,
+  Leaf,
+  Map,
+  Menu,
+  Navigation,
+  Pause,
+  Play,
+  Radio,
+  RotateCcw,
+  Route,
+  ShieldCheck,
+  Thermometer,
+  Users,
+  Wind,
+  X,
+  ChartNoAxesCombined,
+  History,
+  PanelLeftClose,
+  ScanLine,
+  CircleDot,
+} from "lucide-react";
+import CityMap from "./components/CityMap";
+import DigitalTwin from "./components/DigitalTwin";
+import {
+  DataHealth,
+  TrafficScreen,
+  HeatScreen,
+  Roadmap,
+  DecisionLog,
+  ImpactScreen,
+  AlertCenter,
+} from "./components/DomainScreens";
+import {
+  ApprovalDialog,
+  EvidenceDrawer,
+  HandoverDialog,
+} from "./components/Dialogs";
+import { lifecycleReducer, initialLifecycle } from "./lifecycle.mjs";
+
+const ID = "INC-2026-1109-H03";
+const sections = [
+  [
+    "OPERATIONS",
+    [
+      ["Overview", Activity],
+      ["Alert Center", Bell],
+      ["City Map", Map],
+      ["Data Health", Database],
+    ],
+  ],
+  [
+    "DECISION INTELLIGENCE",
+    [
+      ["Traffic & Emissions", Route],
+      ["Urban Heat", Thermometer],
+      ["Digital Twin", Layers3],
+    ],
+  ],
+  [
+    "GOVERNANCE",
+    [
+      ["Decision Log", History],
+      ["KPI & Impact", ChartNoAxesCombined],
+      ["Implementation Roadmap", GitBranch],
+    ],
+  ],
+];
+const subtitles = {
+  Overview: "One city. A clearer picture.",
+  "Alert Center": "Prioritise what needs a human decision.",
+  "City Map": "A shared operational picture of the city.",
+  "Data Health": "Trust begins at the source.",
+  "Traffic & Emissions": "Understand the pressure. Anticipate the next hour.",
+  "Urban Heat": "Anticipate heat. Protect the most exposed.",
+  "Digital Twin": "Compare interventions before acting in the physical city.",
+  "Decision Log": "Every decision has a human owner.",
+  "KPI & Impact": "From modelled benefit to measured outcome.",
+  "Implementation Roadmap":
+    "GreenPulse is the destination. A progressive path to get there.",
+};
+const demoSteps = [
+  "Alert",
+  "Evidence",
+  "Prediction",
+  "Scenarios",
+  "Human approval",
+  "Intervention",
+  "Measured impact",
+];
+const maturityInfo = {
+  CURRENT: [
+    "Current inventory",
+    "Available municipal systems",
+    "Fragmented data",
+    "Manual coordination",
+  ],
+  MVP: [
+    "First connected workflow",
+    "Priority operational sources",
+    "Traffic prediction & human approval",
+    "Baseline KPIs & decision log",
+  ],
+  TARGET: [
+    "GreenPulse target state",
+    "Urban Data Hub & Digital Twins",
+    "AI-supported scenario intelligence",
+    "Closed-loop measurement",
+  ],
+};
+const layerNames = [
+  ["traffic", "Traffic", Route],
+  ["air", "Air Quality", Wind],
+  ["heat", "Urban Heat", Thermometer],
+  ["heritage", "Heritage", Building2],
+  ["sensors", "Sensors", Radio],
+];
+
+function Tag({ tone = "cyan", children, dot = false }) {
+  return (
+    <span className={`tag ${tone}`}>
+      {dot && <i />}
+      {children}
+    </span>
+  );
+}
+function LayerBar({ layers, setLayers }) {
+  return (
+    <div className="layer-bar" aria-label="Map layers">
+      <span className="layer-label">
+        <Layers3 size={14} />
+        LAYERS
+      </span>
+      {layerNames.map(([key, name, Icon]) => (
+        <button
+          key={key}
+          aria-pressed={!!layers[key]}
+          className={layers[key] ? "selected" : ""}
+          onClick={() => setLayers((v) => ({ ...v, [key]: !v[key] }))}
+        >
+          <Icon size={14} />
+          {name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function IncidentPanel({ onCompare, selected, onEvidence }) {
+  return (
+    <section
+      className={`incident-panel ${selected ? "focused" : ""}`}
+      aria-label="Historic Centre incident"
+    >
+      <div className="incident-top">
+        <span className="eyebrow">PRIORITY INCIDENT</span>
+        <Tag tone="red" dot>
+          CRITICAL
+        </Tag>
+      </div>
+      <div className="incident-id">{ID}</div>
+      <h2>
+        Traffic & Air Quality
+        <br />
+        Deterioration
+      </h2>
+      <p className="incident-location">
+        <Navigation size={13} />
+        Historic Centre <span>H-03</span>
+      </p>
+      <div className="incident-status">
+        <Clock3 size={14} />
+        <span>AWAITING APPROVAL</span>
+        <span className="status-line" />
+      </div>
+      <div className="incident-observed">
+        <div className="section-line">
+          <Tag tone="cyan" dot>
+            LIVE
+          </Tag>
+          <span>Synthetic feed · 18 sec ago</span>
+        </div>
+        <div className="observed-values">
+          <div>
+            <span>Traffic speed</span>
+            <strong>
+              19<small> km/h</small>
+            </strong>
+          </div>
+          <div>
+            <span>Congestion</span>
+            <strong>
+              72<small>%</small>
+            </strong>
+          </div>
+          <div>
+            <span>PM2.5</span>
+            <strong>
+              27<small> µg/m³</small>
+            </strong>
+          </div>
+        </div>
+      </div>
+      <div className="prediction-strip">
+        <div>
+          <Tag tone="purple">MODELLED</Tag>
+          <p>
+            Congestion in <b>38 minutes</b>
+          </p>
+        </div>
+        <strong>
+          82<small>%</small>
+          <ArrowUpRight size={21} />
+        </strong>
+        <svg viewBox="0 0 128 40" aria-hidden="true">
+          <path
+            d="M0 36C18 34 16 28 31 29S48 17 62 19 75 11 88 12 105 0 128 2"
+            fill="none"
+            stroke="#a78bfa"
+            strokeWidth="2"
+          />
+        </svg>
+      </div>
+      <div className="ai-recommendation">
+        <div className="eyebrow purple-text">
+          <GitBranch size={14} /> AI RECOMMENDATION
+        </div>
+        <h3>
+          Adaptive traffic signal timing
+          <br />
+          <span>+ targeted route guidance</span>
+        </h3>
+        <div className="expected">
+          <span>Expected improvement</span>
+          <div>
+            <b>
+              −12%<small>Congestion</small>
+            </b>
+            <b>
+              −8%<small>Emissions</small>
+            </b>
+          </div>
+        </div>
+      </div>
+      <button className="button primary compare-button" onClick={onCompare}>
+        Compare scenarios
+        <ArrowRight size={16} />
+      </button>
+      <button className="text-button incident-evidence" onClick={onEvidence}>
+        <BookOpen size={13} /> Review supporting evidence
+        <ChevronRight size={13} />
+      </button>
+    </section>
+  );
+}
+
+function ActivePanel({ state, dispatch, onHandover, onClose, onImpact }) {
+  const paused = state.status === "paused";
+  const countdown = new Date(state.remaining * 1000)
+    .toISOString()
+    .slice(11, 19);
+  if (state.status === "measuring" || state.status === "measured")
+    return (
+      <section className="incident-panel outcome-panel">
+        <Tag tone={state.status === "measured" ? "green" : "purple"}>
+          {state.status === "measured" ? "MEASURED" : "MEASURING OUTCOME"}
+        </Tag>
+        <div className="outcome-orbit">
+          <Activity size={38} />
+        </div>
+        <h2>
+          {state.status === "measured"
+            ? "The loop is complete."
+            : "A decision is only the beginning."}
+        </h2>
+        <p className="muted">
+          {state.status === "measured"
+            ? "The completed measurement window is ready for review. Compare the actual outcome with the model’s prediction."
+            : "The intervention has closed. GreenPulse is comparing the synthetic observation window with its baseline."}
+        </p>
+        <button className="button primary" onClick={onImpact}>
+          View {state.status === "measured" ? "measured impact" : "measurement"}
+          <ArrowRight size={16} />
+        </button>
+        <p className="accountability-note">
+          <Fingerprint size={15} />
+          Accountable operator
+          <br />
+          {state.operator}
+        </p>
+      </section>
+    );
+  return (
+    <section className="incident-panel active-panel">
+      <div className="incident-top">
+        <span className="eyebrow">APPROVED INTERVENTION</span>
+        <Tag tone={paused ? "amber" : "green"} dot>
+          {paused ? "PAUSED" : "ACTIVE"}
+        </Tag>
+      </div>
+      <div className="incident-id">{ID}</div>
+      <h2>Signal Plan H03</h2>
+      <p className="muted">
+        Adaptive signals
+        {state.routeGuidance ? " + targeted route guidance" : ""}
+      </p>
+      <div className={`countdown ${paused ? "paused" : ""}`}>
+        <span className="eyebrow">TIME REMAINING</span>
+        <strong>{countdown}</strong>
+        <span className="monitoring-label">
+          <CircleDot size={13} />
+          {paused
+            ? state.remaining === 0
+              ? "WINDOW ELAPSED · REVIEW REQUIRED"
+              : "OPERATOR PAUSED"
+            : "MONITORING"}
+        </span>
+        <small className="replay-time-note">
+          Accelerated replay · {state.duration}-minute operating window
+        </small>
+      </div>
+      <dl className="active-details">
+        <div>
+          <dt>Operator</dt>
+          <dd>{state.operator}</dd>
+        </div>
+        <div>
+          <dt>Owner</dt>
+          <dd>Mobility Operations</dd>
+        </div>
+        <div>
+          <dt>Supporting department</dt>
+          <dd>Environment</dd>
+        </div>
+        <div>
+          <dt>Next review</dt>
+          <dd>10:05</dd>
+        </div>
+      </dl>
+      <div className="active-controls">
+        <button
+          className="button secondary"
+          disabled={paused && state.remaining === 0}
+          onClick={() => dispatch({ type: paused ? "RESUME" : "PAUSE" })}
+        >
+          {paused ? <Play size={15} /> : <Pause size={15} />}
+          {paused ? "Resume" : "Pause"}
+        </button>
+        <button className="button secondary" onClick={onHandover}>
+          <Users size={15} />
+          Handover
+        </button>
+      </div>
+      <button className="button close-intervention" onClick={onClose}>
+        Close Intervention
+        <ArrowRight size={15} />
+      </button>
+      <p className="accountability-note">
+        <ShieldCheck size={14} />
+        Activated by a human operator
+      </p>
+    </section>
+  );
+}
+
+const seedEvents = [
+  ["10:01:42", "Traffic T14 speed", "↓ 17 km/h", "cyan"],
+  ["10:01:18", "AQ-04 NO₂", "→ 47 µg/m³", "cyan"],
+  ["10:00:51", "Incident H03", "prediction updated", "purple"],
+  ["10:00:33", "Parking P3 occupancy", "→ 93%", "cyan"],
+  ["09:59:58", "AI prediction", "recalculated", "purple"],
+  ["09:59:41", "AVL feed", "healthy", "cyan"],
+];
+function OperationsBottom({ onHealth, lifecycle }) {
+  const [events, setEvents] = useState(seedEvents);
+  useEffect(() => {
+    let n = 0;
+    const timer = setInterval(() => {
+      n++;
+      const entries = [
+        ["Traffic T14 speed", `↓ ${17 + (n % 3)} km/h`, "cyan"],
+        ["AQ-04 NO₂", "→ 47 µg/m³", "cyan"],
+        ["Incident H03", "prediction updated", "purple"],
+        ["AVL feed", "healthy", "cyan"],
+      ];
+      const e = entries[(n - 1) % entries.length];
+      const t = new Date(Date.UTC(2026, 10, 9, 10, 1, 42) + n * 8000)
+        .toISOString()
+        .slice(11, 19);
+      setEvents((v) => [[t, ...e], ...v].slice(0, 6));
+    }, 8000);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <div className="operations-bottom">
+      <section className="event-stream">
+        <div className="stream-heading">
+          <span className="eyebrow">
+            <Radio size={13} />
+            LIVE EVENT STREAM
+          </span>
+          <span className="stream-live">
+            <i />
+            SYNTHETIC REPLAY
+          </span>
+        </div>
+        <div className="events-viewport">
+          <AnimatePresence initial={false}>
+            {events.slice(0, 3).map((e) => (
+              <motion.div
+                layout
+                key={e[0]}
+                className="event-line"
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+              >
+                <time>{e[0]}</time>
+                <i className={e[3]} />
+                <span>{e[1]}</span>
+                <b>{e[2]}</b>
+                <ArrowUpRight size={13} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      </section>
+      <button className="health-summary" onClick={onHealth}>
+        <div className="health-number">
+          <span className="eyebrow">DATA HEALTH</span>
+          <strong>
+            96<span>%</span>
+          </strong>
+          <span className="muted">6 critical source groups · 1 degraded</span>
+        </div>
+        <div className="mini-feeds">
+          {[
+            ["Traffic", "18 sec"],
+            ["Air Quality", "52 sec"],
+            ["AVL", "14 sec"],
+            ["Weather", "2 min"],
+          ].map(([n, t]) => (
+            <div key={n}>
+              <i />
+              <span>{n}</span>
+              <small>Healthy</small>
+              <time>{t}</time>
+            </div>
+          ))}
+        </div>
+        <ChevronRight size={15} />
+      </button>
+    </div>
+  );
+}
+
+export default function App() {
+  const [page, setPage] = useState("Overview");
+  const [state, dispatch] = useReducer(lifecycleReducer, initialLifecycle);
+  const [layers, setLayers] = useState({
+    traffic: true,
+    air: true,
+    heat: false,
+    heritage: true,
+    sensors: true,
+  });
+  const [approval, setApproval] = useState(false),
+    [evidence, setEvidence] = useState(false),
+    [handover, setHandover] = useState(false);
+  const [mobileNav, setMobileNav] = useState(false),
+    [selected, setSelected] = useState(false),
+    [closeConfirm, setCloseConfirm] = useState(false);
+  const [maturity, setMaturity] = useState("TARGET"),
+    [maturityOpen, setMaturityOpen] = useState(false);
+  const [demo, setDemo] = useState(false),
+    [step, setStep] = useState(0),
+    [toast, setToast] = useState("");
+  const [replaySeconds, setReplaySeconds] = useState(0);
+  const replayClock = new Date(
+    Date.UTC(2026, 10, 9, 10, 1, 42) + replaySeconds * 1000,
+  )
+    .toISOString()
+    .slice(11, 19);
+  useEffect(() => {
+    const timer = setInterval(() => setReplaySeconds((s) => s + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  const replayTimeRef = useRef(replayClock);
+  replayTimeRef.current = replayClock;
+  const active = ["active", "paused"].includes(state.status);
+  useEffect(() => {
+    if (state.status !== "active") return;
+    const t = setInterval(
+      () => dispatch({ type: "TICK", time: replayTimeRef.current }),
+      1000,
+    );
+    return () => clearInterval(t);
+  }, [state.status]);
+  useEffect(() => {
+    if (state.status !== "measuring") return;
+    const t = setTimeout(
+      () =>
+        dispatch({ type: "MEASUREMENT_COMPLETE", time: replayTimeRef.current }),
+      5000,
+    );
+    return () => clearTimeout(t);
+  }, [state.status]);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 3800);
+    return () => clearTimeout(t);
+  }, [toast]);
+  const navigate = (name) => {
+    setPage(name);
+    setMobileNav(false);
+    setSelected(false);
+  };
+  const openApproval = () => {
+    if (state.status === "idle") setApproval(true);
+    else {
+      setToast(
+        active
+          ? "An approved intervention is already in progress."
+          : "Reset the demo to begin a new decision cycle.",
+      );
+      if (active) navigate("Overview");
+    }
+  };
+  const compare = () => navigate("Digital Twin");
+  const reset = () => {
+    setReplaySeconds(0);
+    dispatch({ type: "RESET" });
+    setApproval(false);
+    setHandover(false);
+    setCloseConfirm(false);
+    setEvidence(false);
+    setStep(0);
+    setPage("Overview");
+    setSelected(false);
+    setLayers({
+      traffic: true,
+      air: true,
+      heat: false,
+      heritage: true,
+      sensors: true,
+    });
+  };
+  const demoGo = (next) => {
+    setStep(next);
+    setEvidence(false);
+    setApproval(false);
+    setSelected(false);
+    if (next === 0) setPage("Overview");
+    if (next === 1) {
+      setPage("Overview");
+      setSelected(true);
+      setEvidence(true);
+    }
+    if (next === 2) setPage("Traffic & Emissions");
+    if (next === 3) setPage("Digital Twin");
+    if (next === 4) {
+      setPage("Digital Twin");
+      if (state.status === "idle") setApproval(true);
+    }
+    if (next === 5) setPage("Overview");
+    if (next === 6) {
+      setPage("KPI & Impact");
+      if (active) dispatch({ type: "CLOSE", time: replayTimeRef.current });
+    }
+  };
+  const nextStep = () => {
+    if (step === 4 && state.status === "idle") {
+      setApproval(true);
+      setToast("A human must approve this intervention before continuing.");
+      return;
+    }
+    if (step < 6) demoGo(step + 1);
+    else {
+      setDemo(false);
+      setEvidence(false);
+    }
+  };
+
+  return (
+    <div className={`app-shell ${demo ? "is-presenting" : ""}`}>
+      {mobileNav && (
+        <button
+          className="nav-scrim"
+          aria-label="Close navigation"
+          onClick={() => setMobileNav(false)}
+        />
+      )}
+      <aside className={`sidebar ${mobileNav ? "open" : ""}`}>
+        <a
+          className="brand"
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate("Overview");
+          }}
+          aria-label="GreenPulse Overview"
+        >
+          <span className="brand-symbol">
+            <Activity size={25} strokeWidth={1.8} />
+          </span>
+          <span>
+            <strong>
+              GreenPulse<span>®</span>
+            </strong>
+            <small>Urban Decision Intelligence</small>
+          </span>
+        </a>
+        <div className="workspace-name">
+          <span className="workspace-icon">
+            <Globe2 size={16} />
+          </span>
+          <div>
+            City Control Room<small>Demonstration environment</small>
+          </div>
+          <ChevronRight size={13} />
+        </div>
+        <nav aria-label="Main navigation">
+          {sections.map(([title, items]) => (
+            <section className="nav-section" key={title}>
+              <h2>{title}</h2>
+              {items.map(([name, Icon]) => (
+                <button
+                  key={name}
+                  className={`nav-item ${page === name ? "active" : ""}`}
+                  onClick={() => navigate(name)}
+                  aria-label={name}
+                  aria-current={page === name ? "page" : undefined}
+                >
+                  <Icon size={17} strokeWidth={1.6} />
+                  <span>{name}</span>
+                  {name === "Alert Center" && (
+                    <span className="nav-count">3</span>
+                  )}
+                  {name === "Digital Twin" && (
+                    <span className="nav-ai">AI</span>
+                  )}
+                </button>
+              ))}
+            </section>
+          ))}
+        </nav>
+        <div className="sidebar-bottom">
+          <div className="system-ready">
+            <i />
+            Target-state environment<span>v2.0</span>
+          </div>
+          <button
+            className={`demo-start ${demo ? "running" : ""}`}
+            onClick={() => {
+              reset();
+              setDemo(true);
+            }}
+          >
+            <span>
+              <Play size={14} fill="currentColor" />
+            </span>
+            <div>
+              Presentation Demo<small>Follow the decision journey</small>
+            </div>
+            <ChevronRight size={15} />
+          </button>
+          <div className="operator">
+            <div className="operator-avatar">02</div>
+            <span>
+              Control Room Operator<small>Mobility Operations</small>
+            </span>
+            <ShieldCheck size={16} />
+          </div>
+        </div>
+      </aside>
+      <div className="main-shell">
+        <div className="global-bar">
+          <div className="global-left">
+            <button
+              className="icon-button mobile-menu"
+              aria-label="Open navigation"
+              onClick={() => setMobileNav(true)}
+            >
+              <Menu size={21} />
+            </button>
+            <span className="breadcrumb">
+              WORKSPACE <ChevronRight size={12} />
+              <b>City operations</b>
+            </span>
+          </div>
+          <div className="global-right">
+            <div
+              className="maturity-control"
+              aria-label="Operating model maturity"
+            >
+              {["CURRENT", "MVP", "TARGET"].map((m) => (
+                <button
+                  key={m}
+                  className={maturity === m ? "active" : ""}
+                  aria-pressed={maturity === m}
+                  onClick={() => {
+                    setMaturity(m);
+                    setMaturityOpen(true);
+                  }}
+                >
+                  {m}
+                </button>
+              ))}
+              <button
+                className="maturity-help"
+                aria-label="Explain maturity stages"
+                onClick={() => setMaturityOpen((v) => !v)}
+              >
+                <CircleHelp size={14} />
+              </button>
+            </div>
+            <div className="prototype-label">
+              <span>
+                <i />
+                TARGET-STATE PROTOTYPE
+              </span>
+              <small>Synthetic demonstration data</small>
+            </div>
+            <button
+              className="evidence-button"
+              onClick={() => setEvidence(true)}
+            >
+              <BookOpen size={15} />
+              <span>Evidence</span>
+              <ArrowUpRight size={13} />
+            </button>
+          </div>
+        </div>
+        <AnimatePresence>
+          {maturityOpen && (
+            <motion.div
+              className="maturity-popover"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+            >
+              <button
+                className="icon-button"
+                onClick={() => setMaturityOpen(false)}
+                aria-label="Close maturity explanation"
+              >
+                <X size={16} />
+              </button>
+              <span className="eyebrow">
+                CURRENT INVENTORY → MVP → CAPABILITY DEVELOPMENT → TARGET
+              </span>
+              <h3>{maturityInfo[maturity][0]}</h3>
+              <div>
+                {maturityInfo[maturity].slice(1).map((t) => (
+                  <span key={t}>
+                    <Check size={13} />
+                    {t}
+                  </span>
+                ))}
+              </div>
+              <p>
+                The operational workspace illustrates the target state.
+                Selecting a stage explains maturity; it does not represent
+                deployed city capability.
+              </p>
+              <button
+                className="text-button"
+                onClick={() => {
+                  navigate("Implementation Roadmap");
+                  setMaturityOpen(false);
+                }}
+              >
+                Explore implementation roadmap
+                <ArrowRight size={13} />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {demo && (
+          <div className="demo-progress">
+            <div className="demo-steps">
+              {demoSteps.map((name, i) => (
+                <div
+                  key={name}
+                  className={`${i === step ? "current" : ""} ${i < step ? "complete" : ""}`}
+                >
+                  <span>
+                    {i < step ? (
+                      <Check size={11} />
+                    ) : (
+                      String(i + 1).padStart(2, "0")
+                    )}
+                  </span>
+                  <b>{name}</b>
+                </div>
+              ))}
+            </div>
+            <div className="demo-actions">
+              <button
+                aria-label="Previous demo step"
+                disabled={step === 0}
+                onClick={() => demoGo(step - 1)}
+              >
+                <ChevronLeft size={14} />
+                <span>Previous</span>
+              </button>
+              {!(evidence && step === 1) && (
+                <button className="next" onClick={nextStep}>
+                  {step === 6 ? "Finish Demo" : "Next Step"}
+                  <ChevronRight size={14} />
+                </button>
+              )}
+              <button
+                aria-label="Reset Demo"
+                title="Reset Demo"
+                onClick={reset}
+              >
+                <RotateCcw size={14} />
+              </button>
+              <button
+                aria-label="Exit presentation"
+                title="Exit presentation"
+                onClick={() => {
+                  setDemo(false);
+                  setEvidence(false);
+                }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+        <header className="page-heading">
+          <div>
+            <div className="page-kicker">
+              <span
+                className={`kicker-dot ${page === "Digital Twin" ? "purple-dot" : ""}`}
+              />
+              {page === "Digital Twin"
+                ? "SCENARIO INTELLIGENCE"
+                : page === "Implementation Roadmap"
+                  ? "THE PATH TO GREENPULSE"
+                  : "GREENPULSE COMMAND CENTER"}
+            </div>
+            <h1>{page}</h1>
+            <p>{subtitles[page]}</p>
+          </div>
+          {page === "Overview" || page === "City Map" ? (
+            <div className="operational-stats">
+              <button onClick={() => navigate("Data Health")}>
+                <Radio size={15} />
+                <span>
+                  <strong>
+                    14 <small>/ 17</small>
+                  </strong>
+                  <small>operational feeds</small>
+                </span>
+              </button>
+              <button onClick={() => navigate("Data Health")}>
+                <span className="quality-ring">96</span>
+                <span>
+                  <strong>
+                    96<small>%</small>
+                  </strong>
+                  <small>data quality</small>
+                </span>
+              </button>
+              <button
+                onClick={() => navigate("Alert Center")}
+                className="alert-stat"
+              >
+                <Bell size={16} />
+                <span>
+                  <strong>3</strong>
+                  <small>active alerts</small>
+                </span>
+              </button>
+              <div className="demo-clock">
+                <span className="eyebrow">DEMONSTRATION TIME</span>
+                <strong>
+                  {replayClock}
+                  <small>CET</small>
+                </strong>
+                <small>09 NOV 2026 · REPLAY</small>
+              </div>
+            </div>
+          ) : (
+            <div className="heading-context">
+              <Tag tone={page === "Digital Twin" ? "amber" : "cyan"} dot>
+                {page === "Digital Twin" ? "SIMULATED" : "DEMONSTRATION"}
+              </Tag>
+              <span>Historic Centre · H-03</span>
+            </div>
+          )}
+        </header>
+        <main
+          className={`screen-content screen-${page.toLowerCase().replaceAll(" ", "-").replace("&", "and")}`}
+        >
+          {(page === "Overview" || page === "City Map") && (
+            <div
+              className={`overview-layout ${page === "City Map" ? "map-page" : ""}`}
+            >
+              <div className="operations-stage">
+                <section className="map-surface">
+                  <div className="map-heading">
+                    <div>
+                      <span className="eyebrow">
+                        <span className="live-dot" />
+                        CITY OPERATIONS
+                      </span>
+                      <h2>
+                        Historic Centre<span>H-03</span>
+                      </h2>
+                    </div>
+                    <div className="map-heading-note">
+                      <ScanLine size={14} />
+                      Operational perspective
+                    </div>
+                  </div>
+                  <CityMap
+                    layers={layers}
+                    onSelect={() => setSelected(true)}
+                    after={false}
+                  />
+                  <LayerBar layers={layers} setLayers={setLayers} />
+                  <div className="map-bottom-legend">
+                    <span>
+                      <i className="cyan" />
+                      Free flow
+                    </span>
+                    <span>
+                      <i className="amber" />
+                      Elevated
+                    </span>
+                    <span>
+                      <i className="red" />
+                      Congested
+                    </span>
+                    <span className="heritage-key">
+                      <i />
+                      Protected heritage
+                    </span>
+                  </div>
+                  <div className="map-location-note">
+                    <span className="location-cross">+</span>
+                    <span>
+                      HISTORIC CENTRE <b>H-03</b>
+                    </span>
+                    <Tag
+                      tone={
+                        state.status === "paused"
+                          ? "amber"
+                          : active
+                            ? "green"
+                            : "red"
+                      }
+                      dot
+                    >
+                      {state.status === "paused"
+                        ? "INTERVENTION PAUSED"
+                        : active
+                          ? "APPROVED PLAN ACTIVE"
+                          : "INCIDENT DETECTED"}
+                    </Tag>
+                  </div>
+                </section>
+                {state.status === "idle" ? (
+                  <IncidentPanel
+                    selected={selected}
+                    onCompare={compare}
+                    onEvidence={() => setEvidence(true)}
+                  />
+                ) : (
+                  <ActivePanel
+                    state={state}
+                    dispatch={(action) =>
+                      dispatch({ ...action, time: replayTimeRef.current })
+                    }
+                    onHandover={() => setHandover(true)}
+                    onClose={() => setCloseConfirm(true)}
+                    onImpact={() => navigate("KPI & Impact")}
+                  />
+                )}
+              </div>
+              {page === "Overview" && (
+                <OperationsBottom
+                  onHealth={() => navigate("Data Health")}
+                  lifecycle={state.status}
+                />
+              )}
+            </div>
+          )}
+          {page === "Digital Twin" && (
+            <DigitalTwin onApprove={openApproval} lifecycle={state.status} />
+          )}
+          {page === "Data Health" && <DataHealth />}
+          {page === "Traffic & Emissions" && <TrafficScreen />}
+          {page === "Urban Heat" && <HeatScreen />}
+          {page === "Implementation Roadmap" && <Roadmap />}
+          {page === "Decision Log" && (
+            <DecisionLog lifecycle={state.status} logs={state.logs} />
+          )}
+          {page === "KPI & Impact" && (
+            <ImpactScreen
+              lifecycle={state.status}
+              onNavigate={() => navigate("Digital Twin")}
+            />
+          )}
+          {page === "Alert Center" && (
+            <AlertCenter
+              onOpen={(destination) => {
+                navigate(destination);
+                if (destination === "Overview") setSelected(true);
+              }}
+            />
+          )}
+        </main>
+        <footer className="app-footer">
+          <span>
+            <ShieldCheck size={12} />
+            Human-led decisions. AI-supported intelligence.
+          </span>
+          <span>
+            Illustrative city model<span className="footer-sep">/</span>No live
+            municipal systems connected
+          </span>
+          <span>
+            GREENPULSE<span className="footer-version">CONTROL ROOM · 02</span>
+          </span>
+        </footer>
+      </div>
+      <ApprovalDialog
+        open={approval}
+        operator={state.operator}
+        onClose={() => setApproval(false)}
+        onApprove={(options) => {
+          dispatch({
+            type: "APPROVE",
+            humanApproved: true,
+            time: replayClock,
+            duration: options?.duration,
+            routeGuidance: options?.routeGuidance,
+            note: options?.note,
+          });
+          setApproval(false);
+          setPage("Overview");
+          if (demo) setStep(5);
+          setToast("Human approval recorded. Signal Plan H03 is now active.");
+        }}
+      />
+      <EvidenceDrawer
+        open={evidence}
+        onClose={() => setEvidence(false)}
+        onNext={demo && step === 1 ? () => demoGo(2) : undefined}
+      />
+      <HandoverDialog
+        open={handover}
+        onClose={() => setHandover(false)}
+        onConfirm={(operator, note) => {
+          dispatch({ type: "HANDOVER", operator, note, time: replayClock });
+          setHandover(false);
+          setToast(`Accountability transferred to ${operator}.`);
+        }}
+      />
+      {closeConfirm && (
+        <div className="confirmation-backdrop">
+          <div
+            className="confirmation"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="close-title"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setCloseConfirm(false);
+              if (event.key === "Tab") {
+                const buttons = [
+                  ...event.currentTarget.querySelectorAll("button"),
+                ];
+                if (event.shiftKey && document.activeElement === buttons[0]) {
+                  event.preventDefault();
+                  buttons.at(-1).focus();
+                } else if (
+                  !event.shiftKey &&
+                  document.activeElement === buttons.at(-1)
+                ) {
+                  event.preventDefault();
+                  buttons[0].focus();
+                }
+              }
+            }}
+          >
+            <Tag tone="purple">CLOSED-LOOP MEASUREMENT</Tag>
+            <h2 id="close-title">Close this intervention?</h2>
+            <p>
+              The signal plan will close and a synthetic outcome measurement
+              window will begin. Results become available only after measurement
+              completes.
+            </p>
+            <div>
+              <button
+                className="button secondary"
+                autoFocus
+                onClick={() => setCloseConfirm(false)}
+              >
+                Keep monitoring
+              </button>
+              <button
+                className="button primary"
+                onClick={() => {
+                  dispatch({ type: "CLOSE", time: replayTimeRef.current });
+                  setCloseConfirm(false);
+                  navigate("KPI & Impact");
+                }}
+              >
+                Close & measure
+                <ArrowRight size={15} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            className="toast"
+            role="status"
+            initial={{ y: 14, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <ShieldCheck size={16} />
+            {toast}
+            <button
+              className="icon-button"
+              onClick={() => setToast("")}
+              aria-label="Dismiss notification"
+            >
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
