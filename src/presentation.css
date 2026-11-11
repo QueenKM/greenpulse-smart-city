@@ -1,0 +1,261 @@
+.app-shell:fullscreen {
+  height: 100dvh;
+  width: 100vw;
+  background: #050d12;
+}
+.app-shell.is-presenting .sidebar {
+  display: none;
+}
+.is-presenting .global-bar {
+  height: 48px;
+}
+.is-presenting .global-bar .breadcrumb {
+  display: none;
+}
+.is-presenting .page-heading {
+  min-height: 86px;
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+.is-presenting .operations-bottom {
+  display: none;
+}
+.is-presenting .demo-progress {
+  min-height: 57px;
+  gap: 18px;
+  padding: 12px 0;
+}
+.presentation-current-step {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 115px;
+  border-right: 1px solid #ffffff10;
+  padding-right: 18px;
+}
+.presentation-current-step > span {
+  font-size: 9px;
+  letter-spacing: 1.3px;
+  color: #48758e;
+}
+.presentation-current-step > strong {
+  font-family: "Manrope Variable", sans-serif;
+  font-size: 15px;
+  font-weight: 550;
+  color: #b8e7fb;
+}
+.presentation-preparation {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  color: #5f91a6;
+  font-size: 8px;
+  white-space: nowrap;
+}
+.presentation-preparation.ready {
+  color: #77a7b9;
+}
+.presentation-preparation.error {
+  color: #fbbf24;
+}
+.presentation-preparation.loading > svg {
+  animation: presentationSpin 2s linear infinite;
+}
+.is-presenting .demo-actions {
+  gap: 12px;
+}
+.is-presenting .demo-steps > div.current b {
+  font-size: 10px;
+  color: #b4e7fc;
+}
+.is-presenting .demo-steps > div > span {
+  width: 20px;
+  height: 20px;
+}
+.is-presenting .demo-actions .next {
+  font-size: 11px;
+}
+.is-presenting .demo-actions > button:hover {
+  color: #c4ecfc;
+}
+.is-presenting .global-bar .mobile-menu {
+  display: none;
+}
+@keyframes presentationSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (min-width: 1680px) {
+  .presentation-current-step {
+    min-width: 150px;
+  }
+  .presentation-current-step > strong {
+    font-size: 18px;
+  }
+  .presentation-current-step > span {
+    font-size: 10px;
+  }
+  .is-presenting .demo-progress {
+    min-height: 65px;
+  }
+  .is-presenting .demo-actions {
+    gap: 17px;
+  }
+  .presentation-preparation {
+    font-size: 10px;
+  }
+  .is-presenting .page-heading {
+    min-height: 100px;
+  }
+  .is-presenting .global-bar {
+    height: 57px;
+  }
+}
+@media (max-width: 1250px) {
+  .is-presenting .demo-steps > div > b {
+    display: none;
+  }
+  .is-presenting .demo-steps > div.current > b {
+    display: none;
+  }
+  .presentation-current-step {
+    min-width: 125px;
+  }
+  .presentation-preparation {
+    font-size: 8px;
+  }
+}
+@media (max-height: 820px) and (min-width: 851px) {
+  .is-presenting .page-heading {
+    min-height: 65px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .is-presenting .page-heading h1 {
+    font-size: 25px;
+  }
+  .is-presenting .page-heading p {
+    display: none;
+  }
+  .is-presenting .global-bar {
+    height: 44px;
+  }
+  .is-presenting .demo-progress {
+    min-height: 52px;
+    padding: 9px 0;
+  }
+  .presentation-current-step > strong {
+    font-size: 14px;
+  }
+  .is-presenting .screen-content {
+    padding-bottom: 10px;
+  }
+  .is-presenting .overview-layout {
+    gap: 10px;
+  }
+}
+@media (max-width: 850px) {
+  .is-presenting .screen-content {
+    flex: initial;
+  }
+  .is-presenting .page-heading {
+    min-height: 100px;
+  }
+  .is-presenting .operations-stage {
+    min-height: 550px;
+  }
+  .is-presenting .demo-progress {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .presentation-current-step {
+    min-width: 110px;
+    flex: 0;
+  }
+  .is-presenting .demo-steps {
+    flex: 1;
+  }
+  .is-presenting .demo-actions {
+    width: 100%;
+    border-left: 0;
+    justify-content: flex-end;
+    padding-left: 0;
+  }
+  .presentation-preparation {
+    margin-right: auto;
+    font-size: 9px;
+  }
+  .is-presenting .page-heading p {
+    display: block;
+  }
+  .is-presenting .global-bar {
+    height: 59px;
+  }
+}
+@media (max-width: 650px) {
+  .is-presenting .demo-steps {
+    flex-basis: auto;
+  }
+  .is-presenting .presentation-current-step {
+    min-width: 120px;
+  }
+  .is-presenting .demo-steps > div > span {
+    width: 19px;
+    height: 19px;
+  }
+  .is-presenting .page-heading {
+    padding: 18px 16px;
+  }
+  .is-presenting .operations-stage {
+    min-height: 0;
+  }
+  .is-presenting .demo-actions .next {
+    font-size: 11px;
+  }
+  .is-presenting .prototype-label {
+    display: flex;
+  }
+  .is-presenting .operational-stats {
+    padding-top: 12px;
+  }
+  .is-presenting .demo-clock {
+    display: block;
+  }
+  .is-presenting .page-kicker {
+    font-size: 8px;
+  }
+  .is-presenting .heading-context {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .presentation-preparation.loading > svg {
+    animation: none;
+  }
+}
+
+.presentation-keys {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-size: 8px;
+  color: #55778a;
+}
+.presentation-keys kbd {
+  font: inherit;
+  border: 1px solid #ffffff12;
+  border-radius: 2px;
+  padding: 2px 4px;
+  color: #83a3b6;
+}
+.presentation-keys > span {
+  margin: 0 3px;
+  color: #2e4c5e;
+}
+@media (max-width: 1250px) {
+  .presentation-keys {
+    display: none;
+  }
+}
