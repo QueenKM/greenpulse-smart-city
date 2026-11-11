@@ -1,83 +1,216 @@
-# GreenPulse — Urban Decision Intelligence
+<div align="center">
 
-A presentation-led React + Vite target-state Smart City Command Center. All operational values are synthetic demonstration data. The Leuven urban model uses real OpenStreetMap street and building geometry. All incidents, sensor positions, measurements, heat zones, forecasts and interventions are synthetic; they are not Leuven operational data. No municipal systems are connected.
+<img src="docs/assets/greenpulse-banner.svg" alt="GreenPulse — Urban Decision Intelligence. Target-state prototype using real Leuven geography and synthetic operational scenarios." width="100%" />
 
-## Run
+**A map-led smart-city command center, built around accountable human decisions.**
 
-```sh
+[**Open the live demo**](https://greenpulse-urban-intelligence.kmateva.chatgpt.site) · [GitHub Pages](https://queenkm.github.io/greenpulse-smart-city/) · [Presentation guide](docs/PRESENTATION-GUIDE.md) · [Quick start](#quick-start)
+
+[![Build & deployment](https://github.com/QueenKM/greenpulse-smart-city/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/QueenKM/greenpulse-smart-city/actions/workflows/deploy.yml)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white&labelColor=12232D)](https://react.dev/)
+[![Vite 6](https://img.shields.io/badge/Vite-6-A78BFA?logo=vite&logoColor=white&labelColor=12232D)](https://vite.dev/)
+
+<sub>Project artwork based on Leuven OpenStreetMap geometry; not an application screenshot.</sub>
+
+</div>
+
+<br />
+
+> [!IMPORTANT]
+> **TARGET-STATE PROTOTYPE · SYNTHETIC DEMONSTRATION DATA**
+>
+> Leuven's street and building geometry is real. Incidents, sensor locations, traffic, air quality, heat zones, forecasts and outcomes are synthetic. GreenPulse is a proposed operating model, with no municipal systems connected.
+
+## The idea
+
+GreenPulse connects an urban incident to a decision: **what is happening, what might happen next, which options exist, who authorises the response, and how its outcome would be evaluated.**
+
+The prototype brings traffic, air quality and urban heat into one operational story. Its maturity journey makes the proposal explicit:
+
+**Current inventory → MVP → Capability development → GreenPulse target state**
+
+## Explore the experience
+
+| Capability                      | What you can do                                                                                                                                       |
+| :------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **City operations**             | Explore real Leuven streets, buildings, parks and waterways. Select H-03 to focus its affected corridors; switch map layers and 2D/3D views.          |
+| **Shared forecast timeline**    | Move between **Now / +15 / +30 / +60 min** across the map, traffic chart and scenario comparison.                                                     |
+| **Scenario intelligence**       | Compare doing nothing, adaptive signals and traffic diversion. Use a synced before/after camera and inspect the trade-offs behind the recommendation. |
+| **Human-led intervention**      | Review, modify and explicitly approve an action. Pause, hand over and close it, with an accountable operator and demonstration decision log.          |
+| **KPI & impact**                | Compare predicted and synthetic observed improvements; open the calculation, baseline and assumptions behind the numbers.                             |
+| **Implementation & governance** | Follow the maturity roadmap and inspect proposed owners, data stewards, decision authority, dependencies and phase gates.                             |
+
+### One incident. A complete decision journey.
+
+```mermaid
+flowchart LR
+    A["01 · Alert"] --> B["02 · Evidence"]
+    B --> C["03 · Prediction"]
+    C --> D["04 · Scenarios"]
+    D --> E{"05 · Human approval"}
+    E -->|Explicit approval| F["06 · Intervention"]
+    E -->|Review options| D
+    F -->|Close| G["Measuring outcome"]
+    G --> H["07 · Measured impact"]
+
+    classDef live fill:#0C2634,stroke:#38BDF8,color:#C4EBFB
+    classDef model fill:#211C33,stroke:#A78BFA,color:#DDCFFF
+    classDef simulated fill:#2D2616,stroke:#FBBF24,color:#FBE5AE
+    classDef human fill:#15232D,stroke:#8CA7B6,color:#DAE8F0
+    classDef approved fill:#102A25,stroke:#34D399,color:#BDF4E3
+    class A,B live
+    class C model
+    class D,G simulated
+    class E human
+    class F,H approved
+```
+
+**AI recommends; an identified human authorises.** No demo control or keyboard shortcut can bypass approval. Closing an intervention starts measurement; it does not immediately report success.
+
+## Try the presentation
+
+1. Open either [live demo](https://greenpulse-urban-intelligence.kmateva.chatgpt.site) or [GitHub Pages](https://queenkm.github.io/greenpulse-smart-city/).
+2. Select **Presentation Demo**. The app prepares its geographic views and requests fullscreen.
+3. Follow **Next Step** through the evidence, forecast and scenarios.
+4. At the approval drawer, choose **Approve & Activate** explicitly.
+5. Demonstrate **Pause / Resume**, **Handover**, then **Close Intervention** to begin the synthetic measurement replay.
+
+| Control                | Behaviour                                                                                                                |
+| :--------------------- | :----------------------------------------------------------------------------------------------------------------------- |
+| **← / →**              | Previous / next presentation step. Inputs, comparison controls and approval dialogs retain their own keyboard behaviour. |
+| **Esc**                | Close the active dialog, or exit presentation when no dialog is open.                                                    |
+| **Fullscreen control** | Enter / leave fullscreen. If the browser declines it, the guided in-page mode remains available.                         |
+| **Reset Demo**         | Start a fresh synthetic decision cycle. The real wall clock keeps running.                                               |
+
+<details>
+<summary><strong>Replay timing and comparison details</strong></summary>
+
+- The five-second measuring phase represents an accelerated **60-minute observation window**.
+- The default active timer starts at **00:47:32** in the 60-minute replay. Modified operating windows start at their full duration; expiry pauses for human review.
+- The actual clock uses **Europe/Sofia**, updates every second and adjusts for summer/winter time. Forecast views share a synthetic snapshot anchor.
+- **Pan both maps** moves the comparison camera; **Drag comparison** restores the before/after divider.
+- The **CURRENT / MVP / TARGET** control explains maturity. It does not claim those capabilities are deployed today.
+
+</details>
+
+## Method, evidence & presentation materials
+
+| Read                                                           | Purpose                                                                                                   |
+| :------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------- |
+| [**KPI methodology**](docs/KPI-METHODOLOGY.md)                 | Definitions, worked calculations, baselines, causal reasoning, assumptions and verification requirements. |
+| [**Governance roadmap**](docs/GOVERNANCE-ROADMAP.md)           | Proposed RACI, accountable owners, operating responsibilities and implementation gates.                   |
+| [**15-minute presentation guide**](docs/PRESENTATION-GUIDE.md) | A timed method-and-results narrative, demonstration script and references for the final slide.            |
+
+**Inside the app:** use **KPI & Impact → KPI calculation & assumptions**, **Digital Twin → How is this calculated?**, or select a roadmap phase to inspect its proposed governance.
+
+> [!NOTE]
+> The **+60-minute scenario comparison** and the **closed-loop impact benchmark** are separate synthetic examples with different comparators. Their percentages must not be combined or described as one calibrated causal simulation. The arithmetic is reproducible; the forecast assumptions and effects are unvalidated.
+
+## Quick start
+
+**Requires Node.js 22+ and npm.**
+
+```bash
+git clone https://github.com/QueenKM/greenpulse-smart-city.git
+cd greenpulse-smart-city
 npm ci
 npm run dev
 ```
 
-Open the Vite URL at `/greenpulse-smart-city/`.
+Open Vite's local URL with the `/greenpulse-smart-city/` base path — normally **http://localhost:5173/greenpulse-smart-city/**.
 
-```sh
-npm test
-npm run build
+| Command           | Purpose                                             |
+| :---------------- | :-------------------------------------------------- |
+| `npm test`        | Run lifecycle, forecast and DOM interaction checks. |
+| `npm run build`   | Create the production build in `dist/`.             |
+| `npm run preview` | Serve the production build locally.                 |
+
+Typography and geographic data are bundled locally; maps do not depend on an external tile server during a presentation.
+
+## Geography & data provenance
+
+Every map persistently displays:
+
+> **LEUVEN URBAN MODEL**<br />
+> Illustrative operational scenario<br />
+> Synthetic demonstration data
+
+The geographic snapshot contains real central Leuven street hierarchy, pedestrian routes, building footprints, green spaces and waterways. Source: [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright), under [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/).
+
+- Only explicit mapped heights produce 3D building extrusions. Missing heights remain flat footprints; floor counts are not converted into invented measured heights.
+- Historic features are mapped reference sites, not authoritative legal protection boundaries.
+- Sensors and cooling points are proposed demonstration placements, not a verified municipal inventory.
+- The prototype is neither a surveyed city model nor a calibrated digital twin.
+
+[Download the geographic extract](https://queenkm.github.io/greenpulse-smart-city/data/leuven-urban-model.json) · [Inspect the source database](src/data/city-model.json) · [Data notice](public/data/NOTICE.txt)
+
+<details>
+<summary><strong>Regenerate the geographic snapshot</strong></summary>
+
+Use a local OSM API XML extract covering the documented bounding box:
+
+```bash
+python scripts/build-city-model.py /path/to/leuven-osm.xml
 ```
 
-Node 22 or newer is recommended. Typography is bundled locally; maps require no external tile service.
+Source feature identifiers are retained. The derivative geographic database remains **ODbL 1.0**; it is separate from the application code.
 
-## Present
+</details>
 
-The clock shows the actual date and time from the viewer’s device in **Europe/Sofia**, updates every second, and adjusts for summer/winter time. Reset Demo does not reset the clock. Synthetic event timestamps, forecast times, and decision records use the same timezone; the original incident identifiers remain fixed demonstration case IDs.
+### Reading the operational colours
 
-Start **Presentation Demo** in the sidebar. The seven steps follow Alert → Evidence → Prediction → Scenarios → Human approval → Intervention → Measured impact. Continue from the evidence drawer with **Next Step**. At approval, the presenter must explicitly choose **Approve & Activate**. The progression controls cannot bypass this gate.
+| Signal                                     | Meaning                                                     |
+| :----------------------------------------- | :---------------------------------------------------------- |
+| **Cyan · LIVE**                            | Current synthetic operational replay.                       |
+| **Purple · MODELLED**                      | Forecasts and AI-supported decision intelligence.           |
+| **Amber · SIMULATED**                      | Intervention scenarios and warnings.                        |
+| **Emerald · APPROVED / ACTIVE / MEASURED** | Approved actions and completed synthetic positive outcomes. |
+| **Rose · CRITICAL**                        | High-priority operational conditions.                       |
 
-Use **Pause / Resume**, **Handover**, and **Close Intervention** to demonstrate ownership. Closing starts a visible five-second accelerated measurement replay representing a 60-minute observation window; only then do measured synthetic outcomes appear. Reset Demo starts a clean cycle. The active timer starts at 00:47:32 in the default 60-minute replay; modified operating windows start at their full duration. An elapsed operating window pauses for human review.
+<details>
+<summary><strong>Why does Data Health show 14 / 17 operational feeds?</strong></summary>
 
-### Exploring and presenting
+The synthetic inventory contains seven traffic, two air-quality, four parking, two AVL, one weather and one visitor-flow feed: **17 in total**. T18 maintenance, AQ-07 offline and delayed Visitor Flow account for the three exclusions. Historic GIS is reference data and is excluded from the operational-feed count.
 
-- Click the H-03 incident on the map to focus its affected corridors. **Show whole city** restores context; sensor clicks retain their own reading panel.
-- **Now / +15 / +30 / +60 min** is shared across Overview, Traffic & Emissions, and Digital Twin. Future layers and values are MODELLED synthetic forecasts; the real wall clock remains independent. Forecast timestamps share one anchor, including across midnight.
-- Digital Twin zoom, pan, reset and 2D/3D controls apply to both comparison halves. Switch **Pan both maps** on to move the shared camera, then **Drag comparison** to operate the before/after divider. The camera also supports local arrow-key pan without advancing presentation steps.
-- **How is this calculated?** explains the 60-minute decision score. Weights: environment 30%, mobility 25%, accessibility 20%, historic compatibility 10%, implementation feasibility 15%. Higher feasibility means easier delivery. Scenario B sums to 87.55 and rounds to 88/100. These inputs and weights are illustrative assumptions, not a calibrated Leuven model.
-- Technical metadata lives under **Evidence & model details**, while the observed signals, forecast, recommendation and approval path remain visible.
-- **Presentation Demo** requests native fullscreen and prepares both geographic views before enabling Next. Use **← / →** for previous/next and **Esc** to exit. Inputs, the comparison camera and approval dialogs keep their own keyboard controls; no shortcut can approve an intervention. The fullscreen toolbar can enter/leave fullscreen independently. Browsers that decline fullscreen retain the guided in-page presentation. Reset returns to the current-condition alert with a fresh synthetic timeline; actual date/time keep running.
+</details>
 
-The global **CURRENT / MVP / TARGET** control explains operating-model maturity. It does not claim those capabilities exist today or alter the synthetic operating workspace. The roadmap shows a progressive 0–36 month implementation path.
+## For developers
 
-## Method, evidence and presentation annexes
+**Stack:** React · Vite · Framer Motion · Recharts · Lucide React.
 
-- [KPI calculation, assumptions and verification plan](docs/KPI-METHODOLOGY.md): the worked congestion example, other KPI definitions, why decisions can affect them, and limits of the synthetic model. Open **KPI & Impact → KPI calculation & assumptions** for the in-app explanation.
-- [Proposed governance and implementation gates](docs/GOVERNANCE-ROADMAP.md): accountable owners, stewards, decision authority, dependencies and phase acceptance. Select a phase in **Implementation Roadmap** to inspect its proposed governance.
-- [15-minute presentation guide](docs/PRESENTATION-GUIDE.md): emphasis on method and results, one worked KPI, one governance gate, and links for the final slide.
+| Location                                 | Responsibility                                                                 |
+| :--------------------------------------- | :----------------------------------------------------------------------------- |
+| [`src/App.jsx`](src/App.jsx)             | Persistent shell, Overview and presentation coordination.                      |
+| [`src/lifecycle.mjs`](src/lifecycle.mjs) | Human approval, intervention ownership and measurement gates.                  |
+| [`src/scenario.mjs`](src/scenario.mjs)   | Shared synthetic forecast assumptions and decision-score weights.              |
+| [`src/components/`](src/components/)     | Geographic renderer, synced comparison, charts, panels and accessible drawers. |
+| [`tests/`](tests/)                       | Lifecycle, scoring and DOM interaction checks.                                 |
+| [`docs/`](docs/)                         | Methodology, governance and presentation annexes.                              |
 
-The +60-minute scenario comparison and the closed-loop impact benchmark are separate synthetic examples with different comparators. Their percentages must not be combined or described as one calibrated causal simulation. The methodology drawer and annex explain this distinction; no result is claimed to be real Leuven operational evidence.
+### Deployment
 
-## Structure
+**GitHub Pages:** the default Vite base is `/greenpulse-smart-city/`. The [Actions workflow](.github/workflows/deploy.yml) installs from the lockfile, tests and builds pull requests, and deploys successful pushes to `main`. Pull requests do not deploy.
 
-- `src/App.jsx`: persistent shell, Overview, presentation coordinator
-- `src/lifecycle.mjs`: explicit human-approved intervention state transitions
-- `src/components/CityMap.jsx`: lazy map loader and recoverable loading state
-- `src/components/GeographicCityMap.jsx`: geographic renderer for the bundled real Leuven OSM snapshot
-- `src/components/DigitalTwin.jsx`: scenarios, rationale, before/after comparison
-- `src/components/Dialogs.jsx`: accessible approval, evidence, and handover drawers
-- `src/components/DomainScreens.jsx`: traffic, heat, data health, roadmap, log, impact, alerts
-- `tests/`: lifecycle and DOM interaction checks. Motion is replaced by a deterministic adapter in DOM tests; these checks do not verify browser layout or animation.
+**Root-path Sites hosting:**
 
-## Geographic context and provenance
+```bash
+SITES_BUILD=1 npm run build
+```
 
-Every map persistently displays **LEUVEN URBAN MODEL / Illustrative operational scenario / Synthetic demonstration data**. Real geometry provides spatial context only. The prototype is not connected to Leuven municipal systems and is not a calibrated or surveyed digital twin.
+This produces root-relative assets while preserving the default GitHub Pages configuration.
 
-The snapshot includes real central Leuven street hierarchy, pedestrian areas, building footprints, water features and green spaces. Source: [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright), licensed under [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/). Source feature identifiers are retained. Download the normalized database from `data/leuven-urban-model.json` in the deployed app, or inspect `src/data/city-model.json`. That database remains ODbL; application code is separate.
+### Verification & limits
 
-Only explicit OSM height values produce building extrusions. Missing heights remain flat footprints; floor counts are not converted into invented measured heights. Historic features show mapped sites, not an authoritative legal heritage boundary. Synthetic traffic colors are applied only to roads that permit the modelled road mode; pedestrian routes remain distinct. The displayed sensor positions and cooling response points are proposed demonstration placements, not a real inventory.
+Production builds, lifecycle rules and DOM interactions are checked automatically. Motion is replaced by a deterministic adapter in DOM tests, and fullscreen checks use a DOM API adapter. These checks do not establish browser layout, animation quality or native fullscreen behaviour; a visual browser review is still needed before a live presentation.
 
-To regenerate from an OSM API XML extract covering the documented bbox, run `python scripts/build-city-model.py /path/to/leuven-osm.xml`. The snapshot is bundled locally, so maps do not depend on tile servers during a presentation.
+Scenario scores, model confidence and intervention effects are illustrative assumptions. Tartu, Leuven and Pavia benchmark themes are design interpretations, not claims of equivalent municipal capability. Modified intervention parameters are recorded, while the closed-loop benchmark values remain fixed synthetic fixtures.
 
-## Data semantics
+---
 
-Cyan = LIVE synthetic replay; purple = MODELLED / AI; amber = warning / SIMULATED; emerald = APPROVED / ACTIVE / MEASURED positive results; rose = CRITICAL.
+<div align="center">
 
-Fourteen of seventeen operational feeds are current: seven traffic, two air quality, four parking, two public transport AVL, one weather, and one visitor-flow feed. T18 maintenance, AQ-07 offline, and delayed Visitor Flow account for the three excluded feeds. Historic GIS is reference data and excluded from the live count.
+**A city in context. A decision with an owner.**
 
-Scenario scores are illustrative decision-support scores, not a validated scoring model. Evidence themes are design interpretations of Tartu, Leuven, and Pavia, not claims of equivalent municipal capability or connected integrations. Modified intervention parameters are recorded; benchmark impact values remain fixed synthetic demonstration outcomes.
+[Open GreenPulse](https://greenpulse-urban-intelligence.kmateva.chatgpt.site) · [Read the methodology](docs/KPI-METHODOLOGY.md) · [Follow the roadmap](docs/GOVERNANCE-ROADMAP.md)
 
-## Deployment
-
-The Vite default base is `/greenpulse-smart-city/` for GitHub Pages. The GitHub Actions workflow installs from the lockfile, tests and builds pull requests, and deploys successful pushes to `main`. Pull requests never deploy. For root-path private Sites hosting, build with `SITES_BUILD=1 npm run build`; this keeps GitHub Pages configuration intact.
-
-## Verification limit
-
-Production builds and DOM/state interaction checks are automated. Shared browser-control tools were unavailable in the managed build environment, so visual layout, hover animation, and exact viewport-fit inspection require a browser review before a live presentation.
+</div>
