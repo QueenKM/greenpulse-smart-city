@@ -4,7 +4,18 @@ import "./CityMapLoading.css";
 
 // Keep the large, locally bundled OSM geometry out of the initial application
 // download so the command room and decision controls appear immediately.
-const GeographicCityMap = lazy(() => import("./GeographicCityMap"));
+let geographicModule;
+const loadGeography = () =>
+  geographicModule ||
+  (geographicModule = import("./GeographicCityMap").catch((error) => {
+    geographicModule = undefined;
+    throw error;
+  }));
+const GeographicCityMap = lazy(loadGeography);
+export async function preloadCityModel() {
+  const module = await loadGeography();
+  return module.warmGeographyViews();
+}
 
 function MapLoading({ failed = false }) {
   return (

@@ -1,5 +1,6 @@
 import React, {
   memo,
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -490,13 +491,14 @@ const GeographicBase = memo(function GeographicBase({
   );
 });
 const trafficViews = new Map();
-function prepareTraffic(perspective, scenario, improved) {
-  const key = `${perspective}:${scenario}:${improved}`;
+function prepareTraffic(perspective, scenario, improved, forecastOffset = 0) {
+  const minute = Math.max(0, Math.min(60, Number(forecastOffset) || 0));
+  const key = `${perspective}:${scenario}:${improved}:${minute}`;
   if (trafficViews.has(key)) return trafficViews.get(key);
   const base = prepareView(perspective),
     groups = new Map();
   for (const road of trafficRoads) {
-    const color = roadTrafficColor(road, scenario, improved);
+    const color = roadTrafficColor(road, scenario, improved, minute);
     const residential = ["residential", "living_street"].includes(road.kind);
     const groupKey = `${color}:${residential}`;
     if (!groups.has(groupKey))
@@ -511,18 +513,42 @@ function prepareTraffic(perspective, scenario, improved) {
   return value;
 }
 
-function roadTrafficColor(road, scenario, improved) {
-  if (!improved || scenario === "A")
-    return road.distance < 290
+function roadTrafficColor(road, scenario, improved, forecastOffset = 0) {
+  const progress = Math.max(0, Math.min(1, forecastOffset / 60));
+  if (!improved || scenario === "A") {
+    return road.distance < 290 + 100 * progress
       ? "#fb7185"
-      : road.distance < 500
+      : road.distance < 500 + 100 * progress
         ? "#fbbf24"
         : "#38bdf8";
-  if (scenario === "C")
-    return road.distance > 280 && road.distance < 650 ? "#fbbf24" : "#38bdf8";
-  return road.distance < 130 || (road.distance > 340 && road.distance < 430)
+  }
+  if (road.distance < 290 * (1 - progress)) return "#fb7185";
+  if (scenario === "C") {
+    return (road.distance > 280 && road.distance < 500 + 150 * progress) ||
+      road.distance < 500 * (1 - progress)
+      ? "#fbbf24"
+      : "#38bdf8";
+  }
+  return road.distance < Math.max(130, 500 - 370 * progress) ||
+    (progress > 0.6 && road.distance > 340 && road.distance < 430)
     ? "#fbbf24"
     : "#38bdf8";
+}
+
+// Presentation preloading warms the exact views used later by the two map
+// halves, rather than waiting for the first 3D frame during the live journey.
+export function warmGeographyViews() {
+  for (const perspective of [false, true]) {
+    prepareView(perspective);
+    prepareTraffic(perspective, "A", false, 0);
+    for (const scenario of ["A", "B", "C"])
+      prepareTraffic(perspective, scenario, scenario !== "A", 60);
+  }
+  return {
+    views: 2,
+    buildingFootprints: buildings.length,
+    mappedHeights: mappedHeightCount,
+  };
 }
 
 function CityMap({
@@ -532,12 +558,44 @@ function CityMap({
   scenario = "B",
   after = false,
   compact = false,
+  focused = false,
+  focusRequest = 0,
+  onClearFocus,
+  forecastOffset = 0,
+  camera: controlledCamera,
+  onCameraChange,
+  viewMode,
+  onViewModeChange,
 }) {
   const uid = useId().replaceAll(":", "");
   const svgRef = useRef(null);
   const dragRef = useRef(null);
-  const [camera, setCamera] = useState({ zoom: 1, x: 0, y: 0 });
-  const [perspective, setPerspective] = useState(mode === "twin");
+  const [internalCamera, setInternalCamera] = useState({ zoom: 1, x: 0, y: 0 });
+  const camera = controlledCamera || internalCamera;
+  const cameraRef = useRef(camera);
+  cameraRef.current = camera;
+  const cameraChangeRef = useRef(onCameraChange);
+  cameraChangeRef.current = onCameraChange;
+  const setCamera = useCallback((update) => {
+    const next =
+      typeof update === "function" ? update(cameraRef.current) : update;
+    cameraRef.current = next;
+    if (cameraChangeRef.current) cameraChangeRef.current(next);
+    else setInternalCamera(next);
+  }, []);
+  const [internalPerspective, setInternalPerspective] = useState(
+    mode === "twin",
+  );
+  const perspective = viewMode ? viewMode === "3d" : internalPerspective;
+  const setPerspective = (update) => {
+    const next = typeof update === "function" ? update(perspective) : update;
+    if (onViewModeChange) onViewModeChange(next ? "3d" : "2d");
+    else setInternalPerspective(next);
+  };
+  const [focusAnimating, setFocusAnimating] = useState(false);
+  const focusToken = useRef(null);
+  const focusTimer = useRef(null);
+  const dragStopTimer = useRef(null);
   const [selected, setSelected] = useState(null);
   const [sourceOpen, setSourceOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -548,8 +606,49 @@ function CityMap({
   const showHeritage = layers.heritage !== false;
   const showSensors = layers.sensors !== false;
   const improved = after || (mode === "twin" && scenario !== "A");
+  const forecastMinute = Math.max(0, Math.min(60, Number(forecastOffset) || 0));
+  const forecastProgress = forecastMinute / 60;
+  const airWidth = improved
+    ? 255 - (scenario === "C" ? 145 : 110) * forecastProgress
+    : 255 + 75 * forecastProgress;
+  const airHeight = improved
+    ? 170 - 80 * forecastProgress
+    : 170 + 50 * forecastProgress;
+  const pollutionImproving = improved && forecastMinute > 0;
   const incidentPoint = datum;
   const [ix, iy] = project(incidentPoint, perspective);
+  useEffect(() => {
+    if (!focused) {
+      focusToken.current = null;
+      return undefined;
+    }
+    const token = `${focusRequest}:${perspective}`;
+    if (focusToken.current === token) return undefined;
+    focusToken.current = token;
+    clearTimeout(focusTimer.current);
+    setFocusAnimating(true);
+    const zoom = 1.55;
+    setCamera({ zoom, x: W / 2 - ix * zoom, y: H / 2 - iy * zoom });
+    focusTimer.current = setTimeout(() => setFocusAnimating(false), 650);
+    return () => {
+      clearTimeout(focusTimer.current);
+      focusToken.current = null;
+    };
+  }, [focused, focusRequest, perspective, ix, iy, setCamera]);
+  useEffect(
+    () => () => {
+      clearTimeout(focusTimer.current);
+      clearTimeout(dragStopTimer.current);
+    },
+    [],
+  );
+  const clearIncidentFocus = () => {
+    clearTimeout(focusTimer.current);
+    setFocusAnimating(false);
+    setCamera({ zoom: 1, x: 0, y: 0 });
+    setSelected(null);
+    onClearFocus?.();
+  };
   const visibleSensors = syntheticSensors.filter(
     (sensor) => sensor.type !== "cooling" || showHeat,
   );
@@ -587,7 +686,8 @@ function CityMap({
       y: ((clientY - bounds.top) * H) / bounds.height,
     };
   };
-  const zoomAt = (factor, pointer) =>
+  const zoomAt = (factor, pointer) => {
+    setFocusAnimating(false);
     setCamera((previous) => {
       const zoom = Math.max(0.8, Math.min(3.4, previous.zoom * factor));
       const anchor = pointer || { x: W / 2, y: H / 2 };
@@ -598,6 +698,7 @@ function CityMap({
         y: anchor.y - (anchor.y - previous.y) * ratio,
       };
     });
+  };
   useEffect(() => {
     const svg = svgRef.current;
     const measure = () => {
@@ -626,8 +727,9 @@ function CityMap({
   }, [compact]);
   const pointerDown = (event) => {
     if (compact || event.button !== 0) return;
+    setFocusAnimating(false);
     const point = clientToSvg(event.clientX, event.clientY);
-    dragRef.current = { x: point.x, y: point.y, camera };
+    dragRef.current = { x: point.x, y: point.y, camera: cameraRef.current };
     event.currentTarget.setPointerCapture?.(event.pointerId);
   };
   const pointerMove = (event) => {
@@ -642,9 +744,12 @@ function CityMap({
       y: Math.max(-H * 1.8, Math.min(H * 1.8, dragRef.current.camera.y + dy)),
     });
   };
-  const pointerUp = () => {
+  const pointerUp = (event) => {
     dragRef.current = null;
-    setTimeout(() => setDragging(false), 0);
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    clearTimeout(dragStopTimer.current);
+    dragStopTimer.current = setTimeout(() => setDragging(false), 0);
   };
   const onMarkerKey = (event, item) => {
     if (["Enter", " "].includes(event.key)) {
@@ -665,7 +770,9 @@ function CityMap({
   );
   return (
     <div
-      className={`city-map geo-map ${compact ? "geo-compact" : ""} ${mode === "heat" ? "geo-heat" : ""} ${dragging ? "geo-dragging" : ""}`}
+      data-focused={focused ? "true" : "false"}
+      data-forecast-minute={forecastMinute}
+      className={`city-map geo-map ${compact ? "geo-compact" : ""} ${mode === "heat" ? "geo-heat" : ""} ${dragging ? "geo-dragging" : ""} ${focused ? "geo-focused" : ""} ${focusAnimating ? "geo-focusing" : ""}`}
     >
       <svg
         ref={svgRef}
@@ -686,12 +793,14 @@ function CityMap({
           </radialGradient>
           <radialGradient id={id("pollution")}>
             <stop
-              stopColor={improved ? "#fbbf24" : "#fb7185"}
-              stopOpacity={improved ? 0.21 : 0.37}
+              stopColor={pollutionImproving ? "#fbbf24" : "#fb7185"}
+              stopOpacity={
+                pollutionImproving ? 0.21 : 0.37 + 0.05 * forecastProgress
+              }
             />
             <stop
               offset=".5"
-              stopColor={improved ? "#fbbf24" : "#fb7185"}
+              stopColor={pollutionImproving ? "#fbbf24" : "#fb7185"}
               stopOpacity=".12"
             />
             <stop offset="1" stopColor="#fb7185" stopOpacity="0" />
@@ -767,17 +876,27 @@ function CityMap({
             aria-hidden={!showAir}
           >
             <ellipse
-              cx={ix + (scenario === "C" && improved ? 65 : 0)}
+              cx={
+                ix + (scenario === "C" && improved ? 65 * forecastProgress : 0)
+              }
               cy={iy + 15}
-              rx={improved ? (scenario === "C" ? 110 : 145) : 255}
-              ry={improved ? 90 : 170}
+              rx={airWidth}
+              ry={airHeight}
               fill={url("pollution")}
             />
             <ellipse
               cx={ix + 205}
               cy={iy + 130}
-              rx={improved ? 75 : 140}
-              ry={improved ? 50 : 85}
+              rx={
+                improved
+                  ? 140 - 65 * forecastProgress
+                  : 140 + 40 * forecastProgress
+              }
+              ry={
+                improved
+                  ? 85 - 35 * forecastProgress
+                  : 85 + 25 * forecastProgress
+              }
               fill={url("pollution")}
             />
           </g>
@@ -818,7 +937,7 @@ function CityMap({
             className={`geo-layer geo-traffic-overlay ${showTraffic ? "visible" : ""}`}
             aria-hidden={!showTraffic}
           >
-            {prepareTraffic(perspective, scenario, improved)
+            {prepareTraffic(perspective, scenario, improved, forecastMinute)
               .filter((group) => !group.residential)
               .map((group) => (
                 <path
@@ -831,7 +950,12 @@ function CityMap({
                   filter={url("road-glow")}
                 />
               ))}
-            {prepareTraffic(perspective, scenario, improved).map((group) => (
+            {prepareTraffic(
+              perspective,
+              scenario,
+              improved,
+              forecastMinute,
+            ).map((group) => (
               <path
                 key={`${group.color}:${group.residential}`}
                 className="geo-traffic-line"
@@ -844,7 +968,7 @@ function CityMap({
                 strokeLinejoin="round"
               />
             ))}
-            {improved && scenario === "C" && (
+            {improved && scenario === "C" && forecastMinute > 0 && (
               <path
                 className="geo-flow-dash"
                 d={mainRoads
@@ -861,6 +985,28 @@ function CityMap({
               />
             )}
           </g>
+          {focused && showTraffic && (
+            <g
+              className="geo-focus-corridors"
+              aria-label="Affected incident corridors"
+              pointerEvents="none"
+            >
+              <path
+                d={trafficRoads
+                  .filter((road) => road.distance < 340)
+                  .map((road) =>
+                    prepareView(perspective).roadPaths.get(road.id),
+                  )
+                  .join(" ")}
+                fill="none"
+                stroke={pollutionImproving ? "#38bdf8" : "#fb7185"}
+                strokeWidth="3.3"
+                strokeOpacity=".95"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </g>
+          )}
           {showSensors && (
             <g className="geo-synthetic-sensors">
               {visibleSensors.map((sensor) => {
@@ -963,26 +1109,26 @@ function CityMap({
             <circle
               r="48"
               fill="none"
-              stroke={improved ? "#38bdf8" : "#fb7185"}
+              stroke={pollutionImproving ? "#38bdf8" : "#fb7185"}
               strokeWidth="1"
               strokeOpacity=".3"
               className="geo-incident-pulse"
             />
             <circle
               r="23"
-              fill={improved ? "#38bdf8" : "#fb7185"}
+              fill={pollutionImproving ? "#38bdf8" : "#fb7185"}
               fillOpacity=".06"
-              stroke={improved ? "#38bdf8" : "#fb7185"}
+              stroke={pollutionImproving ? "#38bdf8" : "#fb7185"}
               strokeOpacity=".45"
             />
             <path
               d="M-34 0H-19M19 0H34M0-34V-19M0 19V34"
-              stroke={improved ? "#38bdf8" : "#fb7185"}
+              stroke={pollutionImproving ? "#38bdf8" : "#fb7185"}
               strokeOpacity=".6"
             />
             <circle
               r="5"
-              fill={improved ? "#38bdf8" : "#fb7185"}
+              fill={pollutionImproving ? "#38bdf8" : "#fb7185"}
               stroke="#101c25"
               strokeWidth="2"
             />
@@ -1004,14 +1150,16 @@ function CityMap({
               <text
                 className="geo-zone-status"
                 y="32"
-                fill={improved ? "#38bdf8" : "#fb7185"}
+                fill={pollutionImproving ? "#38bdf8" : "#fb7185"}
               >
                 H-03 ·{" "}
-                {improved
-                  ? scenario === "C"
-                    ? "DIVERSION SCENARIO"
-                    : "SIGNAL SCENARIO"
-                  : "OPERATIONAL SCENARIO"}
+                {forecastMinute === 0
+                  ? "CURRENT BASELINE"
+                  : improved
+                    ? scenario === "C"
+                      ? "DIVERSION SCENARIO"
+                      : "SIGNAL SCENARIO"
+                    : "NO ACTION FORECAST"}
               </text>
             </g>
           </g>
@@ -1031,6 +1179,23 @@ function CityMap({
         <span>Illustrative operational scenario</span>
         <span>Synthetic demonstration data</span>
       </div>
+      {!compact && (
+        <div
+          className={`geo-time-state ${forecastMinute ? "is-modelled" : "is-observed"}`}
+          role="status"
+        >
+          <i />
+          {forecastMinute
+            ? `MODELLED · +${forecastMinute} MIN`
+            : "SYNTHETIC REPLAY · NOW"}
+        </div>
+      )}
+      {focused && !compact && (
+        <button className="geo-clear-focus" onClick={clearIncidentFocus}>
+          <LocateFixed size={12} />
+          Show whole city
+        </button>
+      )}
       {!compact && (
         <>
           <div className="geo-map-heading">
@@ -1062,7 +1227,7 @@ function CityMap({
             <button
               aria-label="Reset map view"
               title="Reset map view"
-              onClick={() => setCamera({ zoom: 1, x: 0, y: 0 })}
+              onClick={clearIncidentFocus}
             >
               <LocateFixed size={16} />
             </button>
@@ -1214,6 +1379,14 @@ export default memo(
     previous.compact === next.compact &&
     previous.comparison === next.comparison &&
     previous.onSelect === next.onSelect &&
+    previous.focused === next.focused &&
+    previous.focusRequest === next.focusRequest &&
+    previous.onClearFocus === next.onClearFocus &&
+    previous.forecastOffset === next.forecastOffset &&
+    previous.camera === next.camera &&
+    previous.onCameraChange === next.onCameraChange &&
+    previous.viewMode === next.viewMode &&
+    previous.onViewModeChange === next.onViewModeChange &&
     mapLayerKeys.every((key) =>
       key === "heat"
         ? (previous.layers?.heat === true) === (next.layers?.heat === true)

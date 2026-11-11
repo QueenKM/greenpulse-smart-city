@@ -655,3 +655,113 @@
     transition: none !important;
   }
 }
+/* Focus only the operational corridors; keep source provenance and labels crisp. */
+.geo-map .geo-building-footprints,
+.geo-map .geo-land-polygons,
+.geo-map .geo-water,
+.geo-map .geo-street-foundation,
+.geo-map .geo-street-centres {
+  transition: opacity 0.45s ease;
+}
+.geo-map.geo-focused .geo-building-footprints {
+  opacity: 0.43;
+}
+.geo-map.geo-focused .geo-land-polygons,
+.geo-map.geo-focused .geo-water,
+.geo-map.geo-focused .geo-street-foundation,
+.geo-map.geo-focused .geo-street-centres {
+  opacity: 0.56;
+}
+.geo-map.geo-focused .geo-traffic-overlay.visible {
+  opacity: 0.42;
+}
+.geo-map.geo-focused .geo-heritage.visible {
+  opacity: 0.36;
+}
+.geo-map .geo-focus-corridors {
+  filter: drop-shadow(0 0 3px #fb71851c);
+}
+.geo-map.geo-focusing .geo-camera {
+  transition: transform 0.65s cubic-bezier(0.2, 0.7, 0.25, 1);
+}
+.geo-map .geo-time-state {
+  position: absolute;
+  left: 22px;
+  top: 145px;
+  z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid #38bdf822;
+  border-radius: 3px;
+  background: #081a24e8;
+  backdrop-filter: blur(8px);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: #73c9ec;
+  pointer-events: none;
+}
+.geo-map .geo-time-state > i {
+  width: 4px;
+  height: 4px;
+  background: currentColor;
+  border-radius: 50%;
+}
+.geo-map .geo-time-state.is-modelled {
+  color: #b59aee;
+  border-color: #a78bfa33;
+  background: #171d2ce8;
+}
+.geo-map .geo-clear-focus {
+  position: absolute;
+  left: 22px;
+  top: 178px;
+  z-index: 16;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border: 1px solid #7598ab33;
+  border-radius: 3px;
+  background: #0a202de8;
+  backdrop-filter: blur(8px);
+  color: #9fc2d5;
+  font-size: 10px;
+}
+.geo-map .geo-clear-focus:hover {
+  background: #123347;
+  color: #c6edff;
+  border-color: #38bdf85b;
+}
+@media (min-width: 1680px) {
+  .geo-map .geo-time-state {
+    left: 25px;
+    top: 154px;
+    font-size: 10px;
+  }
+  .geo-map .geo-clear-focus {
+    left: 25px;
+    top: 190px;
+    font-size: 11px;
+  }
+}
+@media (max-width: 650px) {
+  .geo-map .geo-time-state {
+    left: 15px;
+    top: 134px;
+    font-size: 8px;
+    letter-spacing: 0.5px;
+  }
+  .geo-map .geo-clear-focus {
+    left: 15px;
+    top: 166px;
+    font-size: 9px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .geo-map.geo-focusing .geo-camera {
+    transition: none !important;
+  }
+}

@@ -2939,3 +2939,351 @@
     width: 100%;
   }
 }
+
+/* Shared operational horizon: the chart and map use one parent-owned selection. */
+.ds-screen .traffic-timeline-slot {
+  margin-top: 17px;
+  flex-shrink: 0;
+}
+.ds-screen .traffic-timeline-slot:empty {
+  display: none;
+}
+.ds-screen .traffic-selection-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 13px;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.ds-screen .traffic-selection-state > span {
+  font-size: 9px;
+  letter-spacing: 0.8px;
+  font-weight: 650;
+}
+.ds-screen .traffic-selection-state output {
+  font-size: 11px;
+  color: #b5cbd8;
+  margin-left: auto;
+}
+.ds-screen .traffic-selection-state time {
+  font-size: 10px;
+  color: #658596;
+  border-left: 1px solid #2a414f;
+  padding-left: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ds-screen .traffic-forecast.is-observed .forecast-big {
+  color: #38bdf8;
+}
+.ds-screen .traffic-selected-support {
+  display: flex;
+  gap: 22px;
+  width: 100%;
+  padding: 15px 0;
+  border-top: 1px solid #203540;
+  border-bottom: 1px solid #203540;
+  margin-top: 18px;
+}
+.ds-screen .traffic-selected-support > span {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 10px;
+  color: #6f8e9e;
+}
+.ds-screen .traffic-selected-support strong {
+  font-size: 18px;
+  font-weight: 500;
+  color: #b7a4e8;
+  letter-spacing: -0.4px;
+}
+.ds-screen .traffic-selected-support small {
+  font-size: 9px;
+  color: #6c8799;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.ds-screen .traffic-forecast.is-observed .traffic-selected-support strong {
+  color: #9ed8ed;
+}
+@media (max-height: 820px) and (min-width: 851px) {
+  .ds-screen .traffic-timeline-slot {
+    margin-top: 12px;
+  }
+  .ds-screen .traffic-selection-state {
+    padding-top: 9px;
+  }
+  .ds-screen .traffic-chart {
+    min-height: 200px;
+    margin-top: 5px;
+  }
+  .ds-screen .traffic-selected-support {
+    margin-top: 13px;
+    padding: 11px 0;
+  }
+  .ds-screen .traffic-forecast > p {
+    font-size: 11px;
+    line-height: 1.7;
+    margin-top: 12px;
+  }
+  .ds-screen .traffic-forecast .ds-inline-warning {
+    margin-top: 15px;
+  }
+  .ds-screen .traffic-forecast .ds-confidence {
+    padding-top: 18px;
+  }
+  .ds-screen .traffic-forecast .forecast-big {
+    font-size: 64px;
+    margin: 17px 0 10px;
+  }
+}
+@media (max-width: 850px) {
+  .ds-screen .traffic-selected-support {
+    grid-column: 1/-1;
+    margin-top: 18px;
+    gap: 35px;
+  }
+  .ds-screen .traffic-selected-support > span {
+    font-size: 11px;
+  }
+  .ds-screen .traffic-selected-support strong {
+    font-size: 22px;
+  }
+  .ds-screen .traffic-timeline-slot {
+    margin-top: 18px;
+  }
+}
+@media (max-width: 520px) {
+  .ds-screen .traffic-selection-state {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .ds-screen .traffic-selection-state output {
+    font-size: 10px;
+  }
+  .ds-screen .traffic-selection-state > span {
+    font-size: 8px;
+  }
+  .ds-screen .traffic-selection-state time {
+    font-size: 9px;
+    padding-left: 8px;
+  }
+  .ds-screen .traffic-selected-support > span {
+    font-size: 10px;
+  }
+  .ds-screen .traffic-selected-support strong {
+    font-size: 21px;
+  }
+  .ds-screen .traffic-selected-support small {
+    font-size: 9px;
+  }
+}
+
+/* Proposed governance stays attached to the selected maturity stage. */
+.ds-screen.roadmap-screen .roadmap-statement,
+.ds-screen.roadmap-screen .maturity-timeline,
+.ds-screen.roadmap-screen .roadmap-bottom {
+  flex-shrink: 0;
+}
+.ds-screen .maturity-detail-hint {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 18px;
+  color: #658c9f;
+  font-size: 11px;
+}
+.ds-screen .maturity-phase.is-selected .maturity-detail-hint {
+  color: #aabed0;
+}
+.ds-screen .roadmap-governance {
+  flex-shrink: 0;
+  border-top: 1px solid #2d4256;
+  border-bottom: 1px solid #213440;
+  background: linear-gradient(115deg, #111e2d, #091a23);
+  border-radius: 5px;
+}
+.ds-screen .roadmap-governance-toggle {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 17px 20px;
+  text-align: left;
+  font: inherit;
+  border: 0;
+  background: transparent;
+  color: #b9a7e9;
+  cursor: pointer;
+}
+.ds-screen .roadmap-governance-toggle:hover {
+  background: #a78bfa06;
+}
+.ds-screen .roadmap-governance-toggle:focus-visible,
+.ds-screen .impact-methodology-button:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 3px;
+}
+.ds-screen .roadmap-governance-toggle > svg:first-child {
+  flex-shrink: 0;
+}
+.ds-screen .roadmap-governance-toggle > span {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.ds-screen .roadmap-governance-toggle .eyebrow {
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.45px;
+  color: #8296b3;
+  text-transform: none;
+}
+.ds-screen .roadmap-governance-toggle strong {
+  color: #c7d7e5;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+.ds-screen .roadmap-governance-toggle > svg:last-child {
+  margin-left: auto;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.ds-screen .roadmap-governance-toggle > svg.is-expanded {
+  transform: rotate(90deg);
+}
+.ds-screen .roadmap-governance-details {
+  padding: 0 20px 17px;
+}
+.ds-screen .roadmap-governance-roles {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr 1.3fr;
+  gap: 22px;
+  margin: 0;
+  padding: 17px 0;
+  border-top: 1px solid #2c3d4c;
+}
+.ds-screen .roadmap-governance-roles > div + div {
+  border-left: 1px solid #243a48;
+  padding-left: 22px;
+}
+.ds-screen .roadmap-governance-roles dt,
+.ds-screen .roadmap-governance-gate .eyebrow {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #7493a6;
+  letter-spacing: 0.4px;
+  font-weight: 450;
+}
+.ds-screen .roadmap-governance-roles dd {
+  font-size: 12px;
+  line-height: 1.75;
+  color: #b0c4d1;
+  margin: 8px 0 0;
+}
+.ds-screen .roadmap-governance-gate {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 25px;
+  border-top: 1px solid #243945;
+  padding: 14px 0 12px;
+}
+.ds-screen .roadmap-governance-gate .eyebrow {
+  color: #a79bcc;
+  text-transform: none;
+}
+.ds-screen .roadmap-governance-gate p {
+  font-size: 12px;
+  line-height: 1.75;
+  color: #9fb7c7;
+  margin-top: 7px;
+}
+.ds-screen .roadmap-governance-scope {
+  color: #718b9b;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.ds-screen .impact-methodology-strip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid #203540;
+}
+.ds-screen .impact-methodology-strip > span {
+  color: #6f8d9f;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.ds-screen .impact-methodology-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 11px;
+  color: #9acbe2;
+  border: 1px solid #244351;
+  background: #0c2430;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+.ds-screen .impact-methodology-button:hover {
+  background: #113241;
+  border-color: #386276;
+}
+@media (max-width: 850px) {
+  .ds-screen .roadmap-governance-roles {
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  .ds-screen .roadmap-governance-roles > div:last-child {
+    grid-column: 1 / -1;
+    padding-left: 0;
+    border-left: 0;
+  }
+  .ds-screen .roadmap-governance-gate {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .ds-screen .impact-methodology-strip {
+    flex-wrap: wrap;
+    padding-top: 0;
+  }
+}
+@media (max-width: 520px) {
+  .ds-screen .roadmap-governance-toggle {
+    padding: 16px 14px;
+    gap: 10px;
+  }
+  .ds-screen .roadmap-governance-toggle strong {
+    font-size: 13px;
+  }
+  .ds-screen .roadmap-governance-details {
+    padding: 0 14px 16px;
+  }
+  .ds-screen .roadmap-governance-roles {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  .ds-screen .roadmap-governance-roles > div + div {
+    border-left: 0;
+    padding-left: 0;
+  }
+  .ds-screen .roadmap-governance-roles > div:last-child {
+    grid-column: auto;
+  }
+  .ds-screen .impact-methodology-strip {
+    align-items: flex-start;
+    gap: 9px;
+  }
+}

@@ -11,6 +11,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  ReferenceDot,
   ReferenceArea,
   BarChart,
   Bar,
@@ -47,6 +48,7 @@ import {
   Zap,
 } from "lucide-react";
 import CityMap from "./CityMap";
+import { FORECAST_MINUTES, getForecast } from "../scenario.mjs";
 import {
   formatCityTime,
   formatCityDate,
@@ -84,22 +86,41 @@ const DomainTitle = ({ eyebrow, title, description, children }) => (
   </div>
 );
 
-export function TrafficScreen() {
-  const [anchor] = useState(() => new Date());
+export function TrafficScreen({
+  forecastOffset = 0,
+  forecastAnchor,
+  timeline,
+} = {}) {
+  const [localAnchor] = useState(() => Date.now());
+  const anchor = new Date(forecastAnchor ?? localAnchor);
+  const selectedMinute = FORECAST_MINUTES.includes(forecastOffset)
+    ? forecastOffset
+    : 0;
+  const selectedForecast = getForecast(selectedMinute, "A");
+  const isFuture = selectedMinute > 0;
+  const selectedTimestamp = anchor.getTime() + selectedMinute * 60_000;
+  const selectedTone = isFuture ? "#a78bfa" : "#38bdf8";
   const data = [
     { offset: -60, live: 38, model: 40 },
     { offset: -40, live: 47, model: 48 },
     { offset: -20, live: 58, model: 60 },
-    { offset: 0, live: 72, model: 74 },
-    { offset: 38, model: 82 },
-    { offset: 60, model: 87 },
+    { offset: 0, live: 72, model: getForecast(0, "A").congestion },
+    ...FORECAST_MINUTES.filter((minutes) => minutes > 0).map((minutes) => ({
+      offset: minutes,
+      model: getForecast(minutes, "A").congestion,
+    })),
   ].map(({ offset, ...values }) => ({
     ...values,
     timestamp: anchor.getTime() + offset * 60_000,
-    time: formatCityTime(new Date(anchor.getTime() + offset * 60_000), {
-      seconds: false,
-    }),
   }));
+  const thresholdMinute = Array.from(
+    { length: 61 },
+    (_, minute) => minute,
+  ).find((minute) => getForecast(minute, "A").congestion >= 80);
+  const thresholdTime =
+    thresholdMinute === undefined
+      ? null
+      : new Date(anchor.getTime() + thresholdMinute * 60_000);
   return (
     <motion.div {...stagger} className="ds-screen traffic-screen">
       <DomainTitle
@@ -126,6 +147,21 @@ export function TrafficScreen() {
                 MODELLED
               </span>
             </div>
+          </div>
+          <div className="traffic-timeline-slot">{timeline}</div>
+          <div className="traffic-selection-state">
+            <span className={isFuture ? "purple" : "cyan"}>
+              {isFuture ? `MODELLED · +${selectedMinute} MIN` : "LIVE · NOW"}
+            </span>
+            <output
+              aria-live="polite"
+              aria-label="Selected congestion forecast"
+            >
+              {selectedForecast.congestion}% congestion
+            </output>
+            <time dateTime={new Date(selectedTimestamp).toISOString()}>
+              {formatCityTime(new Date(selectedTimestamp), { seconds: false })}
+            </time>
           </div>
           <div className="traffic-chart">
             <ResponsiveContainer width="100%" height="100%">
@@ -168,8 +204,8 @@ export function TrafficScreen() {
                   tickLine={false}
                 />
                 <ReferenceArea
-                  x1={data[3].timestamp}
-                  x2={data[5].timestamp}
+                  x1={anchor.getTime()}
+                  x2={data[data.length - 1].timestamp}
                   fill="#a78bfa"
                   fillOpacity={0.035}
                 />
@@ -185,9 +221,25 @@ export function TrafficScreen() {
                   }}
                 />
                 <ReferenceLine
-                  x={data[3].timestamp}
+                  x={anchor.getTime()}
                   stroke="#4d6976"
                   strokeDasharray="3 5"
+                />
+                {isFuture && (
+                  <ReferenceLine
+                    x={selectedTimestamp}
+                    stroke={selectedTone}
+                    strokeDasharray="3 5"
+                  />
+                )}
+                <ReferenceDot
+                  x={selectedTimestamp}
+                  y={selectedForecast.congestion}
+                  r={6}
+                  fill={selectedTone}
+                  stroke="#09171e"
+                  strokeWidth={3}
+                  isFront
                 />
                 <Tooltip
                   contentStyle={tipStyle}
@@ -234,29 +286,70 @@ export function TrafficScreen() {
             <span>
               Forecast horizon <strong>+60 min</strong>
             </span>
-            <span>Historical observations + synthetic model</span>
+            <span>Synthetic observations + demonstration forecast</span>
           </div>
         </div>
-        <aside className="traffic-forecast">
-          <Tag tone="purple">MODELLED · +38 MIN</Tag>
+        <aside
+          className={`traffic-forecast ${isFuture ? "is-modelled" : "is-observed"}`}
+        >
+          <Tag tone={isFuture ? "purple" : "cyan"}>
+            {isFuture ? `MODELLED · +${selectedMinute} MIN` : "LIVE · NOW"}
+          </Tag>
           <div className="forecast-big">
-            82<span>%</span>
+            {selectedForecast.congestion}
+            <span>%</span>
           </div>
           <h3>
-            Congestion is forecast
-            <br />
-            to intensify.
+            {!isFuture ? (
+              <>
+                The city’s current
+                <br />
+                operational pressure.
+              </>
+            ) : selectedForecast.congestion >= 80 ? (
+              <>
+                Forecast exceeds the
+                <br />
+                operating threshold.
+              </>
+            ) : (
+              <>
+                Pressure at the
+                <br />
+                selected horizon.
+              </>
+            )}
           </h3>
           <p>
-            Without intervention, demand is expected to exceed the historic
-            centre’s effective road capacity.
+            The map and this forecast share the same selected time. All
+            operating conditions are synthetic demonstration data.
           </p>
+          <div className="traffic-selected-support">
+            <span>
+              PM2.5{" "}
+              <strong>
+                {selectedForecast.pm}
+                <small> µg/m³</small>
+              </strong>
+            </span>
+            <span>
+              Average speed{" "}
+              <strong>
+                {selectedForecast.speed}
+                <small> km/h</small>
+              </strong>
+            </span>
+          </div>
           <div className="ds-inline-warning">
             <TriangleAlert size={16} />
-            <span>Threshold breach expected at {data[4].time}</span>
+            <span>
+              {thresholdTime
+                ? `80% threshold forecast at ${formatCityTime(thresholdTime, { seconds: false })}`
+                : "80% operating threshold"}
+            </span>
           </div>
           <div className="ds-confidence">
-            <span>Model confidence</span>
+            <span>Illustrative model confidence</span>
             <strong>87%</strong>
             <div>
               <i />
@@ -742,8 +835,52 @@ const phases = [
     ],
   },
 ];
+const phaseGovernance = [
+  {
+    owner: "Municipal programme lead (proposed)",
+    stewards:
+      "Proposed Mobility, Environment and IT custodians; confirm named source owners during inventory.",
+    authority:
+      "A municipal sponsor authorises discovery. No municipal operating capability is verified by this prototype.",
+    gate: "Signed inventory and data statement: source coverage, quality, lawful access, ownership and integration gaps recorded.",
+    dependency:
+      "Municipal stakeholder validation and access to source-system documentation.",
+  },
+  {
+    owner: "Mobility Operations (proposed)",
+    stewards:
+      "IT owns integration and quality monitoring; Environment stewards air-quality data.",
+    authority:
+      "A named control-room operator approves, modifies, pauses or reverses each action. Mobility owns escalation.",
+    gate: "Baseline agreed; feed-quality thresholds and source owners approved; human approval, rollback and audit trail tested.",
+    dependency:
+      "Authorised priority feeds, traffic-control interfaces, support cover and an approved Mobility–IT–Environment RACI.",
+  },
+  {
+    owner: "Cross-department steering group (proposed)",
+    stewards:
+      "Mobility / Environment RACI; IT manages source access, retention and integration duties.",
+    authority:
+      "Mobility approves traffic changes; a nominated heat lead approves heat response under an agreed protocol.",
+    gate: "Joint operational drill and forecast backtest pass before expansion; heat protocol, data access and retention approved.",
+    dependency:
+      "Historical datasets, named heat-response partners and an agreed service and escalation protocol.",
+  },
+  {
+    owner: "Urban Data Hub service owner (proposed)",
+    stewards:
+      "Named source stewards and a model-governance board; periodic validation and model-version review.",
+    authority:
+      "Named operators retain operational approval. The model-governance board authorises model changes, never operational execution.",
+    gate: "Evidenced benefit against approved baselines, accessibility and historic constraints; periodic validation, continuity and rollback tested.",
+    dependency:
+      "Funded service ownership, interoperable sources, monitored models and recurring governance review.",
+  },
+];
 export function Roadmap() {
   const [selected, setSelected] = useState(3);
+  const [governanceOpen, setGovernanceOpen] = useState(true);
+  const governance = phaseGovernance[selected];
   return (
     <motion.div {...stagger} className="ds-screen roadmap-screen">
       <DomainTitle
@@ -772,7 +909,12 @@ export function Roadmap() {
           <button
             className={`maturity-phase ${selected === i ? "is-selected" : ""} ${p.tone}`}
             key={p.id}
-            onClick={() => setSelected(i)}
+            onClick={() => {
+              setSelected(i);
+              setGovernanceOpen(true);
+            }}
+            aria-expanded={selected === i && governanceOpen}
+            aria-controls="roadmap-governance-details"
           >
             <div className="maturity-node">
               <span>{p.id}</span>
@@ -789,9 +931,76 @@ export function Roadmap() {
                 </li>
               ))}
             </ul>
+            <span className="maturity-detail-hint">
+              Governance & stage gate <ChevronRight size={12} />
+            </span>
           </button>
         ))}
       </div>
+      <section
+        className="roadmap-governance"
+        aria-labelledby="roadmap-governance-title"
+      >
+        <button
+          className="roadmap-governance-toggle"
+          onClick={() => setGovernanceOpen((open) => !open)}
+          aria-expanded={governanceOpen}
+          aria-controls="roadmap-governance-details"
+        >
+          <ShieldCheck size={19} />
+          <span>
+            <span className="eyebrow">
+              Proposed governance · validate against municipal inventory
+            </span>
+            <strong id="roadmap-governance-title">
+              {phases[selected].name} · decision ownership & stage gate
+            </strong>
+          </span>
+          <ChevronRight
+            className={governanceOpen ? "is-expanded" : ""}
+            size={17}
+          />
+        </button>
+        {governanceOpen && (
+          <motion.div
+            id="roadmap-governance-details"
+            className="roadmap-governance-details"
+            key={selected}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <dl className="roadmap-governance-roles">
+              <div>
+                <dt>Accountable owner</dt>
+                <dd>{governance.owner}</dd>
+              </div>
+              <div>
+                <dt>Data stewards & delivery</dt>
+                <dd>{governance.stewards}</dd>
+              </div>
+              <div>
+                <dt>Decision authority</dt>
+                <dd>{governance.authority}</dd>
+              </div>
+            </dl>
+            <div className="roadmap-governance-gate">
+              <div>
+                <span className="eyebrow">Proposed acceptance gate</span>
+                <p>{governance.gate}</p>
+              </div>
+              <div>
+                <span className="eyebrow">Critical dependency</span>
+                <p>{governance.dependency}</p>
+              </div>
+            </div>
+            <p className="roadmap-governance-scope">
+              Roles and gates are proposals, not a verified Leuven
+              organisational structure. City geography provides context only.
+            </p>
+          </motion.div>
+        )}
+      </section>
       <div className="roadmap-bottom">
         <div>
           <GitBranch size={18} />
@@ -924,8 +1133,22 @@ const impactData = [
   { name: "PM2.5", predicted: 8, actual: 7.1 },
   { name: "Travel time", predicted: 14, actual: 12.6 },
 ];
-export function ImpactScreen({ lifecycle = "idle", onNavigate }) {
+export function ImpactScreen({
+  lifecycle = "idle",
+  onNavigate,
+  onMethodology,
+}) {
   const [metric, setMetric] = useState(0);
+  const methodologyButton = (
+    <div className="impact-methodology-strip">
+      <span>Transparent methods · synthetic demonstration</span>
+      <button className="impact-methodology-button" onClick={onMethodology}>
+        <CircleHelp size={14} />
+        KPI calculation & assumptions
+        <ChevronRight size={13} />
+      </button>
+    </div>
+  );
   if (lifecycle !== "measured")
     return (
       <motion.div {...stagger} className="ds-screen impact-screen">
@@ -934,6 +1157,7 @@ export function ImpactScreen({ lifecycle = "idle", onNavigate }) {
           title="KPI & Impact"
           description="An intervention is only as good as its measured outcome."
         />
+        {methodologyButton}
         <div className="impact-pending">
           <div
             className={`impact-pending-orbit ${lifecycle === "measuring" ? "measuring" : ""}`}
@@ -1002,6 +1226,7 @@ export function ImpactScreen({ lifecycle = "idle", onNavigate }) {
         title="Did the intervention work?"
         description="H-03 · Adaptive signal timing + targeted route guidance · 60-minute observation window"
       />
+      {methodologyButton}
       <div className="impact-composition">
         <div className="impact-chart-area">
           <div className="ds-section-heading">

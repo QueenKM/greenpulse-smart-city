@@ -683,3 +683,251 @@
   justify-content: space-between;
   margin-top: 14px;
 }
+.gp-dialog-methodology {
+  width: min(650px, 100%);
+}
+.gp-dialog-methodology .gp-dialog-header h2 {
+  font-size: 27px;
+}
+.gp-dialog-methodology .gp-dialog-badge {
+  font-size: 10px;
+  padding: 6px 8px;
+}
+.gp-dialog-method-intro {
+  margin: 16px 0 27px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: #91aab7;
+}
+.gp-dialog-method-section {
+  border-top: 1px solid #ffffff12;
+  padding: 23px 0;
+}
+.gp-dialog-method-section:last-child {
+  padding-bottom: 4px;
+}
+.gp-dialog-method-section .gp-dialog-field-label {
+  color: #6c8e9f;
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  margin-bottom: 10px;
+}
+.gp-dialog-method-section h3 {
+  margin: 0 0 11px;
+  color: #e1edf2;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.3px;
+  line-height: 1.45;
+}
+.gp-dialog-method-section > p {
+  color: #8ca5b3;
+  font-size: 12px;
+  line-height: 1.85;
+  margin: 0 0 13px;
+}
+.gp-dialog-method-section > p:last-child {
+  margin-bottom: 0;
+}
+.gp-dialog-method-formula {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 17px;
+  margin: 15px 0 12px;
+  border-left: 2px solid #a78bfa66;
+  background: linear-gradient(90deg, #a78bfa08, #a78bfa02);
+}
+.gp-dialog-method-formula > span {
+  color: #abb6cc;
+  font:
+    11px/1.8 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+.gp-dialog-method-formula strong {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 9px;
+  color: #d5dbea;
+  font-size: 14px;
+  line-height: 1.7;
+  font-weight: 450;
+}
+.gp-dialog-method-formula strong em {
+  color: #d4c2ff;
+  font-style: normal;
+  font-size: 18px;
+  letter-spacing: -0.4px;
+}
+.gp-dialog-method-formula small {
+  color: #718b9c;
+  font:
+    11px/1.5 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+.gp-dialog-method-section .gp-dialog-method-note {
+  color: #6f8a99;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.gp-dialog-method-note strong {
+  color: #aabec8;
+  font-weight: 500;
+}
+.gp-dialog-method-examples {
+  display: flex;
+  flex-direction: column;
+  margin: 20px 0 18px;
+}
+.gp-dialog-method-examples article {
+  padding: 17px 0;
+  border-bottom: 1px solid #ffffff0e;
+}
+.gp-dialog-method-examples article:first-child {
+  padding-top: 0;
+}
+.gp-dialog-method-example-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.gp-dialog-method-example-title h4 {
+  margin: 0;
+  font-size: 13px;
+  color: #d4e4eb;
+  font-weight: 500;
+}
+.gp-dialog-method-example-title > span {
+  color: #567c90;
+  font-size: 11px;
+}
+.gp-dialog-method-examples dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin: 14px 0;
+}
+.gp-dialog-method-examples dl div {
+  min-width: 0;
+}
+.gp-dialog-method-examples dt {
+  color: #718f9f;
+  font-size: 10px;
+  line-height: 1.5;
+  margin-bottom: 5px;
+}
+.gp-dialog-method-examples dd {
+  color: #c5d7e1;
+  margin: 0;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.35px;
+}
+.gp-dialog-method-reductions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 22px;
+}
+.gp-dialog-method-reductions > span {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  color: #7795a6;
+  font-size: 11px;
+}
+.gp-dialog-method-reductions b {
+  color: #b8c4d5;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.gp-dialog-method-reductions > span:first-child b {
+  color: #bba3f7;
+}
+.gp-dialog-method-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 15px 0 17px;
+  padding: 13px 0;
+  color: #5e8a9e;
+  border-block: 1px solid #38bdf815;
+}
+.gp-dialog-method-chain span {
+  color: #9abccc;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.gp-dialog-method-chain svg {
+  flex: none;
+}
+.gp-dialog-method-assumptions {
+  padding-left: 16px;
+  padding-right: 15px;
+  border-left: 2px solid #fbbf2435;
+  background: linear-gradient(90deg, #fbbf2404, transparent);
+}
+.gp-dialog-method-assumptions p strong {
+  color: #c9c7b2;
+  font-weight: 500;
+}
+.gp-dialog-method-requirements {
+  margin: 0;
+  padding-left: 16px;
+  color: #89a5b4;
+  font-size: 12px;
+  line-height: 1.85;
+}
+.gp-dialog-method-requirements li {
+  margin-bottom: 10px;
+  padding-left: 3px;
+}
+.gp-dialog-method-requirements li::marker {
+  color: #426578;
+}
+.gp-dialog-method-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #8dcde8;
+  font-size: 12px;
+  text-decoration: none;
+  margin-top: 14px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #38bdf82b;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+}
+.gp-dialog-method-link:hover {
+  color: #c5edff;
+  border-color: #38bdf880;
+}
+.gp-dialog-method-link:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 5px;
+}
+@media (max-width: 600px) {
+  .gp-dialog-methodology .gp-dialog-header h2 {
+    font-size: 24px;
+  }
+  .gp-dialog-method-intro {
+    font-size: 12px;
+  }
+  .gp-dialog-method-formula {
+    padding: 14px 12px;
+  }
+  .gp-dialog-method-examples dl {
+    gap: 8px;
+  }
+  .gp-dialog-method-examples dd {
+    font-size: 17px;
+  }
+}

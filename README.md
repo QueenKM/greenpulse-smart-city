@@ -26,7 +26,24 @@ Start **Presentation Demo** in the sidebar. The seven steps follow Alert → Evi
 
 Use **Pause / Resume**, **Handover**, and **Close Intervention** to demonstrate ownership. Closing starts a visible five-second accelerated measurement replay representing a 60-minute observation window; only then do measured synthetic outcomes appear. Reset Demo starts a clean cycle. The active timer starts at 00:47:32 in the default 60-minute replay; modified operating windows start at their full duration. An elapsed operating window pauses for human review.
 
+### Exploring and presenting
+
+- Click the H-03 incident on the map to focus its affected corridors. **Show whole city** restores context; sensor clicks retain their own reading panel.
+- **Now / +15 / +30 / +60 min** is shared across Overview, Traffic & Emissions, and Digital Twin. Future layers and values are MODELLED synthetic forecasts; the real wall clock remains independent. Forecast timestamps share one anchor, including across midnight.
+- Digital Twin zoom, pan, reset and 2D/3D controls apply to both comparison halves. Switch **Pan both maps** on to move the shared camera, then **Drag comparison** to operate the before/after divider. The camera also supports local arrow-key pan without advancing presentation steps.
+- **How is this calculated?** explains the 60-minute decision score. Weights: environment 30%, mobility 25%, accessibility 20%, historic compatibility 10%, implementation feasibility 15%. Higher feasibility means easier delivery. Scenario B sums to 87.55 and rounds to 88/100. These inputs and weights are illustrative assumptions, not a calibrated Leuven model.
+- Technical metadata lives under **Evidence & model details**, while the observed signals, forecast, recommendation and approval path remain visible.
+- **Presentation Demo** requests native fullscreen and prepares both geographic views before enabling Next. Use **← / →** for previous/next and **Esc** to exit. Inputs, the comparison camera and approval dialogs keep their own keyboard controls; no shortcut can approve an intervention. The fullscreen toolbar can enter/leave fullscreen independently. Browsers that decline fullscreen retain the guided in-page presentation. Reset returns to the current-condition alert with a fresh synthetic timeline; actual date/time keep running.
+
 The global **CURRENT / MVP / TARGET** control explains operating-model maturity. It does not claim those capabilities exist today or alter the synthetic operating workspace. The roadmap shows a progressive 0–36 month implementation path.
+
+## Method, evidence and presentation annexes
+
+- [KPI calculation, assumptions and verification plan](docs/KPI-METHODOLOGY.md): the worked congestion example, other KPI definitions, why decisions can affect them, and limits of the synthetic model. Open **KPI & Impact → KPI calculation & assumptions** for the in-app explanation.
+- [Proposed governance and implementation gates](docs/GOVERNANCE-ROADMAP.md): accountable owners, stewards, decision authority, dependencies and phase acceptance. Select a phase in **Implementation Roadmap** to inspect its proposed governance.
+- [15-minute presentation guide](docs/PRESENTATION-GUIDE.md): emphasis on method and results, one worked KPI, one governance gate, and links for the final slide.
+
+The +60-minute scenario comparison and the closed-loop impact benchmark are separate synthetic examples with different comparators. Their percentages must not be combined or described as one calibrated causal simulation. The methodology drawer and annex explain this distinction; no result is claimed to be real Leuven operational evidence.
 
 ## Structure
 
@@ -59,7 +76,7 @@ Scenario scores are illustrative decision-support scores, not a validated scorin
 
 ## Deployment
 
-The Vite default base is `/greenpulse-smart-city/` for GitHub Pages. The retained GitHub Actions workflow installs from the lockfile, runs tests, builds, and deploys on pushes to `main`. For root-path private Sites hosting, build with `SITES_BUILD=1 npm run build`; this keeps GitHub Pages configuration intact.
+The Vite default base is `/greenpulse-smart-city/` for GitHub Pages. The GitHub Actions workflow installs from the lockfile, tests and builds pull requests, and deploys successful pushes to `main`. Pull requests never deploy. For root-path private Sites hosting, build with `SITES_BUILD=1 npm run build`; this keeps GitHub Pages configuration intact.
 
 ## Verification limit
 

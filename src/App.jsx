@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useReducer, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
@@ -38,8 +44,14 @@ import {
   PanelLeftClose,
   ScanLine,
   CircleDot,
+  Maximize2,
+  Minimize2,
+  LoaderCircle,
 } from "lucide-react";
-import CityMap from "./components/CityMap";
+import CityMap, { preloadCityModel } from "./components/CityMap";
+import IncidentPanel from "./components/IncidentPanel";
+import ForecastTimeline from "./components/ForecastTimeline";
+import { getForecast } from "./scenario.mjs";
 import DigitalTwin from "./components/DigitalTwin";
 import {
   DataHealth,
@@ -54,6 +66,7 @@ import {
   ApprovalDialog,
   EvidenceDrawer,
   HandoverDialog,
+  KpiMethodologyDrawer,
 } from "./components/Dialogs";
 import { lifecycleReducer, initialLifecycle } from "./lifecycle.mjs";
 import {
@@ -198,114 +211,6 @@ function LayerBar({ layers, setLayers }) {
         </button>
       ))}
     </div>
-  );
-}
-
-function IncidentPanel({ onCompare, selected, onEvidence }) {
-  return (
-    <section
-      className={`incident-panel ${selected ? "focused" : ""}`}
-      aria-label="Historic Centre incident"
-    >
-      <div className="incident-top">
-        <span className="eyebrow">PRIORITY INCIDENT</span>
-        <Tag tone="red" dot>
-          CRITICAL
-        </Tag>
-      </div>
-      <div className="incident-id">{ID}</div>
-      <h2>
-        Traffic & Air Quality
-        <br />
-        Deterioration
-      </h2>
-      <p className="incident-location">
-        <Navigation size={13} />
-        Leuven · Historic Centre <span>H-03</span>
-      </p>
-      <div className="incident-status">
-        <Clock3 size={14} />
-        <span>AWAITING APPROVAL</span>
-        <span className="status-line" />
-      </div>
-      <div className="incident-observed">
-        <div className="section-line">
-          <Tag tone="cyan" dot>
-            LIVE
-          </Tag>
-          <span>Synthetic feed · 18 sec ago</span>
-        </div>
-        <div className="observed-values">
-          <div>
-            <span>Traffic speed</span>
-            <strong>
-              19<small> km/h</small>
-            </strong>
-          </div>
-          <div>
-            <span>Congestion</span>
-            <strong>
-              72<small>%</small>
-            </strong>
-          </div>
-          <div>
-            <span>PM2.5</span>
-            <strong>
-              27<small> µg/m³</small>
-            </strong>
-          </div>
-        </div>
-      </div>
-      <div className="prediction-strip">
-        <div>
-          <Tag tone="purple">MODELLED</Tag>
-          <p>
-            Congestion in <b>38 minutes</b>
-          </p>
-        </div>
-        <strong>
-          82<small>%</small>
-          <ArrowUpRight size={21} />
-        </strong>
-        <svg viewBox="0 0 128 40" aria-hidden="true">
-          <path
-            d="M0 36C18 34 16 28 31 29S48 17 62 19 75 11 88 12 105 0 128 2"
-            fill="none"
-            stroke="#a78bfa"
-            strokeWidth="2"
-          />
-        </svg>
-      </div>
-      <div className="ai-recommendation">
-        <div className="eyebrow purple-text">
-          <GitBranch size={14} /> AI RECOMMENDATION
-        </div>
-        <h3>
-          Adaptive traffic signal timing
-          <br />
-          <span>+ targeted route guidance</span>
-        </h3>
-        <div className="expected">
-          <span>Expected improvement</span>
-          <div>
-            <b>
-              −12%<small>Congestion</small>
-            </b>
-            <b>
-              −8%<small>Emissions</small>
-            </b>
-          </div>
-        </div>
-      </div>
-      <button className="button primary compare-button" onClick={onCompare}>
-        Compare scenarios
-        <ArrowRight size={16} />
-      </button>
-      <button className="text-button incident-evidence" onClick={onEvidence}>
-        <BookOpen size={13} /> Review supporting evidence
-        <ChevronRight size={13} />
-      </button>
-    </section>
   );
 }
 
@@ -531,6 +436,7 @@ export default function App() {
   const [approval, setApproval] = useState(false),
     [evidence, setEvidence] = useState(false),
     [handover, setHandover] = useState(false);
+  const [methodologyOpen, setMethodologyOpen] = useState(false);
   const [mobileNav, setMobileNav] = useState(false),
     [selected, setSelected] = useState(false),
     [closeConfirm, setCloseConfirm] = useState(false);
@@ -539,7 +445,26 @@ export default function App() {
   const [demo, setDemo] = useState(false),
     [step, setStep] = useState(0),
     [toast, setToast] = useState("");
-  const selectMapIncident = useCallback(() => setSelected(true), []);
+  const appRef = useRef(null);
+  const [forecastOffset, setForecastOffset] = useState(60);
+  const [forecastAnchor, setForecastAnchor] = useState(() => Date.now());
+  const [focusRequest, setFocusRequest] = useState(0);
+  const [viewResetToken, setViewResetToken] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [preparation, setPreparation] = useState("idle");
+  const selectMapIncident = useCallback((item) => {
+    if (item?.type === "incident" || item?.id === "H03") {
+      setSelected(true);
+      setFocusRequest((value) => value + 1);
+    }
+  }, []);
+  const clearMapFocus = useCallback(() => setSelected(false), []);
+  useEffect(() => {
+    const sync = () =>
+      setFullscreen(document.fullscreenElement === appRef.current);
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
   const active = ["active", "paused"].includes(state.status);
   useEffect(() => {
     if (state.status !== "active") return;
@@ -584,14 +509,19 @@ export default function App() {
   };
   const compare = () => navigate("Digital Twin");
   const reset = () => {
+    setForecastAnchor(Date.now());
+    setForecastOffset(demo ? 0 : 60);
+    setViewResetToken((value) => value + 1);
     dispatch({ type: "RESET" });
     setApproval(false);
     setHandover(false);
+    setMethodologyOpen(false);
     setCloseConfirm(false);
     setEvidence(false);
     setStep(0);
     setPage("Overview");
-    setSelected(false);
+    setSelected(demo);
+    if (demo) setFocusRequest((value) => value + 1);
     setLayers({
       traffic: true,
       air: true,
@@ -605,19 +535,36 @@ export default function App() {
     setEvidence(false);
     setApproval(false);
     setSelected(false);
-    if (next === 0) setPage("Overview");
+    if (next === 0) {
+      setPage("Overview");
+      setForecastOffset(0);
+      setSelected(true);
+      setFocusRequest((value) => value + 1);
+    }
     if (next === 1) {
       setPage("Overview");
       setSelected(true);
+      setFocusRequest((value) => value + 1);
+      setForecastOffset(0);
       setEvidence(true);
     }
-    if (next === 2) setPage("Traffic & Emissions");
-    if (next === 3) setPage("Digital Twin");
+    if (next === 2) {
+      setPage("Traffic & Emissions");
+      setForecastOffset(30);
+    }
+    if (next === 3) {
+      setPage("Digital Twin");
+      setForecastOffset(60);
+    }
     if (next === 4) {
       setPage("Digital Twin");
+      setForecastOffset(60);
       if (state.status === "idle") setApproval(true);
     }
-    if (next === 5) setPage("Overview");
+    if (next === 5) {
+      setPage("Overview");
+      setForecastOffset(0);
+    }
     if (next === 6) {
       setPage("KPI & Impact");
       if (active) dispatch({ type: "CLOSE", time: formatCityTime() });
@@ -630,14 +577,135 @@ export default function App() {
       return;
     }
     if (step < 6) demoGo(step + 1);
-    else {
-      setDemo(false);
-      setEvidence(false);
+    else stopDemo();
+  };
+  const enterFullscreen = () => {
+    const request = appRef.current?.requestFullscreen;
+    if (!request) {
+      setToast(
+        "Presentation mode is active. Fullscreen is unavailable in this browser.",
+      );
+      return;
+    }
+    try {
+      Promise.resolve(request.call(appRef.current)).catch(() =>
+        setToast(
+          "Fullscreen was unavailable. You can continue in presentation mode.",
+        ),
+      );
+    } catch {
+      setToast(
+        "Fullscreen was unavailable. You can continue in presentation mode.",
+      );
     }
   };
+  const leaveFullscreen = () => {
+    if (
+      document.fullscreenElement === appRef.current &&
+      document.exitFullscreen
+    ) {
+      Promise.resolve(document.exitFullscreen()).catch(() => {});
+    }
+  };
+  const stopDemo = () => {
+    setDemo(false);
+    setEvidence(false);
+    setApproval(false);
+    setHandover(false);
+    setMethodologyOpen(false);
+    setCloseConfirm(false);
+    leaveFullscreen();
+  };
+  const startDemo = () => {
+    reset();
+    setDemo(true);
+    setForecastOffset(0);
+    setSelected(true);
+    setFocusRequest((value) => value + 1);
+    setPreparation("loading");
+    enterFullscreen();
+    preloadCityModel()
+      .then(() => setPreparation("ready"))
+      .catch(() => {
+        setPreparation("error");
+        setToast(
+          "The geographic model could not be prepared. Reload the page before presenting maps.",
+        );
+      });
+  };
+  useEffect(() => {
+    if (!demo) return undefined;
+    const keydown = (event) => {
+      if (
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.defaultPrevented ||
+        event.repeat
+      )
+        return;
+      if (
+        event.key !== "Escape" &&
+        event.target?.closest?.(
+          "input,textarea,select,[contenteditable='true'],[data-presentation-shortcuts='off']",
+        )
+      )
+        return;
+      if (
+        evidence &&
+        step === 1 &&
+        ["ArrowLeft", "ArrowRight"].includes(event.key)
+      ) {
+        event.preventDefault();
+        demoGo(event.key === "ArrowRight" ? 2 : 0);
+        return;
+      }
+      if (
+        document.querySelector('[role="dialog"],[role="alertdialog"]') ||
+        approval ||
+        handover ||
+        closeConfirm
+      )
+        return;
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        if (preparation !== "loading") nextStep();
+      }
+      if (event.key === "ArrowLeft" && step > 0) {
+        event.preventDefault();
+        demoGo(step - 1);
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        stopDemo();
+      }
+    };
+    document.addEventListener("keydown", keydown);
+    return () => document.removeEventListener("keydown", keydown);
+  }, [
+    demo,
+    step,
+    evidence,
+    approval,
+    handover,
+    closeConfirm,
+    preparation,
+    state.status,
+  ]);
+  const timeline = (
+    <ForecastTimeline
+      value={forecastOffset}
+      onChange={setForecastOffset}
+      anchor={forecastAnchor}
+      compact
+    />
+  );
 
   return (
-    <div className={`app-shell ${demo ? "is-presenting" : ""}`}>
+    <div
+      ref={appRef}
+      className={`app-shell ${demo ? "is-presenting" : ""} ${fullscreen ? "is-fullscreen" : ""}`}
+    >
       {mobileNav && (
         <button
           className="nav-scrim"
@@ -706,10 +774,7 @@ export default function App() {
           </div>
           <button
             className={`demo-start ${demo ? "running" : ""}`}
-            onClick={() => {
-              reset();
-              setDemo(true);
-            }}
+            onClick={startDemo}
           >
             <span>
               <Play size={14} fill="currentColor" />
@@ -832,11 +897,23 @@ export default function App() {
           )}
         </AnimatePresence>
         {demo && (
-          <div className="demo-progress">
-            <div className="demo-steps">
+          <div
+            className="demo-progress"
+            title="Arrow keys: previous / next step. Escape: exit presentation. Inputs and dialogs retain their own keyboard controls."
+          >
+            <div
+              className="presentation-current-step"
+              role="status"
+              aria-live="polite"
+            >
+              <span>{String(step + 1).padStart(2, "0")} / 07</span>
+              <strong>{demoSteps[step]}</strong>
+            </div>
+            <div className="demo-steps" aria-label="Presentation journey">
               {demoSteps.map((name, i) => (
                 <div
                   key={name}
+                  aria-current={i === step ? "step" : undefined}
                   className={`${i === step ? "current" : ""} ${i < step ? "complete" : ""}`}
                 >
                   <span>
@@ -850,7 +927,35 @@ export default function App() {
                 </div>
               ))}
             </div>
+            <span className="presentation-keys">
+              <kbd>←</kbd>
+              <kbd>→</kbd> Steps <span>·</span> <kbd>Esc</kbd> Exit
+            </span>
             <div className="demo-actions">
+              <span
+                className={`presentation-preparation ${preparation}`}
+                title="Preloaded 2D/3D geography and charts"
+              >
+                {preparation === "loading" ? (
+                  <LoaderCircle size={12} />
+                ) : (
+                  <Check size={12} />
+                )}
+                {preparation === "loading"
+                  ? "Preparing city"
+                  : preparation === "error"
+                    ? "Model unavailable"
+                    : "City ready"}
+              </span>
+              <button
+                aria-label={
+                  fullscreen ? "Exit full screen" : "Enter full screen"
+                }
+                title={fullscreen ? "Exit full screen" : "Enter full screen"}
+                onClick={fullscreen ? leaveFullscreen : enterFullscreen}
+              >
+                {fullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+              </button>
               <button
                 aria-label="Previous demo step"
                 disabled={step === 0}
@@ -860,7 +965,11 @@ export default function App() {
                 <span>Previous</span>
               </button>
               {!(evidence && step === 1) && (
-                <button className="next" onClick={nextStep}>
+                <button
+                  className="next"
+                  onClick={nextStep}
+                  disabled={preparation === "loading"}
+                >
                   {step === 6 ? "Finish Demo" : "Next Step"}
                   <ChevronRight size={14} />
                 </button>
@@ -875,10 +984,7 @@ export default function App() {
               <button
                 aria-label="Exit presentation"
                 title="Exit presentation"
-                onClick={() => {
-                  setDemo(false);
-                  setEvidence(false);
-                }}
+                onClick={stopDemo}
               >
                 <X size={14} />
               </button>
@@ -949,6 +1055,7 @@ export default function App() {
             <div
               className={`overview-layout ${page === "City Map" ? "map-page" : ""}`}
             >
+              {timeline}
               <div className="operations-stage">
                 <section className="map-surface geo-context">
                   <div className="map-heading">
@@ -967,6 +1074,11 @@ export default function App() {
                     </div>
                   </div>
                   <CityMap
+                    key={`overview-map-${viewResetToken}`}
+                    focused={selected}
+                    focusRequest={focusRequest}
+                    onClearFocus={clearMapFocus}
+                    forecastOffset={forecastOffset}
                     layers={layers}
                     onSelect={selectMapIncident}
                     after={false}
@@ -1016,6 +1128,8 @@ export default function App() {
                 {state.status === "idle" ? (
                   <IncidentPanel
                     selected={selected}
+                    forecastOffset={forecastOffset}
+                    forecast={getForecast(forecastOffset)}
                     onCompare={compare}
                     onEvidence={() => setEvidence(true)}
                   />
@@ -1040,10 +1154,21 @@ export default function App() {
             </div>
           )}
           {page === "Digital Twin" && (
-            <DigitalTwin onApprove={openApproval} lifecycle={state.status} />
+            <DigitalTwin
+              onApprove={openApproval}
+              lifecycle={state.status}
+              forecastOffset={forecastOffset}
+              timeline={timeline}
+            />
           )}
           {page === "Data Health" && <DataHealth />}
-          {page === "Traffic & Emissions" && <TrafficScreen />}
+          {page === "Traffic & Emissions" && (
+            <TrafficScreen
+              forecastOffset={forecastOffset}
+              forecastAnchor={forecastAnchor}
+              timeline={timeline}
+            />
+          )}
           {page === "Urban Heat" && <HeatScreen />}
           {page === "Implementation Roadmap" && <Roadmap />}
           {page === "Decision Log" && (
@@ -1053,13 +1178,17 @@ export default function App() {
             <ImpactScreen
               lifecycle={state.status}
               onNavigate={() => navigate("Digital Twin")}
+              onMethodology={() => setMethodologyOpen(true)}
             />
           )}
           {page === "Alert Center" && (
             <AlertCenter
               onOpen={(destination) => {
                 navigate(destination);
-                if (destination === "Overview") setSelected(true);
+                if (destination === "Overview") {
+                  setSelected(true);
+                  setFocusRequest((value) => value + 1);
+                }
               }}
             />
           )}
@@ -1094,6 +1223,7 @@ export default function App() {
           });
           setApproval(false);
           setPage("Overview");
+          setForecastOffset(0);
           if (demo) setStep(5);
           setToast("Human approval recorded. Signal Plan H03 is now active.");
         }}
@@ -1102,6 +1232,10 @@ export default function App() {
         open={evidence}
         onClose={() => setEvidence(false)}
         onNext={demo && step === 1 ? () => demoGo(2) : undefined}
+      />
+      <KpiMethodologyDrawer
+        open={methodologyOpen}
+        onClose={() => setMethodologyOpen(false)}
       />
       <HandoverDialog
         open={handover}

@@ -482,3 +482,246 @@ export function HandoverDialog({ open, onClose, onConfirm }) {
     </Drawer>
   );
 }
+
+export function KpiMethodologyDrawer({ open, onClose }) {
+  const validSamples = 50;
+  const congestedSamples = 36;
+  const congestionBaseline = (congestedSamples / validSamples) * 100;
+  const examples = [
+    {
+      name: "Congestion index",
+      unit: "%",
+      baseline: congestionBaseline,
+      predictedAfter: 63.36,
+      exampleAfter: 64.224,
+    },
+    {
+      name: "PM2.5",
+      unit: "µg/m³",
+      baseline: 27,
+      predictedAfter: 24.84,
+      exampleAfter: 25.083,
+    },
+    {
+      name: "Travel time",
+      unit: "min",
+      baseline: 28,
+      predictedAfter: 24.08,
+      exampleAfter: 24.472,
+    },
+  ].map((example) => {
+    const predictedReduction =
+      (100 * (example.baseline - example.predictedAfter)) / example.baseline;
+    const actualReduction =
+      (100 * (example.baseline - example.exampleAfter)) / example.baseline;
+    return {
+      ...example,
+      predictedReduction,
+      actualReduction,
+      error: Math.abs(predictedReduction - actualReduction),
+    };
+  });
+  const meanError =
+    examples.reduce((sum, example) => sum + example.error, 0) / examples.length;
+  const format = (value, precision = 3) =>
+    Number(value.toFixed(precision)).toString();
+
+  return (
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title="How impact is calculated"
+      label="KPI CALCULATION & ASSUMPTIONS"
+      className="gp-dialog-methodology"
+      footer={
+        <p className="gp-dialog-evidence-footnote">
+          <ShieldCheck size={16} />
+          No real Leuven operational measurements. Human approval remains
+          mandatory.
+        </p>
+      }
+    >
+      <span className="gp-dialog-badge gp-dialog-badge-amber">
+        SYNTHETIC WORKED EXAMPLE
+      </span>
+      <p className="gp-dialog-method-intro">
+        Transparent arithmetic for the presentation. These example values
+        explain the proposed evaluation method; they are not validated municipal
+        results.
+      </p>
+
+      <section className="gp-dialog-method-section">
+        <span className="gp-dialog-field-label">01 / DEFINE THE BASELINE</span>
+        <h3>A proposed congestion index</h3>
+        <p>
+          Share of valid lane-time samples classified as congested. The
+          threshold, sampling interval and lane weighting would require local
+          calibration.
+        </p>
+        <div className="gp-dialog-method-formula">
+          <span>Congested valid lane-time samples ÷ valid samples × 100</span>
+          <strong>
+            {congestedSamples} ÷ {validSamples} × 100 ={" "}
+            <em>{format(congestionBaseline)}%</em>
+          </strong>
+        </div>
+        <p className="gp-dialog-method-note">
+          An illustrative index definition, not a claim about Leuven’s existing
+          congestion methodology.
+        </p>
+      </section>
+
+      <section className="gp-dialog-method-section">
+        <span className="gp-dialog-field-label">
+          02 / COMPARE LIKE WITH LIKE
+        </span>
+        <h3>Relative reduction from a fixed baseline</h3>
+        <div className="gp-dialog-method-formula">
+          <span>Reduction (%) = 100 × (baseline − after) ÷ baseline</span>
+        </div>
+        <div className="gp-dialog-method-examples">
+          {examples.map((example) => (
+            <article key={example.name}>
+              <div className="gp-dialog-method-example-title">
+                <h4>{example.name}</h4>
+                <span>{example.unit}</span>
+              </div>
+              <dl>
+                <div>
+                  <dt>Baseline</dt>
+                  <dd>{format(example.baseline)}</dd>
+                </div>
+                <div>
+                  <dt>Predicted after</dt>
+                  <dd>{format(example.predictedAfter)}</dd>
+                </div>
+                <div>
+                  <dt>Example after</dt>
+                  <dd>{format(example.exampleAfter)}</dd>
+                </div>
+              </dl>
+              <div className="gp-dialog-method-reductions">
+                <span>
+                  Predicted reduction{" "}
+                  <b>{format(example.predictedReduction, 1)}%</b>
+                </span>
+                <span>
+                  Example reduction <b>{format(example.actualReduction, 1)}%</b>
+                </span>
+              </div>
+            </article>
+          ))}
+        </div>
+        <p className="gp-dialog-method-note">
+          For congestion, 72% → 64.224% is a{" "}
+          <strong>
+            {format(examples[0].actualReduction, 1)}% relative reduction
+          </strong>
+          , or a {format(congestionBaseline - examples[0].exampleAfter)}{" "}
+          percentage-point drop in the index. These are different quantities.
+        </p>
+      </section>
+
+      <section className="gp-dialog-method-section">
+        <span className="gp-dialog-field-label">
+          03 / CHECK PREDICTION ERROR
+        </span>
+        <h3>Compare predicted and example reductions</h3>
+        <div className="gp-dialog-method-formula">
+          <span>
+            Congestion error = |{format(examples[0].predictedReduction, 1)} −{" "}
+            {format(examples[0].actualReduction, 1)}| ={" "}
+            {format(examples[0].error, 1)} percentage points
+          </span>
+          <strong>
+            Mean absolute error{" "}
+            <em>
+              {format(meanError, 2)} ≈ {format(meanError, 1)} pp
+            </em>
+          </strong>
+          <small>
+            ({examples.map((example) => format(example.error, 1)).join(" + ")})
+            ÷ {examples.length}
+          </small>
+        </div>
+        <p className="gp-dialog-method-note">
+          This is an illustrative error in reduction rates, not model validation
+          or a statistical confidence interval.
+        </p>
+      </section>
+
+      <section className="gp-dialog-method-section">
+        <span className="gp-dialog-field-label">
+          04 / KEEP THE CAUSAL CLAIM PRECISE
+        </span>
+        <h3>Why an intervention could help</h3>
+        <div className="gp-dialog-method-chain">
+          <span>Adaptive coordination</span>
+          <ArrowRight size={13} />
+          <span>Fewer queues, stops & idling</span>
+          <ArrowRight size={13} />
+          <span>Travel-time & fuel/emission benefits</span>
+        </div>
+        <p>
+          PM concentration also depends on background pollution, weather, fleet
+          mix and dispersion. A traffic improvement cannot be assumed to produce
+          a proportional PM2.5 reduction.
+        </p>
+      </section>
+
+      <section className="gp-dialog-method-section gp-dialog-method-assumptions">
+        <span className="gp-dialog-field-label">
+          05 / TWO DIFFERENT ILLUSTRATIONS
+        </span>
+        <h3>Scenario comparison ≠ measurement benchmark</h3>
+        <p>
+          <strong>Scenario comparison:</strong> the +60-minute options use a
+          do-nothing forecast of 87% congestion and Scenario B at 66%.
+        </p>
+        <p>
+          <strong>Measurement benchmark:</strong> the fixed before/after worked
+          example above starts at 72% and illustrates the separate evaluation
+          step.
+        </p>
+        <p>
+          These are separate synthetic fixtures, not outputs from one calibrated
+          simulation and not measured municipal data. The 60-minute scenario
+          values must not be used to derive the example impact percentages.
+        </p>
+      </section>
+
+      <section className="gp-dialog-method-section">
+        <span className="gp-dialog-field-label">
+          06 / WHAT REAL VERIFICATION REQUIRES
+        </span>
+        <h3>Data, controls and a declared evaluation window</h3>
+        <ul className="gp-dialog-method-requirements">
+          <li>
+            Timestamped traffic speed, flow, occupancy and signal-plan records;
+            defined sensor coverage and data-quality rules.
+          </li>
+          <li>
+            Calibrated air-quality observations, fleet information, background
+            pollution and weather/dispersion variables.
+          </li>
+          <li>
+            A predeclared baseline and after window on comparable streets and
+            times, with a matched control and weather adjustment.
+          </li>
+          <li>
+            Recorded human approval, intervention timing, uncertainty and an
+            attribution review before reporting an effect.
+          </li>
+        </ul>
+        <a
+          className="gp-dialog-method-link"
+          href="https://github.com/QueenKM/greenpulse-smart-city/blob/main/docs/KPI-METHODOLOGY.md"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Read the full KPI methodology <ArrowRight size={14} />
+        </a>
+      </section>
+    </Drawer>
+  );
+}
