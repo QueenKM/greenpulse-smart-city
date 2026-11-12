@@ -13,7 +13,6 @@ import {
   ArrowUpRight,
   Bell,
   BookOpen,
-  Building2,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -23,7 +22,6 @@ import {
   Fingerprint,
   Gauge,
   GitBranch,
-  Globe2,
   Layers3,
   Leaf,
   Map,
@@ -37,7 +35,6 @@ import {
   ShieldCheck,
   Thermometer,
   Users,
-  Wind,
   X,
   ChartNoAxesCombined,
   History,
@@ -49,6 +46,9 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import CityMap, { preloadCityModel } from "./components/CityMap";
+import WorkspaceMenu from "./components/WorkspaceMenu";
+import LayerMenu from "./components/LayerMenu";
+import { MATURITY_MAP_STAGES } from "./maturity.mjs";
 import IncidentPanel from "./components/IncidentPanel";
 import ForecastTimeline from "./components/ForecastTimeline";
 import { getForecast } from "./scenario.mjs";
@@ -129,30 +129,23 @@ const demoSteps = [
 const maturityInfo = {
   CURRENT: [
     "Current inventory",
-    "Available municipal systems",
-    "Fragmented data",
-    "Manual coordination",
+    "Reference street and building geometry",
+    "Illustrative fragmented inventory",
+    "Manual coordination; no operational overlays",
   ],
   MVP: [
     "First connected workflow",
-    "Priority operational sources",
-    "Traffic prediction & human approval",
-    "Baseline KPIs & decision log",
+    "Priority traffic and air-quality corridor",
+    "Limited monitoring coverage in 2D",
+    "Proposed forecasting and human approval",
   ],
   TARGET: [
     "GreenPulse target state",
-    "Urban Data Hub & Digital Twins",
-    "AI-supported scenario intelligence",
-    "Closed-loop measurement",
+    "City-wide, multi-domain layers",
+    "Mapped-height 3D and scenario intelligence",
+    "Proposed closed-loop measurement",
   ],
 };
-const layerNames = [
-  ["traffic", "Traffic", Route],
-  ["air", "Air Quality", Wind],
-  ["heat", "Urban Heat", Thermometer],
-  ["heritage", "Heritage", Building2],
-  ["sensors", "Sensors", Radio],
-];
 
 function LocalClock() {
   const [now, setNow] = useState(() => new Date());
@@ -192,28 +185,6 @@ function Tag({ tone = "cyan", children, dot = false }) {
     </span>
   );
 }
-function LayerBar({ layers, setLayers }) {
-  return (
-    <div className="layer-bar" aria-label="Map layers">
-      <span className="layer-label">
-        <Layers3 size={14} />
-        LAYERS
-      </span>
-      {layerNames.map(([key, name, Icon]) => (
-        <button
-          key={key}
-          aria-pressed={!!layers[key]}
-          className={layers[key] ? "selected" : ""}
-          onClick={() => setLayers((v) => ({ ...v, [key]: !v[key] }))}
-        >
-          <Icon size={14} />
-          {name}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function ActivePanel({ state, dispatch, onHandover, onClose, onImpact }) {
   const paused = state.status === "paused";
   const countdown = new Date(state.remaining * 1000)
@@ -446,6 +417,7 @@ export default function App() {
     [step, setStep] = useState(0),
     [toast, setToast] = useState("");
   const appRef = useRef(null);
+  const maturityHelpRef = useRef(null);
   const [forecastOffset, setForecastOffset] = useState(60);
   const [forecastAnchor, setForecastAnchor] = useState(() => Date.now());
   const [focusRequest, setFocusRequest] = useState(0);
@@ -491,6 +463,30 @@ export default function App() {
     const t = setTimeout(() => setToast(""), 3800);
     return () => clearTimeout(t);
   }, [toast]);
+  useEffect(() => {
+    if (!maturityOpen) return undefined;
+    const dismissOutside = (event) => {
+      if (!event.target?.closest?.("[data-maturity-ui]"))
+        setMaturityOpen(false);
+    };
+    const dismissWithEscape = (event) => {
+      if (
+        event.key !== "Escape" ||
+        document.querySelector('[role="dialog"],[role="alertdialog"]')
+      )
+        return;
+      event.preventDefault();
+      event.stopPropagation();
+      setMaturityOpen(false);
+      maturityHelpRef.current?.focus({ preventScroll: true });
+    };
+    document.addEventListener("pointerdown", dismissOutside);
+    document.addEventListener("keydown", dismissWithEscape, true);
+    return () => {
+      document.removeEventListener("pointerdown", dismissOutside);
+      document.removeEventListener("keydown", dismissWithEscape, true);
+    };
+  }, [maturityOpen]);
   const navigate = (name) => {
     setPage(name);
     setMobileNav(false);
@@ -509,6 +505,8 @@ export default function App() {
   };
   const compare = () => navigate("Digital Twin");
   const reset = () => {
+    setMaturity("TARGET");
+    setMaturityOpen(false);
     setForecastAnchor(Date.now());
     setForecastOffset(demo ? 0 : 60);
     setViewResetToken((value) => value + 1);
@@ -618,6 +616,7 @@ export default function App() {
   };
   const startDemo = () => {
     reset();
+    setMobileNav(false);
     setDemo(true);
     setForecastOffset(0);
     setSelected(true);
@@ -733,15 +732,11 @@ export default function App() {
             <small>Urban Decision Intelligence</small>
           </span>
         </a>
-        <div className="workspace-name">
-          <span className="workspace-icon">
-            <Globe2 size={16} />
-          </span>
-          <div>
-            City Control Room<small>Demonstration environment</small>
-          </div>
-          <ChevronRight size={13} />
-        </div>
+        <WorkspaceMenu
+          page={page}
+          onNavigate={navigate}
+          onStartDemo={startDemo}
+        />
         <nav aria-label="Main navigation">
           {sections.map(([title, items]) => (
             <section className="nav-section" key={title}>
@@ -811,7 +806,10 @@ export default function App() {
           <div className="global-right">
             <div
               className="maturity-control"
+              role="group"
               aria-label="Operating model maturity"
+              data-maturity-ui
+              data-presentation-shortcuts="off"
             >
               {["CURRENT", "MVP", "TARGET"].map((m) => (
                 <button
@@ -820,15 +818,19 @@ export default function App() {
                   aria-pressed={maturity === m}
                   onClick={() => {
                     setMaturity(m);
-                    setMaturityOpen(true);
+                    setMaturityOpen(false);
+                    setViewResetToken((value) => value + 1);
                   }}
                 >
                   {m}
                 </button>
               ))}
               <button
+                ref={maturityHelpRef}
                 className="maturity-help"
                 aria-label="Explain maturity stages"
+                aria-expanded={maturityOpen}
+                aria-controls="maturity-explanation"
                 onClick={() => setMaturityOpen((v) => !v)}
               >
                 <CircleHelp size={14} />
@@ -854,7 +856,12 @@ export default function App() {
         <AnimatePresence>
           {maturityOpen && (
             <motion.div
+              id="maturity-explanation"
               className="maturity-popover"
+              role="region"
+              aria-labelledby="maturity-explanation-title"
+              data-maturity-ui
+              data-presentation-shortcuts="off"
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
@@ -869,7 +876,9 @@ export default function App() {
               <span className="eyebrow">
                 CURRENT INVENTORY → MVP → CAPABILITY DEVELOPMENT → TARGET
               </span>
-              <h3>{maturityInfo[maturity][0]}</h3>
+              <h3 id="maturity-explanation-title">
+                {maturityInfo[maturity][0]}
+              </h3>
               <div>
                 {maturityInfo[maturity].slice(1).map((t) => (
                   <span key={t}>
@@ -879,9 +888,10 @@ export default function App() {
                 ))}
               </div>
               <p>
-                The operational workspace illustrates the target state.
-                Selecting a stage explains maturity; it does not represent
-                deployed city capability.
+                Selecting a stage changes the map’s illustrated capabilities:
+                reference inventory, a priority-corridor MVP, or the integrated
+                target-state model. These views do not verify deployed municipal
+                systems; operational data remains synthetic.
               </p>
               <button
                 className="text-button"
@@ -1061,8 +1071,14 @@ export default function App() {
                   <div className="map-heading">
                     <div>
                       <span className="eyebrow">
-                        <span className="live-dot" />
-                        CITY OPERATIONS
+                        {maturity !== "CURRENT" && (
+                          <span className="live-dot" />
+                        )}
+                        {maturity === "CURRENT"
+                          ? "CURRENT INVENTORY"
+                          : maturity === "MVP"
+                            ? "PROPOSED PRIORITY CORRIDOR"
+                            : "CITY OPERATIONS"}
                       </span>
                       <h2>
                         Leuven historic centre<span>H-03</span>
@@ -1079,28 +1095,42 @@ export default function App() {
                     focusRequest={focusRequest}
                     onClearFocus={clearMapFocus}
                     forecastOffset={forecastOffset}
+                    maturity={maturity}
                     layers={layers}
                     onSelect={selectMapIncident}
                     after={false}
                   />
-                  <LayerBar layers={layers} setLayers={setLayers} />
-                  <div className="map-bottom-legend">
-                    <span>
-                      <i className="cyan" />
-                      Free flow
-                    </span>
-                    <span>
-                      <i className="amber" />
-                      Elevated
-                    </span>
-                    <span>
-                      <i className="red" />
-                      Congested
-                    </span>
-                    <span className="heritage-key">
-                      <i />
-                      Mapped historic sites
-                    </span>
+                  <LayerMenu
+                    layers={layers}
+                    setLayers={setLayers}
+                    maturity={maturity}
+                    availableLayers={
+                      MATURITY_MAP_STAGES[maturity].availableLayers
+                    }
+                  />
+                  <div className="map-bottom-legend" aria-label="Map legend">
+                    {maturity === "CURRENT" ? (
+                      <span>Reference geography · illustrative inventory</span>
+                    ) : (
+                      <>
+                        <span>
+                          <i className="cyan" />
+                          Free flow
+                        </span>
+                        <span>
+                          <i className="amber" />
+                          Elevated
+                        </span>
+                        <span>
+                          <i className="red" />
+                          Congested
+                        </span>
+                        <span className="heritage-key">
+                          <i />
+                          Mapped historic sites
+                        </span>
+                      </>
+                    )}
                   </div>
                   <div className="map-location-note">
                     <span className="location-cross">+</span>
@@ -1109,19 +1139,23 @@ export default function App() {
                     </span>
                     <Tag
                       tone={
-                        state.status === "paused"
-                          ? "amber"
-                          : active
-                            ? "green"
-                            : "red"
+                        maturity === "CURRENT"
+                          ? "cyan"
+                          : state.status === "paused"
+                            ? "amber"
+                            : active
+                              ? "green"
+                              : "red"
                       }
                       dot
                     >
-                      {state.status === "paused"
-                        ? "INTERVENTION PAUSED"
-                        : active
-                          ? "APPROVED PLAN ACTIVE"
-                          : "INCIDENT DETECTED"}
+                      {maturity === "CURRENT"
+                        ? "REFERENCE INVENTORY"
+                        : state.status === "paused"
+                          ? "INTERVENTION PAUSED"
+                          : active
+                            ? "APPROVED PLAN ACTIVE"
+                            : "INCIDENT DETECTED"}
                     </Tag>
                   </div>
                 </section>
@@ -1157,6 +1191,7 @@ export default function App() {
             <DigitalTwin
               onApprove={openApproval}
               lifecycle={state.status}
+              maturity={maturity}
               forecastOffset={forecastOffset}
               timeline={timeline}
             />
@@ -1169,7 +1204,7 @@ export default function App() {
               timeline={timeline}
             />
           )}
-          {page === "Urban Heat" && <HeatScreen />}
+          {page === "Urban Heat" && <HeatScreen maturity={maturity} />}
           {page === "Implementation Roadmap" && <Roadmap />}
           {page === "Decision Log" && (
             <DecisionLog lifecycle={state.status} logs={state.logs} />

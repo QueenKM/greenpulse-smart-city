@@ -227,11 +227,14 @@ export default function DigitalTwin({
   lifecycle = "idle",
   forecastOffset = 60,
   timeline,
+  maturity = "TARGET",
 }) {
   const [selected, setSelected] = useState("B");
   const [divider, setDivider] = useState(50);
   const [camera, setCamera] = useState({ zoom: 1, x: 0, y: 0 });
-  const [viewMode, setViewMode] = useState("3d");
+  const [viewMode, setViewMode] = useState(() =>
+    maturity === "TARGET" ? "3d" : "2d",
+  );
   const [panMode, setPanMode] = useState(false);
   const [panning, setPanning] = useState(false);
   const [scoreOpen, setScoreOpen] = useState(false);
@@ -239,6 +242,14 @@ export default function DigitalTwin({
   const uid = useId();
   const mapRef = useRef(null);
   const dragging = useRef(false);
+  useEffect(() => {
+    setViewMode(maturity === "TARGET" ? "3d" : "2d");
+  }, [maturity]);
+  const maturityLabel = {
+    CURRENT: "CURRENT · reference inventory",
+    MVP: "MVP · priority corridor",
+    TARGET: "TARGET · integrated model",
+  }[maturity];
   const updateDivider = (event) => {
     const bounds = mapRef.current?.getBoundingClientRect();
     if (!bounds?.width) return;
@@ -355,6 +366,7 @@ export default function DigitalTwin({
           <div className="twin-map-before">
             <CityMap
               mode="twin"
+              maturity={maturity}
               camera={camera}
               onCameraChange={setCamera}
               viewMode={viewMode}
@@ -376,6 +388,7 @@ export default function DigitalTwin({
           >
             <CityMap
               mode="twin"
+              maturity={maturity}
               camera={camera}
               onCameraChange={setCamera}
               viewMode={viewMode}
@@ -507,7 +520,12 @@ export default function DigitalTwin({
             <button
               className="twin-camera-mode"
               aria-label={`Show comparison in ${viewMode === "3d" ? "2D" : "3D"}`}
-              title="Switch both map views"
+              disabled={maturity !== "TARGET"}
+              title={
+                maturity === "TARGET"
+                  ? "Switch both map views"
+                  : "3D city modelling is a target-state capability"
+              }
               onClick={() =>
                 setViewMode((mode) => (mode === "3d" ? "2d" : "3d"))
               }
@@ -536,7 +554,12 @@ export default function DigitalTwin({
                 <i className="twin-legend-cyan" /> Managed flow
               </span>
             </div>
-            <span className="twin-drag-caption">Drag divider to explore</span>
+            <span
+              className="twin-map-maturity"
+              title="Illustrative maturity view, not a claim about real municipal deployment. Scenario forecasts remain synthetic target-state comparisons."
+            >
+              {maturityLabel}
+            </span>
           </div>
           <div className="twin-improvement">
             <ArrowDownRight size={19} />

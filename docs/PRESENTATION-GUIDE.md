@@ -24,6 +24,8 @@ If running late, omit heat and detailed benchmark discussion. Preserve the KPI e
 
 ## A compact demonstration script
 
+Before starting the guided replay, use **CURRENT → MVP → TARGET** to show the map's proposed capability journey: reference geography, limited priority-corridor monitoring, then the integrated model with mapped-height 3D. **Layers** opens the overlay controls; availability follows the selected stage. These views illustrate the proposal, not verified Leuven deployment. Starting or resetting Presentation Demo restores TARGET.
+
 ### Alert and evidence
 
 Start **Presentation Demo** from Overview. Allow its geographic views to prepare. Fullscreen is optional; if the browser declines it, continue with the guided in-page mode. Use **Next Step** or the arrow-key controls; approval still requires its explicit action.

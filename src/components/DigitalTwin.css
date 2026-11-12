@@ -1754,3 +1754,26 @@
   padding: 2px 5px;
   margin-left: 3px;
 }
+
+.twin-map-maturity {
+  color: #a1b5c2;
+  background: #071722df;
+  border: 1px solid #38566b55;
+  border-radius: 3px;
+  padding: 5px 7px;
+  font-size: 9px;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: auto;
+}
+.twin-camera-toolbar > button:disabled {
+  color: #587080;
+  background: transparent;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+@media (max-width: 1100px) {
+  .twin-map-maturity {
+    font-size: 8px;
+  }
+}

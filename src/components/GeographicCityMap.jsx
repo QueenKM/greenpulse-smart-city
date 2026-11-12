@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import cityModel from "../data/city-model.json";
+import { MATURITY_MAP_STAGES, resolveMapLayers } from "../maturity.mjs";
 import "./CityMap.css";
 
 // All base geometry comes from the bundled OpenStreetMap extract. Operational
@@ -491,13 +492,25 @@ const GeographicBase = memo(function GeographicBase({
   );
 });
 const trafficViews = new Map();
-function prepareTraffic(perspective, scenario, improved, forecastOffset = 0) {
+function prepareTraffic(
+  perspective,
+  scenario,
+  improved,
+  forecastOffset = 0,
+  coverage = "city",
+) {
   const minute = Math.max(0, Math.min(60, Number(forecastOffset) || 0));
-  const key = `${perspective}:${scenario}:${improved}:${minute}`;
+  const key = `${perspective}:${scenario}:${improved}:${minute}:${coverage}`;
   if (trafficViews.has(key)) return trafficViews.get(key);
   const base = prepareView(perspective),
     groups = new Map();
   for (const road of trafficRoads) {
+    if (
+      coverage === "priority" &&
+      (road.distance > 400 ||
+        ["residential", "living_street"].includes(road.kind))
+    )
+      continue;
     const color = roadTrafficColor(road, scenario, improved, minute);
     const residential = ["residential", "living_street"].includes(road.kind);
     const groupKey = `${color}:${residential}`;
@@ -553,6 +566,8 @@ export function warmGeographyViews() {
 
 function CityMap({
   layers = {},
+  maturity = "TARGET",
+  viewResetToken = 0,
   onSelect,
   mode = "traffic",
   scenario = "B",
@@ -567,6 +582,18 @@ function CityMap({
   viewMode,
   onViewModeChange,
 }) {
+  const stageKey =
+    typeof maturity === "string" && Object.hasOwn(MATURITY_MAP_STAGES, maturity)
+      ? maturity
+      : "TARGET";
+  const stage = MATURITY_MAP_STAGES[stageKey];
+  const isCurrent = stageKey === "CURRENT";
+  const isMVP = stageKey === "MVP";
+  const canUse3d = stageKey === "TARGET";
+  const effectiveLayers = resolveMapLayers(
+    { ...layers, heat: layers.heat === true || mode === "heat" },
+    stageKey,
+  );
   const uid = useId().replaceAll(":", "");
   const svgRef = useRef(null);
   const dragRef = useRef(null);
@@ -584,10 +611,14 @@ function CityMap({
     else setInternalCamera(next);
   }, []);
   const [internalPerspective, setInternalPerspective] = useState(
-    mode === "twin",
+    stage.viewMode === "3d",
   );
-  const perspective = viewMode ? viewMode === "3d" : internalPerspective;
+  const perspective =
+    canUse3d && (viewMode ? viewMode === "3d" : internalPerspective);
+  const viewModeChangeRef = useRef(onViewModeChange);
+  viewModeChangeRef.current = onViewModeChange;
   const setPerspective = (update) => {
+    if (!canUse3d) return;
     const next = typeof update === "function" ? update(perspective) : update;
     if (onViewModeChange) onViewModeChange(next ? "3d" : "2d");
     else setInternalPerspective(next);
@@ -600,29 +631,46 @@ function CityMap({
   const [sourceOpen, setSourceOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [viewportScale, setViewportScale] = useState(1);
-  const showTraffic = layers.traffic !== false && mode !== "heat";
-  const showAir = layers.air !== false && mode !== "heat";
-  const showHeat = layers.heat === true || mode === "heat";
-  const showHeritage = layers.heritage !== false;
-  const showSensors = layers.sensors !== false;
-  const improved = after || (mode === "twin" && scenario !== "A");
-  const forecastMinute = Math.max(0, Math.min(60, Number(forecastOffset) || 0));
+  const showTraffic = effectiveLayers.traffic && mode !== "heat";
+  const showAir = effectiveLayers.air && mode !== "heat";
+  const showHeat = effectiveLayers.heat;
+  const showHeritage = effectiveLayers.heritage;
+  const showSensors = effectiveLayers.sensors;
+  const improved =
+    !isCurrent && (after || (mode === "twin" && scenario !== "A"));
+  const forecastMinute = isCurrent
+    ? 0
+    : Math.max(0, Math.min(60, Number(forecastOffset) || 0));
+  const coverage = isMVP ? "priority" : "city";
+  const trafficView = !isCurrent
+    ? prepareTraffic(perspective, scenario, improved, forecastMinute, coverage)
+    : [];
   const forecastProgress = forecastMinute / 60;
-  const airWidth = improved
-    ? 255 - (scenario === "C" ? 145 : 110) * forecastProgress
-    : 255 + 75 * forecastProgress;
-  const airHeight = improved
-    ? 170 - 80 * forecastProgress
-    : 170 + 50 * forecastProgress;
+  const airWidth =
+    (improved
+      ? 255 - (scenario === "C" ? 145 : 110) * forecastProgress
+      : 255 + 75 * forecastProgress) * (isMVP ? 0.65 : 1);
+  const airHeight =
+    (improved ? 170 - 80 * forecastProgress : 170 + 50 * forecastProgress) *
+    (isMVP ? 0.7 : 1);
   const pollutionImproving = improved && forecastMinute > 0;
   const incidentPoint = datum;
   const [ix, iy] = project(incidentPoint, perspective);
   useEffect(() => {
-    if (!focused) {
+    setInternalPerspective(stage.viewMode === "3d");
+    viewModeChangeRef.current?.(stage.viewMode);
+    setCamera({ zoom: 1, x: 0, y: 0 });
+    setSelected(null);
+    setFocusAnimating(false);
+    clearTimeout(focusTimer.current);
+    focusToken.current = null;
+  }, [stageKey, viewResetToken, setCamera]);
+  useEffect(() => {
+    if (!focused || isCurrent) {
       focusToken.current = null;
       return undefined;
     }
-    const token = `${focusRequest}:${perspective}`;
+    const token = `${focusRequest}:${perspective}:${stageKey}`;
     if (focusToken.current === token) return undefined;
     focusToken.current = token;
     clearTimeout(focusTimer.current);
@@ -634,7 +682,16 @@ function CityMap({
       clearTimeout(focusTimer.current);
       focusToken.current = null;
     };
-  }, [focused, focusRequest, perspective, ix, iy, setCamera]);
+  }, [
+    focused,
+    focusRequest,
+    perspective,
+    ix,
+    iy,
+    setCamera,
+    stageKey,
+    isCurrent,
+  ]);
   useEffect(
     () => () => {
       clearTimeout(focusTimer.current);
@@ -649,18 +706,25 @@ function CityMap({
     setSelected(null);
     onClearFocus?.();
   };
-  const visibleSensors = syntheticSensors.filter(
-    (sensor) => sensor.type !== "cooling" || showHeat,
+  const visibleSensors = syntheticSensors.filter((sensor) =>
+    isMVP
+      ? ["traffic", "air", "offline"].includes(sensor.type)
+      : sensor.type !== "cooling" || showHeat,
   );
   const id = (name) => `${uid}-${name}`;
   const url = (name) => `url(#${id(name)})`;
   const groundScaleMetres = 250;
   const baseScaleWidth =
     groundScaleMetres * groundPxPerMetre * camera.zoom * viewportScale;
-  const selectedBaseLabel = perspective
-    ? `Mapped building heights · ${mappedHeightCount} tagged`
-    : `${buildings.length.toLocaleString("en-GB")} real building footprints`;
+  const selectedBaseLabel = isCurrent
+    ? "Reference inventory only · no connected feeds"
+    : isMVP
+      ? "Proposed priority corridor · limited coverage"
+      : perspective
+        ? `Mapped building heights · ${mappedHeightCount} tagged`
+        : `${buildings.length.toLocaleString("en-GB")} real building footprints`;
   const pick = (item) => {
+    if (isCurrent) return;
     setSelected(item);
     onSelect?.(
       item || {
@@ -770,9 +834,10 @@ function CityMap({
   );
   return (
     <div
-      data-focused={focused ? "true" : "false"}
+      data-focused={focused && !isCurrent ? "true" : "false"}
+      data-maturity={stageKey}
       data-forecast-minute={forecastMinute}
-      className={`city-map geo-map ${compact ? "geo-compact" : ""} ${mode === "heat" ? "geo-heat" : ""} ${dragging ? "geo-dragging" : ""} ${focused ? "geo-focused" : ""} ${focusAnimating ? "geo-focusing" : ""}`}
+      className={`city-map geo-map geo-stage-${stageKey.toLowerCase()} ${compact ? "geo-compact" : ""} ${mode === "heat" ? "geo-heat" : ""} ${dragging ? "geo-dragging" : ""} ${focused && !isCurrent ? "geo-focused" : ""} ${focusAnimating ? "geo-focusing" : ""}`}
     >
       <svg
         ref={svgRef}
@@ -780,7 +845,7 @@ function CityMap({
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="xMidYMid slice"
         role="group"
-        aria-label={`Real OpenStreetMap geography of ${metadata.city}. All operational layers are synthetic demonstration data.`}
+        aria-label={`Real OpenStreetMap geography of ${metadata.city}. ${stage.label}: ${stage.description} This is an illustrated capability view, not a verified inventory of Leuven systems. All operational layers are synthetic demonstration data.`}
         onPointerDown={pointerDown}
         onPointerMove={pointerMove}
         onPointerUp={pointerUp}
@@ -871,121 +936,148 @@ function CityMap({
               );
             })}
           </g>
-          <g
-            className={`geo-layer geo-air ${showAir ? "visible" : ""}`}
-            aria-hidden={!showAir}
-          >
-            <ellipse
-              cx={
-                ix + (scenario === "C" && improved ? 65 * forecastProgress : 0)
-              }
-              cy={iy + 15}
-              rx={airWidth}
-              ry={airHeight}
-              fill={url("pollution")}
-            />
-            <ellipse
-              cx={ix + 205}
-              cy={iy + 130}
-              rx={
-                improved
-                  ? 140 - 65 * forecastProgress
-                  : 140 + 40 * forecastProgress
-              }
-              ry={
-                improved
-                  ? 85 - 35 * forecastProgress
-                  : 85 + 25 * forecastProgress
-              }
-              fill={url("pollution")}
-            />
-          </g>
-          <g
-            className={`geo-layer geo-heat-overlay ${showHeat ? "visible" : ""}`}
-            aria-hidden={!showHeat}
-          >
-            <ellipse
-              cx={ix + 20}
-              cy={iy + 35}
-              rx="255"
-              ry={perspective ? 140 : 195}
-              fill={url("heat")}
-            />
-            <ellipse
-              cx={ix - 245}
-              cy={iy + 210}
-              rx="165"
-              ry="120"
-              fill={url("heat")}
-            />
-            <ellipse
-              cx={ix + 285}
-              cy={iy - 110}
-              rx="180"
-              ry="120"
-              fill={url("heat")}
-            />
-            <path
-              d={`M${ix - 180},${iy - 85} C${ix - 80},${iy - 175} ${ix + 160},${iy - 100} ${ix + 195},${iy + 25} C${ix + 215},${iy + 155} ${ix - 110},${iy + 170} ${ix - 180},${iy - 85}Z`}
-              fill="none"
-              stroke="#fbbf24"
-              strokeOpacity=".38"
-              strokeDasharray="5 6"
-            />
-          </g>
-          <g
-            className={`geo-layer geo-traffic-overlay ${showTraffic ? "visible" : ""}`}
-            aria-hidden={!showTraffic}
-          >
-            {prepareTraffic(perspective, scenario, improved, forecastMinute)
-              .filter((group) => !group.residential)
-              .map((group) => (
+          {isMVP && (showTraffic || showAir || showSensors) && (
+            <g
+              className="geo-mvp-coverage"
+              aria-label="Proposed MVP pilot coverage"
+            >
+              <ellipse
+                cx={ix}
+                cy={iy}
+                rx="400"
+                ry="400"
+                fill="#38bdf8"
+                fillOpacity=".014"
+                stroke="#38bdf8"
+                strokeOpacity=".24"
+                strokeWidth="1.2"
+                strokeDasharray="7 9"
+              />
+              <title>
+                Illustrated priority-corridor coverage. Not an existing
+                municipal service boundary.
+              </title>
+            </g>
+          )}
+          {!isCurrent && (
+            <g
+              className={`geo-layer geo-air ${showAir ? "visible" : ""}`}
+              aria-hidden={!showAir}
+            >
+              <ellipse
+                cx={
+                  ix +
+                  (scenario === "C" && improved ? 65 * forecastProgress : 0)
+                }
+                cy={iy + 15}
+                rx={airWidth}
+                ry={airHeight}
+                fill={url("pollution")}
+              />
+              <ellipse
+                cx={ix + 205}
+                cy={iy + 130}
+                rx={
+                  improved
+                    ? 140 - 65 * forecastProgress
+                    : 140 + 40 * forecastProgress
+                }
+                ry={
+                  improved
+                    ? 85 - 35 * forecastProgress
+                    : 85 + 25 * forecastProgress
+                }
+                fill={url("pollution")}
+              />
+            </g>
+          )}
+          {stage.availableLayers.includes("heat") && (
+            <g
+              className={`geo-layer geo-heat-overlay ${showHeat ? "visible" : ""}`}
+              aria-hidden={!showHeat}
+            >
+              <ellipse
+                cx={ix + 20}
+                cy={iy + 35}
+                rx="255"
+                ry={perspective ? 140 : 195}
+                fill={url("heat")}
+              />
+              <ellipse
+                cx={ix - 245}
+                cy={iy + 210}
+                rx="165"
+                ry="120"
+                fill={url("heat")}
+              />
+              <ellipse
+                cx={ix + 285}
+                cy={iy - 110}
+                rx="180"
+                ry="120"
+                fill={url("heat")}
+              />
+              <path
+                d={`M${ix - 180},${iy - 85} C${ix - 80},${iy - 175} ${ix + 160},${iy - 100} ${ix + 195},${iy + 25} C${ix + 215},${iy + 155} ${ix - 110},${iy + 170} ${ix - 180},${iy - 85}Z`}
+                fill="none"
+                stroke="#fbbf24"
+                strokeOpacity=".38"
+                strokeDasharray="5 6"
+              />
+            </g>
+          )}
+          {!isCurrent && (
+            <g
+              className={`geo-layer geo-traffic-overlay ${showTraffic ? "visible" : ""}`}
+              aria-hidden={!showTraffic}
+            >
+              {trafficView
+                .filter((group) => !group.residential)
+                .map((group) => (
+                  <path
+                    key={`glow-${group.color}`}
+                    d={group.path}
+                    fill="none"
+                    stroke={group.color}
+                    strokeWidth="11"
+                    opacity=".09"
+                    filter={url("road-glow")}
+                  />
+                ))}
+              {trafficView.map((group) => (
                 <path
-                  key={`glow-${group.color}`}
+                  key={`${group.color}:${group.residential}`}
+                  className="geo-traffic-line"
                   d={group.path}
                   fill="none"
                   stroke={group.color}
-                  strokeWidth="11"
-                  opacity=".09"
-                  filter={url("road-glow")}
+                  strokeWidth={group.residential ? 1.25 : 2.7}
+                  strokeOpacity={group.residential ? 0.36 : 0.88}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               ))}
-            {prepareTraffic(
-              perspective,
-              scenario,
-              improved,
-              forecastMinute,
-            ).map((group) => (
-              <path
-                key={`${group.color}:${group.residential}`}
-                className="geo-traffic-line"
-                d={group.path}
-                fill="none"
-                stroke={group.color}
-                strokeWidth={group.residential ? 1.25 : 2.7}
-                strokeOpacity={group.residential ? 0.36 : 0.88}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ))}
-            {improved && scenario === "C" && forecastMinute > 0 && (
-              <path
-                className="geo-flow-dash"
-                d={mainRoads
-                  .filter((road) => road.distance > 200 && road.distance < 600)
-                  .slice(0, 18)
-                  .map((road) =>
-                    prepareView(perspective).roadPaths.get(road.id),
-                  )
-                  .join(" ")}
-                fill="none"
-                stroke="#fbbf24"
-                strokeWidth="2"
-                strokeDasharray="3 11"
-              />
-            )}
-          </g>
-          {focused && showTraffic && (
+              {!isMVP && improved && scenario === "C" && forecastMinute > 0 && (
+                <path
+                  className="geo-flow-dash"
+                  d={mainRoads
+                    .filter(
+                      (road) => road.distance > 200 && road.distance < 600,
+                    )
+                    .slice(0, 18)
+                    .map((road) =>
+                      prepareView(perspective).roadPaths.get(road.id),
+                    )
+                    .join(" ")}
+                  fill="none"
+                  stroke="#fbbf24"
+                  strokeWidth="2"
+                  strokeDasharray="3 11"
+                />
+              )}
+            </g>
+          )}
+          {!isCurrent && focused && showTraffic && (
             <g
               className="geo-focus-corridors"
               aria-label="Affected incident corridors"
@@ -1094,75 +1186,77 @@ function CityMap({
               })}
             </g>
           )}
-          <g
-            transform={`translate(${ix} ${iy})`}
-            className="geo-incident"
-            role="button"
-            tabIndex={compact ? -1 : 0}
-            aria-label={`Select ${metadata.city} Historic Centre H-03 scenario`}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={() => {
-              if (!dragging) pick(null);
-            }}
-            onKeyDown={(event) => onMarkerKey(event, null)}
-          >
-            <circle
-              r="48"
-              fill="none"
-              stroke={pollutionImproving ? "#38bdf8" : "#fb7185"}
-              strokeWidth="1"
-              strokeOpacity=".3"
-              className="geo-incident-pulse"
-            />
-            <circle
-              r="23"
-              fill={pollutionImproving ? "#38bdf8" : "#fb7185"}
-              fillOpacity=".06"
-              stroke={pollutionImproving ? "#38bdf8" : "#fb7185"}
-              strokeOpacity=".45"
-            />
-            <path
-              d="M-34 0H-19M19 0H34M0-34V-19M0 19V34"
-              stroke={pollutionImproving ? "#38bdf8" : "#fb7185"}
-              strokeOpacity=".6"
-            />
-            <circle
-              r="5"
-              fill={pollutionImproving ? "#38bdf8" : "#fb7185"}
-              stroke="#101c25"
-              strokeWidth="2"
-            />
-            <g transform="translate(0,53)">
-              <rect
-                x="-95"
-                y="-4"
-                width="190"
-                height="49"
-                rx="4"
-                fill="#081721"
-                fillOpacity=".92"
-                stroke="#547080"
-                strokeOpacity=".36"
+          {!isCurrent && (
+            <g
+              transform={`translate(${ix} ${iy})`}
+              className="geo-incident"
+              role="button"
+              tabIndex={compact ? -1 : 0}
+              aria-label={`Select ${metadata.city} Historic Centre H-03 scenario`}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={() => {
+                if (!dragging) pick(null);
+              }}
+              onKeyDown={(event) => onMarkerKey(event, null)}
+            >
+              <circle
+                r="48"
+                fill="none"
+                stroke={pollutionImproving ? "#38bdf8" : "#fb7185"}
+                strokeWidth="1"
+                strokeOpacity=".3"
+                className="geo-incident-pulse"
               />
-              <text className="geo-zone-name" y="15">
-                GROTE MARKT
-              </text>
-              <text
-                className="geo-zone-status"
-                y="32"
+              <circle
+                r="23"
                 fill={pollutionImproving ? "#38bdf8" : "#fb7185"}
-              >
-                H-03 ·{" "}
-                {forecastMinute === 0
-                  ? "CURRENT BASELINE"
-                  : improved
-                    ? scenario === "C"
-                      ? "DIVERSION SCENARIO"
-                      : "SIGNAL SCENARIO"
-                    : "NO ACTION FORECAST"}
-              </text>
+                fillOpacity=".06"
+                stroke={pollutionImproving ? "#38bdf8" : "#fb7185"}
+                strokeOpacity=".45"
+              />
+              <path
+                d="M-34 0H-19M19 0H34M0-34V-19M0 19V34"
+                stroke={pollutionImproving ? "#38bdf8" : "#fb7185"}
+                strokeOpacity=".6"
+              />
+              <circle
+                r="5"
+                fill={pollutionImproving ? "#38bdf8" : "#fb7185"}
+                stroke="#101c25"
+                strokeWidth="2"
+              />
+              <g transform="translate(0,53)">
+                <rect
+                  x="-95"
+                  y="-4"
+                  width="190"
+                  height="49"
+                  rx="4"
+                  fill="#081721"
+                  fillOpacity=".92"
+                  stroke="#547080"
+                  strokeOpacity=".36"
+                />
+                <text className="geo-zone-name" y="15">
+                  GROTE MARKT
+                </text>
+                <text
+                  className="geo-zone-status"
+                  y="32"
+                  fill={pollutionImproving ? "#38bdf8" : "#fb7185"}
+                >
+                  H-03 ·{" "}
+                  {forecastMinute === 0
+                    ? "CURRENT BASELINE"
+                    : improved
+                      ? scenario === "C"
+                        ? "DIVERSION SCENARIO"
+                        : "SIGNAL SCENARIO"
+                      : "NO ACTION FORECAST"}
+                </text>
+              </g>
             </g>
-          </g>
+          )}
         </g>
         <rect
           width={W}
@@ -1179,18 +1273,19 @@ function CityMap({
         <span>Illustrative operational scenario</span>
         <span>Synthetic demonstration data</span>
       </div>
-      {!compact && (
-        <div
-          className={`geo-time-state ${forecastMinute ? "is-modelled" : "is-observed"}`}
-          role="status"
-        >
-          <i />
-          {forecastMinute
-            ? `MODELLED · +${forecastMinute} MIN`
-            : "SYNTHETIC REPLAY · NOW"}
-        </div>
-      )}
-      {focused && !compact && (
+      <div
+        className={`geo-time-state ${!isCurrent && forecastMinute ? "is-modelled" : "is-observed"} ${isCurrent ? "is-reference" : ""}`}
+        role="status"
+        aria-label={`${stage.label} map capability view`}
+        title={`${stage.description} Illustrated capability, not a verified Leuven inventory.`}
+      >
+        <i />
+        {isCurrent
+          ? "CURRENT · REFERENCE INVENTORY"
+          : `${stage.label} · ${forecastMinute ? `MODELLED +${forecastMinute} MIN` : "SYNTHETIC REPLAY NOW"}`}
+        {isCurrent && <small>Illustrative baseline · no connected feeds</small>}
+      </div>
+      {!isCurrent && focused && !compact && (
         <button className="geo-clear-focus" onClick={clearIncidentFocus}>
           <LocateFixed size={12} />
           Show whole city
@@ -1236,7 +1331,12 @@ function CityMap({
               aria-label={
                 perspective ? "Show 2D map" : "Show mapped 3D building heights"
               }
-              title="2D / mapped building heights"
+              title={
+                canUse3d
+                  ? "2D / mapped building heights"
+                  : "Mapped-height 3D is illustrated in TARGET"
+              }
+              disabled={!canUse3d}
               aria-pressed={perspective}
               onClick={() => setPerspective((value) => !value)}
             >
@@ -1292,6 +1392,16 @@ function CityMap({
           </button>
           <span className="geo-source-overline">GEOGRAPHY / OPERATIONS</span>
           <h3>A real city. An illustrative scenario.</h3>
+          <div className="geo-stage-explanation">
+            <strong>
+              {stage.label} · {stage.shortLabel}
+            </strong>
+            <p>{stage.description}</p>
+            <small>
+              Illustrated capability view, not a verified inventory of Leuven
+              systems.
+            </small>
+          </div>
           <p>
             Street geometry, building footprints, green spaces and waterways
             come from OpenStreetMap.
@@ -1344,7 +1454,7 @@ function CityMap({
           </a>
         </aside>
       )}
-      {!compact && selected && (
+      {!isCurrent && !compact && selected && (
         <aside className="geo-sensor-panel" role="status">
           <button
             className="geo-popover-close"
@@ -1374,6 +1484,8 @@ export default memo(
   CityMap,
   (previous, next) =>
     previous.mode === next.mode &&
+    previous.maturity === next.maturity &&
+    previous.viewResetToken === next.viewResetToken &&
     previous.scenario === next.scenario &&
     previous.after === next.after &&
     previous.compact === next.compact &&

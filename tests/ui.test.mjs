@@ -85,7 +85,7 @@ document.exitFullscreen = () => {
 };
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const React = await import("react");
-const { render, screen, fireEvent, waitFor, cleanup, within } = await import(
+const { render, screen, fireEvent, waitFor, cleanup, within, act } = await import(
   "@testing-library/react"
 );
 const { default: App } = await import("../work/App.test.mjs");
@@ -113,6 +113,8 @@ test(
     assert.notEqual(geographyCamera.getAttribute("transform"), originalCamera);
     click("Reset map view");
     assert.equal(geographyCamera.getAttribute("transform"), originalCamera);
+    // TARGET starts with mapped-height 3D; operators can still inspect 2D.
+    click("Show 2D map");
     click("Show mapped 3D building heights");
     assert.ok(screen.getByRole("button", { name: "Show 2D map" }));
     click("Show 2D map");
@@ -143,6 +145,7 @@ test(
       click(name);
       assert.ok(screen.getAllByRole("heading", { name, exact: true }).length);
     }
+    click("Layers");
     for (const name of [
       "Traffic",
       "Air Quality",
@@ -158,6 +161,7 @@ test(
       assert.notEqual(b.getAttribute("aria-pressed"), before);
       fireEvent.click(b);
     }
+    fireEvent.keyDown(document, { key: "Escape" });
     click("Compare scenarios");
     const slider = screen.getByRole("slider", {
       name: "Drag to compare before and after",
@@ -671,5 +675,312 @@ test(
     assert.equal(mvpPhase.getAttribute("aria-expanded"), "true");
     assert.ok(document.getElementById(detailsId));
     assert.ok(within(governance).getByText("Mobility Operations (proposed)"));
+  },
+);
+
+test(
+  "the workspace dropdown navigates every destination and starts the guided presentation",
+  { timeout: 15000 },
+  async (t) => {
+    t.after(() => {
+      cleanup();
+      fullscreenElement = null;
+    });
+    render(React.createElement(App));
+    const trigger = button("City Control Room workspace menu");
+    assert.equal(trigger.getAttribute("aria-haspopup"), "menu");
+    assert.equal(trigger.getAttribute("aria-expanded"), "false");
+    assert.equal(screen.queryByRole("menu"), null);
+    for (const [destination, page] of [
+      ["City map", "City Map"],
+      ["Scenario intelligence", "Digital Twin"],
+      ["Implementation roadmap", "Implementation Roadmap"],
+      ["City overview", "Overview"],
+    ]) {
+      fireEvent.click(trigger);
+      assert.equal(trigger.getAttribute("aria-expanded"), "true");
+      const menu = screen.getByRole("menu", {
+        name: "City Control Room workspace menu",
+      });
+      assert.equal(within(menu).getAllByRole("menuitem").length, 5);
+      fireEvent.click(within(menu).getByRole("menuitem", { name: destination }));
+      assert.equal(screen.queryByRole("menu"), null);
+      assert.equal(document.querySelector(".page-heading h1").textContent, page);
+      await waitFor(() =>
+        assert.ok(document.activeElement === document.querySelector(".page-heading h1"), "navigation focuses the new page heading"),
+      );
+      assert.equal(screen.queryByText("Signal Plan H03"), null);
+      assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
+    }
+    click("CURRENT");
+    await waitFor(() => assert.equal(document.querySelector(".geo-map")?.dataset.maturity, "CURRENT"));
+    const requestsBefore = fullscreenRequests;
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Presentation Demo" }));
+    await waitFor(() => assert.ok(screen.getByText("City ready")), { timeout: 5000 });
+    assert.equal(screen.queryByRole("menu"), null);
+    assert.equal(currentStep(), "Alert");
+    assert.ok(fullscreenRequests > requestsBefore);
+    assert.equal(button("TARGET").getAttribute("aria-pressed"), "true");
+    assert.equal(document.querySelector(".geo-map").dataset.maturity, "TARGET");
+    assert.ok(document.querySelector(".geo-building-heights"));
+    assert.ok(document.querySelector(".geo-traffic-overlay.visible"));
+    assert.equal(screen.queryByText("Signal Plan H03"), null);
+    assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
+  },
+);
+
+test(
+  "maturity selection changes actual map geometry and capability coverage without executing a decision",
+  { timeout: 15000 },
+  async (t) => {
+    t.after(() => {
+      cleanup();
+      fullscreenElement = null;
+    });
+    render(React.createElement(App));
+    await waitFor(() => assert.equal(document.querySelector(".geo-map")?.dataset.maturity, "TARGET"));
+    let map = document.querySelector(".geo-map");
+    assert.ok(map.querySelector(".geo-building-heights"));
+    assert.equal(map.querySelectorAll(".geo-synthetic-sensors .geo-sensor").length, 5);
+
+    click("CURRENT");
+    await waitFor(() => assert.equal(document.querySelector(".geo-map")?.dataset.maturity, "CURRENT"));
+    map = document.querySelector(".geo-map");
+    assert.equal(document.querySelector(".maturity-popover"), null);
+    assert.ok(within(map).getByRole("status", { name: "CURRENT map capability view" }));
+    assert.ok(map.querySelector(".geo-street-foundation path").getAttribute("d").length > 100);
+    const flatFootprint = map.querySelector(".geo-building-footprints path").getAttribute("d");
+    for (const forbidden of [".geo-building-heights", ".geo-air", ".geo-heat-overlay", ".geo-traffic-overlay", ".geo-synthetic-sensors", ".geo-incident"]) {
+      assert.equal(map.querySelector(forbidden) === null, true, `CURRENT must not render ${forbidden}`);
+    }
+    assert.ok(map.querySelector(".geo-heritage"));
+    click("Layers");
+    let group = screen.getByRole("group", { name: "Map layers" });
+    for (const name of ["Traffic", "Air Quality", "Urban Heat", "Sensors"]) {
+      assert.equal(within(group).getByRole("button", { name, exact: true }).disabled, true);
+    }
+    assert.equal(within(group).getByRole("button", { name: "Heritage", exact: true }).disabled, false);
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    click("MVP");
+    await waitFor(() => assert.equal(document.querySelector(".geo-map")?.dataset.maturity, "MVP"));
+    map = document.querySelector(".geo-map");
+    assert.equal(map.querySelector(".geo-building-heights"), null);
+    assert.equal(map.querySelector(".geo-building-footprints path").getAttribute("d"), flatFootprint);
+    assert.ok(map.querySelector(".geo-mvp-coverage"));
+    assert.ok(map.querySelector(".geo-traffic-overlay.visible"));
+    assert.ok(map.querySelector(".geo-air.visible"));
+    assert.equal(map.querySelector(".geo-heat-overlay.visible"), null);
+    assert.equal(map.querySelectorAll(".geo-synthetic-sensors .geo-sensor").length, 4);
+    assert.deepEqual([...map.querySelectorAll(".geo-sensor-id")].map((node) => node.textContent).sort(), ["AQ-04", "AQ-07", "T12", "T14"]);
+    assert.equal(map.querySelectorAll(".geo-sensor-parking,.geo-sensor-cooling").length, 0);
+    const mvpTrafficLength = [...map.querySelectorAll(".geo-traffic-line")].reduce((sum, node) => sum + node.getAttribute("d").length, 0);
+    click("Layers");
+    group = screen.getByRole("group", { name: "Map layers" });
+    assert.equal(within(group).getByRole("button", { name: "Urban Heat", exact: true }).disabled, true);
+    for (const name of ["Traffic", "Air Quality", "Heritage", "Sensors"]) {
+      assert.equal(within(group).getByRole("button", { name, exact: true }).disabled, false);
+    }
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    click("TARGET");
+    await waitFor(() => assert.equal(document.querySelector(".geo-map")?.dataset.maturity, "TARGET"));
+    map = document.querySelector(".geo-map");
+    assert.ok(map.querySelector(".geo-building-heights"));
+    assert.notEqual(map.querySelector(".geo-building-footprints path").getAttribute("d"), flatFootprint);
+    assert.equal(map.querySelectorAll(".geo-synthetic-sensors .geo-sensor").length, 5);
+    assert.ok(map.querySelector(".geo-sensor-parking"));
+    const targetTrafficLength = [...map.querySelectorAll(".geo-traffic-line")].reduce((sum, node) => sum + node.getAttribute("d").length, 0);
+    assert.ok(targetTrafficLength > mvpTrafficLength, "TARGET renders a broader traffic network than MVP");
+    click("Layers");
+    group = screen.getByRole("group", { name: "Map layers" });
+    assert.equal(within(group).getAllByRole("button").filter((node) => node.disabled).length, 0);
+    const heat = within(group).getByRole("button", { name: "Urban Heat", exact: true });
+    assert.equal(heat.getAttribute("aria-pressed"), "false");
+    fireEvent.click(heat);
+    assert.ok(map.querySelector(".geo-heat-overlay.visible"));
+    assert.equal(map.querySelectorAll(".geo-synthetic-sensors .geo-sensor").length, 8);
+    fireEvent.keyDown(document, { key: "Escape" });
+    click("Show 2D map");
+    assert.equal(map.querySelector(".geo-building-heights"), null);
+    assert.equal(map.dataset.maturity, "TARGET");
+    assert.equal(screen.queryByText("Signal Plan H03"), null);
+    assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
+    click("KPI & Impact");
+    assert.ok(screen.getByText("OUTCOME NOT YET MEASURED"));
+  },
+);
+
+test(
+  "Digital Twin and Urban Heat retain the global maturity restrictions across navigation",
+  { timeout: 15000 },
+  async (t) => {
+    t.after(() => {
+      cleanup();
+      fullscreenElement = null;
+    });
+    render(React.createElement(App));
+    click("CURRENT");
+    click("Digital Twin");
+    await waitFor(() => assert.equal(document.querySelectorAll(".twin-map-stage .geo-map[data-maturity='CURRENT']").length, 2));
+    assert.equal(document.querySelectorAll(".twin-map-stage .geo-building-heights,.twin-map-stage .geo-synthetic-sensors,.twin-map-stage .geo-traffic-overlay").length, 0);
+    click("MVP");
+    await waitFor(() => assert.equal(document.querySelectorAll(".twin-map-stage .geo-map[data-maturity='MVP']").length, 2));
+    assert.equal(document.querySelectorAll(".twin-map-stage .geo-building-heights").length, 0);
+    // Twin deliberately hides point markers in both comparison halves; MVP
+    // still renders only its permitted priority corridor traffic coverage.
+    assert.equal(document.querySelectorAll(".twin-map-stage .geo-synthetic-sensors .geo-sensor").length, 0);
+    assert.equal(document.querySelectorAll(".twin-map-stage .geo-traffic-overlay.visible").length, 2);
+    assert.equal(document.querySelectorAll(".twin-map-stage .geo-mvp-coverage").length, 2);
+    click("TARGET");
+    await waitFor(() => assert.equal(document.querySelectorAll(".twin-map-stage .geo-map[data-maturity='TARGET']").length, 2));
+    assert.equal(document.querySelectorAll(".twin-map-stage .geo-building-heights").length, 2);
+    click("Urban Heat");
+    await waitFor(() => assert.ok(document.querySelector(".heat-map .geo-map[data-maturity='TARGET']")));
+    assert.ok(document.querySelector(".heat-map .geo-heat-overlay.visible"));
+    assert.equal(document.querySelectorAll(".heat-map .geo-sensor-cooling").length, 3);
+    click("MVP");
+    assert.equal(document.querySelector(".heat-map .geo-map").dataset.maturity, "MVP");
+    assert.equal(document.querySelector(".heat-map .geo-heat-overlay.visible"), null);
+    assert.equal(document.querySelectorAll(".heat-map .geo-sensor-cooling").length, 0);
+    click("CURRENT");
+    assert.equal(document.querySelector(".heat-map .geo-map").dataset.maturity, "CURRENT");
+    assert.equal(document.querySelector(".heat-map .geo-synthetic-sensors"), null);
+    assert.equal(document.querySelector(".heat-map .geo-building-heights"), null);
+    assert.equal(screen.queryByText("Signal Plan H03"), null);
+    assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
+  },
+);
+
+test(
+  "workspace keyboard navigation, Escape, outside pointers and focus departure dismiss the menu",
+  { timeout: 10000 },
+  async (t) => {
+    t.after(() => {
+      cleanup();
+      fullscreenElement = null;
+    });
+    render(React.createElement(App));
+    const trigger = button("City Control Room workspace menu");
+    act(() => trigger.focus());
+    fireEvent.keyDown(trigger, { key: "ArrowDown" });
+    const overview = screen.getByRole("menuitem", { name: "City overview" });
+    await waitFor(() => assert.ok(document.activeElement === overview, "ArrowDown initially focuses City overview"));
+    fireEvent.keyDown(overview, { key: "ArrowDown" });
+    assert.ok(document.activeElement === screen.getByRole("menuitem", { name: "City map" }), "ArrowDown advances to City map");
+    fireEvent.keyDown(document.activeElement, { key: "End" });
+    assert.ok(document.activeElement === screen.getByRole("menuitem", { name: "Presentation Demo" }), "End focuses the final menu item");
+    fireEvent.keyDown(document.activeElement, { key: "ArrowDown" });
+    assert.ok(document.activeElement === overview, "ArrowDown wraps to first item");
+    fireEvent.keyDown(overview, { key: "ArrowUp" });
+    assert.ok(document.activeElement === screen.getByRole("menuitem", { name: "Presentation Demo" }), "ArrowUp wraps to final item");
+    fireEvent.keyDown(document.activeElement, { key: "Home" });
+    assert.ok(document.activeElement === overview, "Home focuses the first menu item");
+    fireEvent.keyDown(overview, { key: "Escape" });
+    assert.equal(screen.queryByRole("menu"), null);
+    assert.ok(document.activeElement === trigger, "Escape restores workspace trigger focus");
+
+    fireEvent.keyDown(trigger, { key: "ArrowUp" });
+    await waitFor(() => assert.ok(document.activeElement === screen.getByRole("menuitem", { name: "Presentation Demo" }), "ArrowUp from trigger opens at final item"));
+    fireEvent.pointerDown(document.body);
+    assert.equal(screen.queryByRole("menu"), null);
+    assert.equal(trigger.getAttribute("aria-expanded"), "false");
+
+    fireEvent.click(trigger);
+    await waitFor(() => assert.ok(document.activeElement === screen.getByRole("menuitem", { name: "City overview" }), "click opens at first item"));
+    act(() => button("Evidence").focus());
+    await waitFor(() => assert.ok(screen.queryByRole("menu") === null, "focus departure closes workspace menu"));
+    assert.ok(document.activeElement === button("Evidence"), "focus departure is not trapped");
+    assert.equal(screen.queryByText("Signal Plan H03"), null);
+  },
+);
+
+test(
+  "the Layers disclosure supports persistent multi-selection and closes on Escape or an outside pointer",
+  { timeout: 10000 },
+  async (t) => {
+    t.after(() => {
+      cleanup();
+      fullscreenElement = null;
+    });
+    render(React.createElement(App));
+    const trigger = button("Layers");
+    assert.equal(trigger.getAttribute("aria-expanded"), "false");
+    assert.equal(screen.queryByRole("group", { name: "Map layers" }), null);
+    fireEvent.click(trigger);
+    const group = screen.getByRole("group", { name: "Map layers" });
+    assert.equal(trigger.getAttribute("aria-expanded"), "true");
+    assert.equal(document.getElementById(trigger.getAttribute("aria-controls")), group);
+    assert.equal(within(group).getAllByRole("button").length, 5);
+    const traffic = within(group).getByRole("button", { name: "Traffic", exact: true });
+    const heat = within(group).getByRole("button", { name: "Urban Heat", exact: true });
+    const air = within(group).getByRole("button", { name: "Air Quality", exact: true });
+    assert.equal(traffic.getAttribute("aria-pressed"), "true");
+    assert.equal(heat.getAttribute("aria-pressed"), "false");
+    fireEvent.click(traffic);
+    fireEvent.click(heat);
+    assert.equal(traffic.getAttribute("aria-pressed"), "false");
+    assert.equal(heat.getAttribute("aria-pressed"), "true");
+    assert.equal(air.getAttribute("aria-pressed"), "true");
+    assert.equal(trigger.getAttribute("aria-expanded"), "true");
+
+    act(() => heat.focus());
+    fireEvent.keyDown(heat, { key: "Escape" });
+    assert.equal(screen.queryByRole("group", { name: "Map layers" }), null);
+    assert.ok(document.activeElement === trigger, "Escape restores Layers trigger focus");
+    fireEvent.click(trigger);
+    const reopened = screen.getByRole("group", { name: "Map layers" });
+    assert.equal(within(reopened).getByRole("button", { name: "Traffic", exact: true }).getAttribute("aria-pressed"), "false");
+    assert.equal(within(reopened).getByRole("button", { name: "Urban Heat", exact: true }).getAttribute("aria-pressed"), "true");
+    const outsideControl = button("Evidence");
+    fireEvent.pointerDown(outsideControl);
+    act(() => outsideControl.focus());
+    assert.equal(screen.queryByRole("group", { name: "Map layers" }), null);
+    assert.equal(trigger.getAttribute("aria-expanded"), "false");
+    assert.ok(document.activeElement === outsideControl, "outside dismissal preserves the clicked control's focus");
+    assert.equal(screen.queryByText("Signal Plan H03"), null);
+    assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
+  },
+);
+
+test(
+  "maturity help consumes Escape before presentation exit and restores its trigger focus",
+  { timeout: 10000 },
+  async (t) => {
+    t.after(() => {
+      cleanup();
+      fullscreenElement = null;
+    });
+    render(React.createElement(App));
+    click("Presentation Demo Follow the decision journey");
+    await waitFor(() => assert.ok(screen.getByText("City ready")), {
+      timeout: 5000,
+    });
+    const maturityGroup = screen.getByRole("group", {
+      name: "Operating model maturity",
+    });
+    const help = within(maturityGroup).getByRole("button", {
+      name: "Explain maturity stages",
+    });
+    act(() => help.focus());
+    fireEvent.click(help);
+    assert.equal(help.getAttribute("aria-expanded"), "true");
+    assert.ok(document.getElementById(help.getAttribute("aria-controls")));
+    assert.equal(currentStep(), "Alert");
+    fireEvent.keyDown(help, { key: "ArrowRight" });
+    assert.equal(currentStep(), "Alert");
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    assert.equal(document.querySelector(".maturity-popover"), null);
+    assert.equal(help.getAttribute("aria-expanded"), "false");
+    assert.ok(document.activeElement === help, "Escape returns focus to maturity help");
+    assert.equal(currentStep(), "Alert");
+    assert.ok(document.fullscreenElement === document.querySelector(".app-shell"), "dismissing help retains fullscreen presentation");
+    fireEvent.keyDown(help, { key: "Escape" });
+    assert.equal(document.querySelector(".presentation-current-step"), null);
+    assert.equal(document.fullscreenElement, null);
+    assert.equal(screen.queryByText("Signal Plan H03"), null);
+    assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
   },
 );

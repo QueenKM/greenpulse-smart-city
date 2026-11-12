@@ -3287,3 +3287,16 @@
     gap: 9px;
   }
 }
+
+.ds-screen .heat-map-heading.is-maturity-limited h2 {
+  max-width: 320px;
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: -.2px;
+}
+.ds-screen .heat-map-key .heat-maturity-note {
+  color: #8ba4b4;
+  font-size: 11px;
+  line-height: 1.6;
+  max-width: 360px;
+}

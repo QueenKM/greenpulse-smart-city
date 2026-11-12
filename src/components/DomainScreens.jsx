@@ -635,7 +635,7 @@ export function DataHealth() {
   );
 }
 
-export function HeatScreen() {
+export function HeatScreen({ maturity = "TARGET" } = {}) {
   const [simulated, setSimulated] = useState(false);
   const [point, setPoint] = useState(null);
   return (
@@ -651,6 +651,7 @@ export function HeatScreen() {
         <div className="heat-map">
           <CityMap
             mode="heat"
+            maturity={maturity}
             layers={{
               heat: true,
               heritage: false,
@@ -662,11 +663,13 @@ export function HeatScreen() {
               setPoint(item?.type === "cooling" ? item : null)
             }
           />
-          <div className="heat-map-heading">
-            <Tag tone="purple">MODELLED HEAT EXPOSURE</Tag>
-            <h2>Heat has a geography.</h2>
+          <div className={`heat-map-heading ${maturity !== "TARGET" ? "is-maturity-limited" : ""}`}>
+            <Tag tone={maturity === "TARGET" ? "purple" : "cyan"}>
+              {maturity === "TARGET" ? "MODELLED HEAT EXPOSURE" : `${maturity} geographic view`}
+            </Tag>
+            <h2>{maturity === "TARGET" ? "Heat has a geography." : "Urban Heat belongs to the target state"}</h2>
           </div>
-          {point && (
+          {maturity === "TARGET" && point && (
             <div className="cooling-selection">
               <Snowflake size={18} />
               <div>
@@ -682,18 +685,26 @@ export function HeatScreen() {
             </div>
           )}
           <div className="heat-map-key">
-            <span>
-              <i style={{ background: "#38bdf8" }} />
-              Cooling point
-            </span>
-            <span>
-              <i style={{ background: "#fbbf24" }} />
-              Elevated risk
-            </span>
-            <span>
-              <i style={{ background: "#fb7185" }} />
-              High exposure
-            </span>
+            {maturity === "TARGET" ? (
+              <>
+                <span>
+                  <i style={{ background: "#38bdf8" }} />
+                  Cooling point
+                </span>
+                <span>
+                  <i style={{ background: "#fbbf24" }} />
+                  Elevated risk
+                </span>
+                <span>
+                  <i style={{ background: "#fb7185" }} />
+                  High exposure
+                </span>
+              </>
+            ) : (
+              <span className="heat-maturity-note">
+                Heat-risk and cooling layers are part of the target-state proposal.
+              </span>
+            )}
           </div>
         </div>
         <aside className="heat-response">
