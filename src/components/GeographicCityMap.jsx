@@ -656,7 +656,17 @@ function CityMap({
   const pollutionImproving = improved && forecastMinute > 0;
   const incidentPoint = datum;
   const [ix, iy] = project(incidentPoint, perspective);
+  const previousMapStage = useRef({ stageKey, viewResetToken });
   useEffect(() => {
+    const previous = previousMapStage.current;
+    if (
+      previous.stageKey === stageKey &&
+      previous.viewResetToken === viewResetToken
+    )
+      return;
+    previousMapStage.current = { stageKey, viewResetToken };
+    // Initial state already matches the selected stage. Resetting on mount
+    // could overwrite a zoom made while the lazy map finishes committing.
     setInternalPerspective(stage.viewMode === "3d");
     viewModeChangeRef.current?.(stage.viewMode);
     setCamera({ zoom: 1, x: 0, y: 0 });

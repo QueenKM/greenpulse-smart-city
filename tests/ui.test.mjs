@@ -125,7 +125,11 @@ test(
     const geographyCamera = document.querySelector(".geo-camera");
     const originalCamera = geographyCamera.getAttribute("transform");
     click("Zoom in");
-    assert.notEqual(geographyCamera.getAttribute("transform"), originalCamera);
+    const zoomedCamera = geographyCamera.getAttribute("transform");
+    assert.notEqual(zoomedCamera, originalCamera);
+    // A late mount effect must not overwrite the operator's first camera action.
+    await act(async () => { await Promise.resolve(); });
+    assert.equal(geographyCamera.getAttribute("transform"), zoomedCamera);
     click("Reset map view");
     assert.equal(geographyCamera.getAttribute("transform"), originalCamera);
     // TARGET starts with mapped-height 3D; operators can still inspect 2D.
