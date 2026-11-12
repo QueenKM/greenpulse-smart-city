@@ -49,6 +49,7 @@ import CityMap, { preloadCityModel } from "./components/CityMap";
 import WorkspaceMenu from "./components/WorkspaceMenu";
 import LayerMenu from "./components/LayerMenu";
 import { MATURITY_MAP_STAGES } from "./maturity.mjs";
+import useAutoHideSidebar from "./useAutoHideSidebar.mjs";
 import IncidentPanel from "./components/IncidentPanel";
 import ForecastTimeline from "./components/ForecastTimeline";
 import { getForecast } from "./scenario.mjs";
@@ -416,6 +417,10 @@ export default function App() {
   const [demo, setDemo] = useState(false),
     [step, setStep] = useState(0),
     [toast, setToast] = useState("");
+  const { sidebarRef, sidebarExpanded, sidebarEvents } = useAutoHideSidebar({
+    mobileOpen: mobileNav,
+    presenting: demo,
+  });
   const appRef = useRef(null);
   const maturityHelpRef = useRef(null);
   const [forecastOffset, setForecastOffset] = useState(60);
@@ -712,7 +717,13 @@ export default function App() {
           onClick={() => setMobileNav(false)}
         />
       )}
-      <aside className={`sidebar ${mobileNav ? "open" : ""}`}>
+      <aside
+        ref={sidebarRef}
+        className={`sidebar auto-hide-sidebar ${mobileNav ? "open" : ""} ${sidebarExpanded ? "is-expanded" : ""}`}
+        aria-label="Workspace navigation"
+        data-expanded={sidebarExpanded}
+        {...sidebarEvents}
+      >
         <a
           className="brand"
           href="#"
@@ -734,6 +745,7 @@ export default function App() {
         </a>
         <WorkspaceMenu
           page={page}
+          sidebarExpanded={sidebarExpanded}
           onNavigate={navigate}
           onStartDemo={startDemo}
         />
@@ -747,6 +759,7 @@ export default function App() {
                   className={`nav-item ${page === name ? "active" : ""}`}
                   onClick={() => navigate(name)}
                   aria-label={name}
+                  title={name}
                   aria-current={page === name ? "page" : undefined}
                 >
                   <Icon size={17} strokeWidth={1.6} />
@@ -769,6 +782,8 @@ export default function App() {
           </div>
           <button
             className={`demo-start ${demo ? "running" : ""}`}
+            aria-label="Presentation Demo"
+            title="Presentation Demo"
             onClick={startDemo}
           >
             <span>

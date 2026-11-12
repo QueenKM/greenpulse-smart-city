@@ -90,6 +90,7 @@ flowchart LR
 - The actual clock uses **Europe/Sofia**, updates every second and adjusts for summer/winter time. Forecast views share a synthetic snapshot anchor.
 - **Pan both maps** moves the comparison camera; **Drag comparison** restores the before/after divider.
 - **City Control Room ▾** opens workspace shortcuts, including the map, scenarios, roadmap and presentation.
+- The desktop sidebar rests as an icon rail. Hover to expand it; moving away hides the labels without shifting the city view. Keyboard focus keeps navigation open, and mobile uses the menu button.
 - **CURRENT / MVP / TARGET** changes the map: reference geography → a proposed priority corridor → the integrated target-state model with mapped-height 3D. These are illustrative capability stages, not a verified inventory of Leuven's deployed systems.
 - **Layers** opens the individual overlay controls. Availability follows the selected maturity stage; your layer preferences are preserved when switching stages.
 

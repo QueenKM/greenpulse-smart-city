@@ -23,7 +23,12 @@ const destinations = [
   { label: "Presentation Demo", demo: true, icon: Play },
 ];
 
-export default function WorkspaceMenu({ page, onNavigate, onStartDemo }) {
+export default function WorkspaceMenu({
+  page,
+  onNavigate,
+  onStartDemo,
+  sidebarExpanded = undefined,
+}) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const pickerRef = useRef(null);
@@ -39,6 +44,10 @@ export default function WorkspaceMenu({ page, onNavigate, onStartDemo }) {
     setOpen(false);
     if (restoreFocus) triggerRef.current?.focus();
   };
+
+  useEffect(() => {
+    if (sidebarExpanded === false) setOpen(false);
+  }, [sidebarExpanded]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -132,6 +141,7 @@ export default function WorkspaceMenu({ page, onNavigate, onStartDemo }) {
         id={triggerId}
         type="button"
         className="workspace-trigger"
+        title="City Control Room"
         aria-label="City Control Room workspace menu"
         aria-haspopup="menu"
         aria-expanded={open}

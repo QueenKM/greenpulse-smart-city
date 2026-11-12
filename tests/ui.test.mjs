@@ -64,6 +64,21 @@ globalThis.ResizeObserver = class {
   unobserve() {}
   disconnect() {}
 };
+// jsdom does not implement PointerEvent. Preserve real pointer modality in
+// interaction tests so a touch hover cannot accidentally act like a mouse.
+if (!window.PointerEvent) {
+  window.PointerEvent = class PointerEvent extends window.MouseEvent {
+    constructor(type, options = {}) {
+      super(type, options);
+      Object.defineProperty(this, "pointerType", {
+        value: options.pointerType || "mouse",
+      });
+      Object.defineProperty(this, "pointerId", {
+        value: options.pointerId ?? 1,
+      });
+    }
+  };
+}
 // The DOM runner has no native window manager. This adapter verifies the app's
 // fullscreen requests and change-event handling; it does not verify browser chrome.
 let fullscreenElement = null;
@@ -214,7 +229,7 @@ test(
       fullscreenElement = null;
     });
     render(React.createElement(App));
-    click("Presentation Demo Follow the decision journey");
+    click("Presentation Demo");
     await waitFor(() => assert.ok(screen.getByText("City ready")), {
       timeout: 5000,
     });
@@ -421,7 +436,7 @@ test(
     });
     render(React.createElement(App));
     const requestsBefore = fullscreenRequests;
-    click("Presentation Demo Follow the decision journey");
+    click("Presentation Demo");
     await waitFor(() => assert.ok(screen.getByText("City ready")), {
       timeout: 5000,
     });
@@ -505,7 +520,7 @@ test(
     HTMLElement.prototype.requestFullscreen = () =>
       Promise.reject(new Error("Fullscreen denied by browser"));
     render(React.createElement(App));
-    click("Presentation Demo Follow the decision journey");
+    click("Presentation Demo");
     await waitFor(() => assert.ok(screen.getByText("City ready")), {
       timeout: 5000,
     });
@@ -535,7 +550,7 @@ test(
     });
     for (const controlType of ["comparison", "timeline"]) {
       render(React.createElement(App));
-      click("Presentation Demo Follow the decision journey");
+      click("Presentation Demo");
       await waitFor(() => assert.ok(screen.getByText("City ready")), {
         timeout: 5000,
       });
@@ -953,7 +968,7 @@ test(
       fullscreenElement = null;
     });
     render(React.createElement(App));
-    click("Presentation Demo Follow the decision journey");
+    click("Presentation Demo");
     await waitFor(() => assert.ok(screen.getByText("City ready")), {
       timeout: 5000,
     });
@@ -982,5 +997,152 @@ test(
     assert.equal(document.fullscreenElement, null);
     assert.equal(screen.queryByText("Signal Plan H03"), null);
     assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
+  },
+);
+
+test(
+  "the desktop sidebar starts as an icon rail and follows mouse hover without touch hover or mouse focus pinning it open",
+  { timeout: 10000 },
+  async (t) => {
+    t.after(() => {
+      cleanup();
+      fullscreenElement = null;
+    });
+    render(React.createElement(App));
+    await waitFor(() => assert.ok(document.querySelector(".geo-camera")));
+    const sidebar = document.querySelector(".sidebar.auto-hide-sidebar");
+    assert.ok(sidebar);
+    assert.equal(sidebar.dataset.expanded, "false");
+    assert.equal(sidebar.classList.contains("is-expanded"), false);
+    assert.ok(button("Overview"));
+
+    fireEvent.pointerEnter(sidebar, { pointerType: "touch" });
+    assert.equal(sidebar.dataset.expanded, "false");
+    fireEvent.pointerLeave(sidebar, { pointerType: "touch" });
+    assert.equal(sidebar.dataset.expanded, "false");
+    fireEvent.pointerEnter(sidebar, { pointerType: "mouse" });
+    assert.equal(sidebar.dataset.expanded, "true");
+    assert.equal(sidebar.classList.contains("is-expanded"), true);
+    fireEvent.pointerLeave(sidebar, { pointerType: "touch" });
+    assert.equal(sidebar.dataset.expanded, "true", "touch hover events do not cancel mouse hover");
+    fireEvent.pointerDown(button("Overview"), { pointerType: "mouse" });
+    act(() => button("Overview").focus());
+    assert.ok(document.activeElement === button("Overview"));
+    fireEvent.pointerLeave(sidebar, {
+      pointerType: "mouse",
+      relatedTarget: document.querySelector(".main-shell"),
+    });
+    assert.equal(sidebar.dataset.expanded, "false");
+    assert.equal(sidebar.classList.contains("is-expanded"), false);
+    assert.equal(screen.queryByText("Signal Plan H03"), null);
+    assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
+  },
+);
+
+test(
+  "keyboard focus keeps the sidebar expanded until focus leaves the navigation",
+  { timeout: 10000 },
+  async (t) => {
+    t.after(() => {
+      cleanup();
+      fullscreenElement = null;
+    });
+    render(React.createElement(App));
+    const sidebar = document.querySelector(".sidebar.auto-hide-sidebar");
+    fireEvent.keyDown(document, { key: "Tab" });
+    act(() => button("Overview").focus());
+    assert.equal(sidebar.dataset.expanded, "true");
+    fireEvent.pointerLeave(sidebar, { pointerType: "mouse" });
+    assert.equal(sidebar.dataset.expanded, "true");
+    act(() => button("Data Health").focus());
+    assert.equal(sidebar.dataset.expanded, "true");
+    act(() => button("Evidence").focus());
+    assert.ok(document.activeElement === button("Evidence"));
+    assert.equal(sidebar.dataset.expanded, "false");
+    assert.equal(sidebar.classList.contains("is-expanded"), false);
+  },
+);
+
+test(
+  "pointer movement within the workspace menu retains the expanded sidebar and leaving the sidebar dismisses the menu",
+  { timeout: 10000 },
+  async (t) => {
+    t.after(() => {
+      cleanup();
+      fullscreenElement = null;
+    });
+    render(React.createElement(App));
+    const sidebar = document.querySelector(".sidebar.auto-hide-sidebar");
+    fireEvent.pointerEnter(sidebar, { pointerType: "mouse" });
+    const trigger = button("City Control Room workspace menu");
+    fireEvent.pointerDown(trigger, { pointerType: "mouse" });
+    fireEvent.click(trigger);
+    const menu = screen.getByRole("menu", {
+      name: "City Control Room workspace menu",
+    });
+    await waitFor(() =>
+      assert.ok(document.activeElement === within(menu).getByRole("menuitem", { name: "City overview" })),
+    );
+    fireEvent.pointerOut(sidebar, { pointerType: "mouse", relatedTarget: menu });
+    fireEvent.pointerOver(menu, { pointerType: "mouse", relatedTarget: sidebar });
+    assert.equal(sidebar.dataset.expanded, "true");
+    assert.equal(trigger.getAttribute("aria-expanded"), "true");
+    assert.ok(screen.queryByRole("menu"));
+
+    fireEvent.pointerLeave(sidebar, {
+      pointerType: "mouse",
+      relatedTarget: document.querySelector(".main-shell"),
+    });
+    assert.equal(sidebar.dataset.expanded, "false");
+    await waitFor(() => assert.ok(screen.queryByRole("menu") === null));
+    assert.equal(trigger.getAttribute("aria-expanded"), "false");
+  },
+);
+
+test(
+  "touch navigation still uses its drawer and presentation keeps the sidebar collapsed",
+  { timeout: 15000 },
+  async (t) => {
+    t.after(() => {
+      cleanup();
+      fullscreenElement = null;
+    });
+    render(React.createElement(App));
+    const sidebar = document.querySelector(".sidebar.auto-hide-sidebar");
+    const open = button("Open navigation");
+    fireEvent.pointerDown(open, { pointerType: "touch" });
+    fireEvent.click(open);
+    assert.equal(sidebar.classList.contains("open"), true);
+    assert.equal(sidebar.dataset.expanded, "true");
+    assert.ok(button("Close navigation"));
+    fireEvent.pointerLeave(sidebar, { pointerType: "touch" });
+    assert.equal(sidebar.classList.contains("open"), true);
+    fireEvent.pointerDown(button("Data Health"), { pointerType: "touch" });
+    fireEvent.click(button("Data Health"));
+    assert.equal(document.querySelector(".page-heading h1").textContent, "Data Health");
+    assert.equal(sidebar.classList.contains("open"), false);
+    assert.equal(screen.queryByRole("button", { name: "Close navigation" }), null);
+
+    fireEvent.pointerDown(open, { pointerType: "touch" });
+    fireEvent.click(open);
+    fireEvent.pointerDown(button("Close navigation"), { pointerType: "touch" });
+    fireEvent.click(button("Close navigation"));
+    assert.equal(sidebar.classList.contains("open"), false);
+    fireEvent.pointerEnter(sidebar, { pointerType: "mouse" });
+    assert.equal(sidebar.dataset.expanded, "true");
+    click("Presentation Demo");
+    await waitFor(() => assert.ok(screen.getByText("City ready")), { timeout: 5000 });
+    assert.equal(document.querySelector(".app-shell").classList.contains("is-presenting"), true);
+    assert.equal(sidebar.dataset.expanded, "false");
+    assert.equal(sidebar.classList.contains("open"), false);
+    fireEvent.pointerEnter(sidebar, { pointerType: "mouse" });
+    assert.equal(sidebar.dataset.expanded, "false");
+    assert.equal(currentStep(), "Alert");
+    assert.equal(screen.queryByText("Signal Plan H03"), null);
+    assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
+    click("Exit presentation");
+    assert.equal(sidebar.dataset.expanded, "false");
+    fireEvent.pointerEnter(sidebar, { pointerType: "mouse" });
+    assert.equal(sidebar.dataset.expanded, "true");
   },
 );

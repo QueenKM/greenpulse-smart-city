@@ -1,0 +1,375 @@
+/* Desktop navigation expands over the city. Its 72px reservation never changes,
+   so opening the sidebar does not resize the map, chart, or comparison camera. */
+@media (min-width: 851px) {
+  .sidebar.auto-hide-sidebar {
+    --sidebar-rail-width: 72px;
+    --sidebar-expanded-width: 228px;
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 60;
+    width: var(--sidebar-rail-width);
+    padding: 30px 12px 0;
+    overflow: visible;
+    transform: none;
+    border-right-color: #ffffff0c;
+    box-shadow: none;
+    transition:
+      width 190ms cubic-bezier(0.2, 0.7, 0.2, 1),
+      box-shadow 190ms ease;
+  }
+  .sidebar.auto-hide-sidebar.is-expanded {
+    width: var(--sidebar-expanded-width);
+    box-shadow:
+      18px 0 42px #02090d4d,
+      1px 0 0 #233b4740;
+  }
+  .app-shell:not(.is-presenting) > .main-shell {
+    margin-left: 72px;
+  }
+
+  .sidebar.auto-hide-sidebar .brand {
+    position: relative;
+    width: 100%;
+    min-height: 38px;
+    padding: 0 0 23px 7px;
+    margin: 0;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .sidebar.auto-hide-sidebar .brand-symbol {
+    width: 34px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+  .sidebar.auto-hide-sidebar .brand > span:not(.brand-symbol) {
+    position: absolute;
+    top: 0;
+    left: 55px;
+    white-space: nowrap;
+  }
+
+  .sidebar.auto-hide-sidebar .workspace-picker {
+    margin: 0 0 23px;
+    flex-shrink: 0;
+  }
+  .sidebar.auto-hide-sidebar .workspace-trigger {
+    position: relative;
+    min-height: 54px;
+    height: 54px;
+    padding: 10px 0 10px 16px;
+    gap: 0;
+    overflow: hidden;
+  }
+  .sidebar.auto-hide-sidebar .workspace-trigger-icon,
+  .sidebar.auto-hide-sidebar .workspace-trigger-icon > svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+  .sidebar.auto-hide-sidebar .workspace-trigger-copy {
+    position: absolute;
+    left: 43px;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    overflow: hidden;
+  }
+  .sidebar.auto-hide-sidebar .workspace-trigger-chevron {
+    position: absolute;
+    right: 8px;
+    top: calc(50% - 7px);
+    margin: 0;
+  }
+  .sidebar.auto-hide-sidebar .workspace-dropdown {
+    width: calc(var(--sidebar-expanded-width) - 24px);
+    right: auto;
+  }
+
+  .sidebar.auto-hide-sidebar nav {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+  .sidebar.auto-hide-sidebar .nav-section {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0 0 14px;
+  }
+  .sidebar.auto-hide-sidebar .nav-section h2 {
+    height: 13px;
+    line-height: 13px;
+    margin: 0 14px 7px;
+    padding: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .sidebar.auto-hide-sidebar .nav-item {
+    position: relative;
+    height: 39px;
+    min-height: 39px;
+    width: 100%;
+    margin: 0;
+    padding: 0 15px;
+    gap: 0;
+    flex-shrink: 0;
+  }
+  .sidebar.auto-hide-sidebar .nav-item > svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+  .sidebar.auto-hide-sidebar .nav-item > span:first-of-type {
+    position: absolute;
+    top: 50%;
+    left: 43px;
+    right: 10px;
+    max-height: 2.7em;
+    overflow: hidden;
+    line-height: 1.3;
+    transform: translateY(-50%);
+  }
+  .sidebar.auto-hide-sidebar .nav-item:has(.nav-count) > span:first-of-type,
+  .sidebar.auto-hide-sidebar .nav-item:has(.nav-ai) > span:first-of-type {
+    right: 35px;
+  }
+  .sidebar.auto-hide-sidebar .nav-count,
+  .sidebar.auto-hide-sidebar .nav-ai {
+    position: absolute;
+    right: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0;
+  }
+  .sidebar.auto-hide-sidebar .nav-item.active::before {
+    left: -12px;
+    top: 50%;
+    bottom: auto;
+    height: 23px;
+    transform: translateY(-50%);
+  }
+
+  .sidebar.auto-hide-sidebar .sidebar-bottom {
+    margin-top: auto;
+    flex-shrink: 0;
+  }
+  .sidebar.auto-hide-sidebar .system-ready {
+    height: 30px;
+    padding: 10px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .sidebar.auto-hide-sidebar .demo-start {
+    position: relative;
+    min-height: 44px;
+    height: 44px;
+    width: 100%;
+    padding: 8px 11px;
+    gap: 0;
+    overflow: hidden;
+  }
+  .sidebar.auto-hide-sidebar .demo-start > span {
+    width: 24px;
+    height: 26px;
+    flex-shrink: 0;
+  }
+  .sidebar.auto-hide-sidebar .demo-start > div {
+    position: absolute;
+    left: 43px;
+    right: 23px;
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+  }
+  .sidebar.auto-hide-sidebar .demo-start > svg {
+    position: absolute;
+    right: 8px;
+    top: calc(50% - 7.5px);
+    margin: 0;
+  }
+  .sidebar.auto-hide-sidebar .operator {
+    position: relative;
+    min-height: 64px;
+    padding: 18px 9px;
+    gap: 0;
+    overflow: hidden;
+  }
+  .sidebar.auto-hide-sidebar .operator-avatar {
+    width: 29px;
+    height: 29px;
+    flex-shrink: 0;
+  }
+  .sidebar.auto-hide-sidebar .operator > span {
+    position: absolute;
+    top: 50%;
+    left: 47px;
+    right: 27px;
+    transform: translateY(-50%);
+    white-space: nowrap;
+  }
+  .sidebar.auto-hide-sidebar .operator > svg {
+    position: absolute;
+    right: 8px;
+    top: calc(50% - 8px);
+    margin: 0;
+  }
+
+  /* Hidden copy cannot extend a hit target outside the collapsed icon rail.
+     Interactive parents retain their explicit accessible labels in App. */
+  .sidebar.auto-hide-sidebar .brand > span:not(.brand-symbol),
+  .sidebar.auto-hide-sidebar .workspace-trigger-copy,
+  .sidebar.auto-hide-sidebar .workspace-trigger-chevron,
+  .sidebar.auto-hide-sidebar .nav-section h2,
+  .sidebar.auto-hide-sidebar .nav-item > span,
+  .sidebar.auto-hide-sidebar .system-ready,
+  .sidebar.auto-hide-sidebar .demo-start > div,
+  .sidebar.auto-hide-sidebar .demo-start > svg,
+  .sidebar.auto-hide-sidebar .operator > span,
+  .sidebar.auto-hide-sidebar .operator > svg {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 120ms ease,
+      visibility 0s linear 120ms;
+  }
+  .sidebar.auto-hide-sidebar.is-expanded .brand > span:not(.brand-symbol),
+  .sidebar.auto-hide-sidebar.is-expanded .workspace-trigger-copy,
+  .sidebar.auto-hide-sidebar.is-expanded .workspace-trigger-chevron,
+  .sidebar.auto-hide-sidebar.is-expanded .nav-section h2,
+  .sidebar.auto-hide-sidebar.is-expanded .nav-item > span,
+  .sidebar.auto-hide-sidebar.is-expanded .system-ready,
+  .sidebar.auto-hide-sidebar.is-expanded .demo-start > div,
+  .sidebar.auto-hide-sidebar.is-expanded .demo-start > svg,
+  .sidebar.auto-hide-sidebar.is-expanded .operator > span,
+  .sidebar.auto-hide-sidebar.is-expanded .operator > svg {
+    opacity: 1;
+    visibility: visible;
+    transition:
+      opacity 170ms ease 35ms,
+      visibility 0s;
+  }
+
+  @media (min-width: 1680px) {
+    .sidebar.auto-hide-sidebar {
+      --sidebar-expanded-width: 248px;
+      padding-top: 35px;
+    }
+    .sidebar.auto-hide-sidebar .nav-item {
+      height: 44px;
+      min-height: 44px;
+    }
+    .sidebar.auto-hide-sidebar .nav-section {
+      margin-bottom: 20px;
+    }
+  }
+  @media (max-width: 1250px) {
+    .sidebar.auto-hide-sidebar {
+      --sidebar-expanded-width: 204px;
+    }
+  }
+  @media (max-width: 1050px) {
+    .sidebar.auto-hide-sidebar {
+      --sidebar-expanded-width: 178px;
+    }
+  }
+  @media (max-height: 820px) {
+    .sidebar.auto-hide-sidebar {
+      padding-top: 22px;
+    }
+    .sidebar.auto-hide-sidebar .brand {
+      padding-bottom: 17px;
+    }
+    .sidebar.auto-hide-sidebar .workspace-picker {
+      margin-bottom: 17px;
+    }
+    .sidebar.auto-hide-sidebar .workspace-trigger {
+      min-height: 50px;
+      height: 50px;
+    }
+    .sidebar.auto-hide-sidebar .nav-section,
+    .sidebar.auto-hide-sidebar.is-expanded .nav-section {
+      margin-bottom: 13px;
+    }
+    .sidebar.auto-hide-sidebar .nav-section h2 {
+      height: 12px;
+      margin-bottom: 7px;
+    }
+    .sidebar.auto-hide-sidebar .nav-item {
+      height: 34px;
+      min-height: 34px;
+    }
+    .sidebar.auto-hide-sidebar .operator {
+      min-height: 57px;
+      padding-top: 14px;
+      padding-bottom: 14px;
+    }
+    .sidebar.auto-hide-sidebar .system-ready {
+      height: 25px;
+      padding-top: 7px;
+      padding-bottom: 7px;
+    }
+  }
+  @media (max-height: 640px) {
+    .sidebar.auto-hide-sidebar nav {
+      flex: 0 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      overscroll-behavior-y: contain;
+      scrollbar-width: none;
+    }
+    .sidebar.auto-hide-sidebar nav::-webkit-scrollbar {
+      display: none;
+    }
+    .sidebar.auto-hide-sidebar .nav-item.active::before {
+      left: 0;
+    }
+  }
+  @media (max-height: 700px) {
+    .sidebar.auto-hide-sidebar {
+      padding-top: 17px;
+    }
+    .sidebar.auto-hide-sidebar .brand {
+      padding-bottom: 13px;
+    }
+    .sidebar.auto-hide-sidebar .workspace-picker {
+      margin-bottom: 12px;
+    }
+    .sidebar.auto-hide-sidebar .workspace-trigger {
+      min-height: 45px;
+      height: 45px;
+    }
+    .sidebar.auto-hide-sidebar .nav-section,
+    .sidebar.auto-hide-sidebar.is-expanded .nav-section {
+      margin-bottom: 9px;
+    }
+    .sidebar.auto-hide-sidebar .nav-item,
+    .sidebar.auto-hide-sidebar.is-expanded .nav-item {
+      height: 31px;
+      min-height: 31px;
+    }
+    .sidebar.auto-hide-sidebar .nav-section h2 {
+      height: 11px;
+      margin-bottom: 5px;
+    }
+    .sidebar.auto-hide-sidebar .operator {
+      min-height: 49px;
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+  }
+}
+
+.app-shell.is-presenting .sidebar.auto-hide-sidebar {
+  display: none;
+}
+.app-shell.is-presenting > .main-shell {
+  margin-left: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar.auto-hide-sidebar,
+  .sidebar.auto-hide-sidebar * {
+    transition: none !important;
+  }
+}
