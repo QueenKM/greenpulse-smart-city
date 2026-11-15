@@ -713,9 +713,15 @@ export default function App() {
     enterFullscreen();
     prepareCity();
   };
+  // Native key events can arrive between a ready-state DOM commit and passive
+  // effects. Read the current render rather than a previous loading/step closure.
+  const presentationNavigation = useRef(null);
+  presentationNavigation.current = { demo, step, evidence, approval, handover, closeConfirm, preparation, nextStep, demoGo, stopDemo };
   useEffect(() => {
     if (!demo) return undefined;
     const keydown = (event) => {
+      const current = presentationNavigation.current;
+      if (!current.demo) return;
       if (
         event.altKey ||
         event.ctrlKey ||
@@ -732,46 +738,37 @@ export default function App() {
       )
         return;
       if (
-        evidence &&
-        step === 1 &&
+        current.evidence &&
+        current.step === 1 &&
         ["ArrowLeft", "ArrowRight"].includes(event.key)
       ) {
         event.preventDefault();
-        demoGo(event.key === "ArrowRight" ? 2 : 0);
+        current.demoGo(event.key === "ArrowRight" ? 2 : 0);
         return;
       }
       if (
         document.querySelector('[role="dialog"],[role="alertdialog"]') ||
-        approval ||
-        handover ||
-        closeConfirm
+        current.approval ||
+        current.handover ||
+        current.closeConfirm
       )
         return;
       if (event.key === "ArrowRight") {
         event.preventDefault();
-        if (!["loading", "error"].includes(preparation)) nextStep();
+        if (!["loading", "error"].includes(current.preparation)) current.nextStep();
       }
-      if (event.key === "ArrowLeft" && step > 0) {
+      if (event.key === "ArrowLeft" && current.step > 0) {
         event.preventDefault();
-        demoGo(step - 1);
+        current.demoGo(current.step - 1);
       }
       if (event.key === "Escape") {
         event.preventDefault();
-        stopDemo();
+        current.stopDemo();
       }
     };
     document.addEventListener("keydown", keydown);
     return () => document.removeEventListener("keydown", keydown);
-  }, [
-    demo,
-    step,
-    evidence,
-    approval,
-    handover,
-    closeConfirm,
-    preparation,
-    state.status,
-  ]);
+  }, [demo]);
   const timeline = (
     <ForecastTimeline
       value={forecastOffset}
