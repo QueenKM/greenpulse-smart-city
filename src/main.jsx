@@ -6,6 +6,7 @@ import "@fontsource-variable/manrope";
 import "./styles.css";
 import "./presentation.css";
 import "./components/AutoHideSidebar.css";
+import "./workflow.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>

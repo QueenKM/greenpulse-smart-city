@@ -1,20 +1,33 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { initialLifecycle, lifecycleReducer } from "../src/lifecycle.mjs";
+import { DEFAULT_PLAN, createPlanReview } from "../src/decision.mjs";
+import { evaluateDataReadiness } from "../src/quality.mjs";
 
 const fresh = () => ({ ...initialLifecycle, logs: [] });
-const approve = (state) =>
-  lifecycleReducer(state, {
+const approvalAction = (options = {}) => {
+  const plan = {
+    duration: options.duration === undefined ? DEFAULT_PLAN.duration : options.duration,
+    routeGuidance: options.routeGuidance === undefined ? DEFAULT_PLAN.routeGuidance : options.routeGuidance,
+  };
+  return {
     type: "APPROVE",
     humanApproved: true,
     time: "10:02:00",
-  });
+    ...options,
+    reviewSnapshot: createPlanReview(plan, {
+      qualityKey: evaluateDataReadiness(options.qualityState).key,
+      reviewedAt: "2026-11-14T08:01:00.000Z",
+    }),
+  };
+};
+const approve = (state, options) => lifecycleReducer(state, approvalAction(options));
 
 test("activation requires an explicit human approval", () => {
   for (const humanApproved of [undefined, false, "true", 1]) {
     const state = fresh();
     assert.equal(
-      lifecycleReducer(state, { type: "APPROVE", humanApproved }),
+      lifecycleReducer(state, approvalAction({ humanApproved })),
       state,
     );
     assert.equal(state.status, "idle");
@@ -169,7 +182,7 @@ test("approved modifications persist with the activation and its audit record", 
     note: "Keep pedestrian access unchanged; review after thirty minutes.",
     time: "10:03:18",
   };
-  const activated = lifecycleReducer(fresh(), options);
+  const activated = lifecycleReducer(fresh(), approvalAction(options));
   assert.equal(activated.status, "active");
   assert.equal(activated.duration, 30);
   assert.equal(activated.remaining, 30 * 60);
@@ -182,10 +195,10 @@ test("approved modifications persist with the activation and its audit record", 
 });
 
 test("a longer approved window and included route guidance persist after measurement", () => {
-  const activated = lifecycleReducer(fresh(), {
+  const activated = lifecycleReducer(fresh(), approvalAction({
     type: "APPROVE", humanApproved: true, duration: 90,
     routeGuidance: true, note: "Coordinate with Environment.",
-  });
+  }));
   assert.equal(activated.duration, 90);
   assert.equal(activated.remaining, 90 * 60);
   assert.equal(activated.routeGuidance, true);
@@ -243,4 +256,103 @@ test("the receiving operator and handover note remain in the decision trail", ()
   assert.equal(handed.logs.at(-1).operator, "Control Room Operator #04");
   assert.equal(handed.logs.at(-1).detail, "Watch the NO₂ escalation threshold.");
   assert.equal(handed.logs[0].operator, "Control Room Operator #02");
+});
+
+test("human approval alone cannot activate a plan without its reviewed snapshot", () => {
+  const state = fresh();
+  for (const reviewSnapshot of [undefined, null, {}, { version: 1 }]) {
+    assert.equal(lifecycleReducer(state, {
+      type: "APPROVE", humanApproved: true, reviewSnapshot,
+    }), state);
+  }
+  assert.equal(state.approvedDecision, null);
+  assert.deepEqual(state.logs, []);
+});
+
+test("an edit to duration or route guidance invalidates the previous approval review", () => {
+  const state = fresh();
+  const original = approvalAction();
+  assert.equal(lifecycleReducer(state, { ...original, duration: 30 }), state);
+  assert.equal(lifecycleReducer(state, { ...original, routeGuidance: false }), state);
+  assert.equal(lifecycleReducer(state, { ...original, duration: "60" }), state);
+  assert.equal(lifecycleReducer(state, { ...original, routeGuidance: "false" }), state);
+  assert.equal(lifecycleReducer(state, { ...original, note: "A context note does not change the plan." }).status, "active");
+});
+
+test("explicit review permits a modified plan without claiming reference benefits for it", () => {
+  const options = { duration: 30, routeGuidance: false };
+  const action = approvalAction(options);
+  action.reviewSnapshot = createPlanReview(options, {
+    version: 4,
+    qualityKey: evaluateDataReadiness().key,
+    reviewedAt: "2026-11-14T08:04:00.000Z",
+  });
+  const active = lifecycleReducer(fresh(), action);
+  assert.equal(active.status, "active");
+  assert.equal(active.approvedDecision.snapshot.version, 4);
+  assert.equal(active.approvedDecision.snapshot.forecast.status, "unestimated");
+  assert.equal(active.approvedDecision.snapshot.forecast.score, null);
+  assert.equal(active.approvedDecision.snapshot.forecast.values, null);
+  assert.equal(active.approvedDecision.snapshot.forecast.reference.score, 88);
+  assert.match(active.logs[0].event, /^Approved & activated · Scenario B$/);
+  assert.match(active.logs[0].detail, /Review v4/);
+  assert.match(active.logs[0].detail, /numerical outcome not estimated/);
+  assert.equal(active.logs[0].reviewVersion, 4);
+  assert.equal(active.logs[0].forecastScope, "unestimated");
+});
+
+test("approval stores an immutable independent decision record and reset removes it", () => {
+  const action = approvalAction({ timestamp: Date.parse("2026-11-14T08:02:00.000Z") });
+  const active = lifecycleReducer(fresh(), action);
+  const approved = active.approvedDecision;
+  assert.equal(approved.approvedAt, "2026-11-14T08:02:00.000Z");
+  assert.equal(approved.operator, "Control Room Operator #02");
+  assert.notEqual(approved.snapshot, action.reviewSnapshot);
+  assert.notEqual(approved.snapshot.plan, action.reviewSnapshot.plan);
+  assert.equal(Object.isFrozen(approved), true);
+  assert.equal(Object.isFrozen(approved.snapshot.forecast.reference.values), true);
+  action.reviewSnapshot.plan.duration = 90;
+  action.reviewSnapshot.forecast.reference.values.congestion = 10;
+  assert.equal(approved.snapshot.plan.duration, 60);
+  assert.equal(approved.snapshot.forecast.reference.values.congestion, 66);
+  assert.throws(() => { approved.snapshot.plan.duration = 90; }, TypeError);
+  const handed = lifecycleReducer(active, { type: "HANDOVER", operator: "Control Room Operator #03" });
+  assert.equal(handed.approvedDecision, approved);
+  assert.equal(handed.approvedDecision.operator, "Control Room Operator #02");
+  assert.equal(lifecycleReducer(handed, { type: "RESET" }).approvedDecision, null);
+});
+
+test("altered forecast claims are rejected by the reducer rather than relying on UI guards", () => {
+  const state = fresh();
+  const action = approvalAction({ duration: 90, routeGuidance: false });
+  action.reviewSnapshot.forecast.score = 99;
+  action.reviewSnapshot.forecast.values = { congestion: 40, pm: 10 };
+  assert.equal(lifecycleReducer(state, action), state);
+});
+
+test("missing required evidence blocks activation even with a fresh review and explicit approval", () => {
+  const required = evaluateDataReadiness().checks.filter((check) => check.required);
+  assert.ok(required.length > 0);
+  for (const source of required) {
+    const qualityState = { version: 1, overrides: { [source.id]: "offline" } };
+    assert.equal(evaluateDataReadiness(qualityState).canApprove, false);
+    const state = fresh();
+    assert.equal(lifecycleReducer(state, { ...approvalAction(), qualityState }), state);
+    assert.equal(lifecycleReducer(state, approvalAction({ qualityState })), state);
+    assert.equal(state.approvedDecision, null);
+  }
+});
+
+test("a changed advisory-source condition invalidates old reviews but can be explicitly reviewed again", () => {
+  const advisory = evaluateDataReadiness().checks.find((check) => !check.required && check.status !== "healthy");
+  assert.ok(advisory);
+  const qualityState = { version: 1, overrides: { [advisory.id]: "healthy" } };
+  const readiness = evaluateDataReadiness(qualityState);
+  assert.equal(readiness.canApprove, true);
+  assert.notEqual(readiness.key, evaluateDataReadiness().key);
+  const state = fresh();
+  assert.equal(lifecycleReducer(state, { ...approvalAction(), qualityState }), state);
+  const renewed = lifecycleReducer(state, approvalAction({ qualityState }));
+  assert.equal(renewed.status, "active");
+  assert.equal(renewed.approvedDecision.snapshot.qualityKey, readiness.key);
 });

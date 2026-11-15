@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { motion } from "framer-motion";
 import {
   AreaChart,
@@ -90,6 +90,7 @@ export function TrafficScreen({
   forecastOffset = 0,
   forecastAnchor,
   timeline,
+  readiness,
 } = {}) {
   const [localAnchor] = useState(() => Date.now());
   const anchor = new Date(forecastAnchor ?? localAnchor);
@@ -349,11 +350,9 @@ export function TrafficScreen({
             </span>
           </div>
           <div className="ds-confidence">
-            <span>Illustrative model confidence</span>
-            <strong>87%</strong>
-            <div>
-              <i />
-            </div>
+            <span>Evidence readiness · synthetic policy</span>
+            <strong className={readiness?.canApprove === false ? "amber" : "cyan"}>{readiness?.canApprove === false ? "Review required" : "Required inputs available"}</strong>
+            <small>{readiness?.canApprove === false ? "Reference forecast only. Approval is blocked until critical sources recover." : "Availability permits review; it is not a confidence percentage or model validation."}</small>
           </div>
         </aside>
       </div>
@@ -406,238 +405,14 @@ export function TrafficScreen({
   );
 }
 
-const sources = [
-  {
-    name: "Traffic T12–T18",
-    detail: "7 roadside traffic sensors",
-    state: "Healthy",
-    fresh: "18 sec",
-    quality: 98,
-    tone: "green",
-    note: "T12–T17 streaming · T18 in maintenance",
-  },
-  {
-    name: "AQ-04",
-    detail: "Historic centre air quality",
-    state: "Healthy",
-    fresh: "52 sec",
-    quality: 98,
-    tone: "green",
-    note: "PM2.5, NO₂ and ambient conditions",
-  },
-  {
-    name: "Parking P1–P4",
-    detail: "4 occupancy feeds",
-    state: "Healthy",
-    fresh: "27 sec",
-    quality: 97,
-    tone: "green",
-    note: "Off-street parking capacity",
-  },
-  {
-    name: "Public Transport AVL",
-    detail: "2 vehicle & service feeds",
-    state: "Healthy",
-    fresh: "14 sec",
-    quality: 96,
-    tone: "green",
-    note: "Two feeds: vehicle positions and service headways",
-  },
-  {
-    name: "Weather W-01",
-    detail: "Local weather station",
-    state: "Healthy",
-    fresh: "2 min",
-    quality: 99,
-    tone: "green",
-    note: "Temperature, wind and humidity",
-  },
-  {
-    name: "AQ-07",
-    detail: "Air-quality backup station",
-    state: "Offline",
-    fresh: "Maintenance",
-    quality: null,
-    tone: "red",
-    note: "Planned maintenance · excluded from model",
-  },
-  {
-    name: "Visitor Flow",
-    detail: "Aggregated pedestrian counts",
-    state: "Delayed",
-    fresh: "11 minutes",
-    quality: 72,
-    tone: "amber",
-    note: "Degraded source · confidence reduced",
-  },
-  {
-    name: "Historic GIS",
-    detail: "OpenStreetMap · Leuven geometry",
-    state: "Reference",
-    fresh: "Reference dataset",
-    quality: null,
-    tone: "purple",
-    note: "Bundled OSM snapshot · excluded from synthetic feed count",
-  },
-];
-export function DataHealth() {
-  const [selected, setSelected] = useState(0);
-  const source = sources[selected];
-  return (
-    <motion.div {...stagger} className="ds-screen data-screen">
-      <DomainTitle
-        eyebrow="OPERATIONS / TRUST & OBSERVABILITY"
-        title="Data Health"
-        description="Every decision begins with knowing what the city can see."
-      >
-        <Tag tone="green">DATA PIPELINE MONITORED</Tag>
-      </DomainTitle>
-      <div className="data-layout">
-        <div className="data-main">
-          <div className="ds-health-summary">
-            <div className="health-orbit">
-              <svg viewBox="0 0 110 110">
-                <circle cx="55" cy="55" r="46" />
-                <circle
-                  cx="55"
-                  cy="55"
-                  r="46"
-                  className="health-orbit-progress"
-                />
-              </svg>
-              <div>
-                <strong>
-                  96<span>%</span>
-                </strong>
-                <small>DATA QUALITY</small>
-              </div>
-            </div>
-            <div>
-              <h2>
-                Decision-grade data.
-                <br />
-                <span>Visible limitations.</span>
-              </h2>
-              <p>
-                <strong>6</strong> critical source groups <i />{" "}
-                <strong>1</strong> degraded source
-              </p>
-            </div>
-            <div className="feed-ratio">
-              <strong>
-                14<span>/ 17</span>
-              </strong>
-              <small>OPERATIONAL FEEDS</small>
-            </div>
-          </div>
-          <div className="ds-source-heading">
-            <span>SOURCE / GROUP</span>
-            <span>STATUS</span>
-            <span>FRESHNESS</span>
-            <span>QUALITY</span>
-          </div>
-          <div className="source-list">
-            {sources.map((s, i) => (
-              <button
-                onClick={() => setSelected(i)}
-                aria-pressed={selected === i}
-                className={`source-row ${selected === i ? "selected" : ""}`}
-                key={s.name}
-              >
-                <span className="source-name">
-                  <Database size={16} />
-                  <span>
-                    <strong>{s.name}</strong>
-                    <small>{s.detail}</small>
-                  </span>
-                </span>
-                <span>
-                  <Tag tone={s.tone}>{s.state}</Tag>
-                </span>
-                <span className="source-fresh">{s.fresh}</span>
-                <span className="source-quality">
-                  {s.quality !== null ? (
-                    <>
-                      <strong>{s.quality}%</strong>
-                      <i>
-                        <b
-                          style={{
-                            width: s.quality + "%",
-                            background:
-                              s.tone === "amber" ? "#FBBF24" : "#34D399",
-                          }}
-                        />
-                      </i>
-                    </>
-                  ) : (
-                    <span>—</span>
-                  )}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <aside className="health-explainer">
-          <span className="eyebrow">UNDERSTANDING COVERAGE</span>
-          <h2>Why 14 of 17?</h2>
-          <p>
-            17 expected feeds: 7 traffic, 2 air-quality, 4 parking, 2 transit, 1
-            weather and 1 visitor-flow connection.
-          </p>
-          <div className="feed-count">
-            <span>Expected operational feeds</span>
-            <strong>17</strong>
-          </div>
-          <div className="feed-count">
-            <span>
-              <i className="green" />
-              Streaming and current
-            </span>
-            <strong className="green">14</strong>
-          </div>
-          <div className="feed-count">
-            <span>
-              <i className="red" />
-              AQ-07 · offline
-            </span>
-            <strong>1</strong>
-          </div>
-          <div className="feed-count">
-            <span>
-              <i className="amber" />
-              Visitor Flow · delayed
-            </span>
-            <strong>1</strong>
-          </div>
-          <div className="feed-count">
-            <span>
-              <i className="amber" />
-              Traffic T18 · maintenance
-            </span>
-            <strong>1</strong>
-          </div>
-          <div className="health-note">
-            <CircleHelp size={16} />
-            <p>
-              Historic GIS uses a real Leuven OpenStreetMap reference snapshot.
-              It supports the urban model but is not counted as an operational
-              feed.
-            </p>
-          </div>
-          <div className="source-detail" aria-live="polite">
-            <span className="eyebrow">SELECTED SOURCE</span>
-            <h3>{source.name}</h3>
-            <p>{source.note}</p>
-          </div>
-        </aside>
-      </div>
-    </motion.div>
-  );
-}
+export { default as DataHealth } from "./DataHealthPanel";
 
-export function HeatScreen({ maturity = "TARGET" } = {}) {
+export function HeatScreen({ maturity = "TARGET", viewContext, onViewContextChange } = {}) {
   const [simulated, setSimulated] = useState(false);
   const [point, setPoint] = useState(null);
+  const updateCamera = useCallback(camera => onViewContextChange?.(value => ({ ...value, camera: typeof camera === "function" ? camera(value.camera) : camera })), [onViewContextChange]);
+  const updateViewMode = useCallback(viewMode => onViewContextChange?.(value => ({ ...value, viewMode })), [onViewContextChange]);
+  const updateEntity = useCallback(entity => onViewContextChange?.(value => ({ ...value, entity })), [onViewContextChange]);
   return (
     <motion.div {...stagger} className="ds-screen heat-screen">
       <DomainTitle
@@ -652,6 +427,12 @@ export function HeatScreen({ maturity = "TARGET" } = {}) {
           <CityMap
             mode="heat"
             maturity={maturity}
+            camera={viewContext?.camera}
+            onCameraChange={onViewContextChange ? updateCamera : undefined}
+            viewMode={viewContext?.viewMode}
+            onViewModeChange={onViewContextChange ? updateViewMode : undefined}
+            selectedEntity={viewContext?.entity}
+            onSelectedEntityChange={onViewContextChange ? updateEntity : undefined}
             layers={{
               heat: true,
               heritage: false,
@@ -1148,6 +929,7 @@ export function ImpactScreen({
   lifecycle = "idle",
   onNavigate,
   onMethodology,
+  approvedDecision,
 }) {
   const [metric, setMetric] = useState(0);
   const methodologyButton = (
@@ -1187,13 +969,13 @@ export function ImpactScreen({
           </h2>
           <p>
             {lifecycle === "measuring"
-              ? "The intervention has closed. Synthetic observations are being compared with the baseline before an outcome is reported."
+              ? approvedDecision?.snapshot?.forecast.status === "unestimated" ? "The demonstration observation window is running. This modified plan has no plan-specific numerical forecast or outcome dataset; no baseline comparison or improvement is inferred." : "The intervention has closed. Synthetic observations are being compared with the baseline before an outcome is reported."
               : "Measured results become available after a human-approved intervention is closed and the measurement cycle is complete."}
           </p>
           {lifecycle === "measuring" && (
             <div className="measurement-demo-note">
               <Timer size={13} />
-              Accelerated demonstration · 60-minute window compressed to 5
+              Accelerated demonstration · {approvedDecision?.snapshot?.plan.duration || 60}-minute window compressed to 5
               seconds
             </div>
           )}
@@ -1230,12 +1012,27 @@ export function ImpactScreen({
         </div>
       </motion.div>
     );
+  if (approvedDecision?.snapshot?.forecast.status === "unestimated")
+    return (
+      <motion.div {...stagger} className="ds-screen impact-screen">
+        <DomainTitle eyebrow="GOVERNANCE / PLAN-SPECIFIC EVIDENCE" title="Measurement complete. Estimate unavailable." description={`Approved plan v${approvedDecision.snapshot.version} · ${approvedDecision.snapshot.plan.duration}-minute operating window · Synthetic demonstration`} />
+        {methodologyButton}
+        <div className="impact-pending modified-outcome">
+          <Tag tone="cyan">MEASUREMENT WINDOW COMPLETE</Tag>
+          <h2>A reviewed modification needs its own evidence.</h2>
+          <p>The modified plan has no numerical forecast or plan-specific outcome dataset. The reference example’s −12% prediction and −10.8% synthetic result are not attributed to this intervention.</p>
+          <dl className="modified-outcome-plan"><div><dt>Plan version</dt><dd>v{approvedDecision.snapshot.version}</dd></div><div><dt>Duration</dt><dd>{approvedDecision.snapshot.plan.duration} minutes</dd></div><div><dt>Route guidance</dt><dd>{approvedDecision.snapshot.plan.routeGuidance ? "Included" : "Excluded"}</dd></div></dl>
+          <p>No success or reduction claim is inferred from completing the observation window.</p>
+          <button className="ds-button" onClick={onMethodology}>Inspect the separate reference benchmark <ChevronRight size={14} /></button>
+        </div>
+      </motion.div>
+    );
   return (
     <motion.div {...stagger} className="ds-screen impact-screen">
       <DomainTitle
         eyebrow="GOVERNANCE / CLOSED-LOOP LEARNING"
         title="Did the intervention work?"
-        description="H-03 · Adaptive signal timing + targeted route guidance · 60-minute observation window"
+        description="Separate synthetic measurement example · Reference 60-minute plan · Not derived from scenario endpoints"
       />
       {methodologyButton}
       <div className="impact-composition">
@@ -1395,110 +1192,4 @@ export function ImpactScreen({
   );
 }
 
-export function AlertCenter({ onOpen }) {
-  const [anchor] = useState(() => new Date());
-  const alerts = [
-    {
-      id: "INC-2026-1109-H03",
-      tone: "red",
-      level: "CRITICAL",
-      title: "Traffic & Air Quality Deterioration",
-      place: "Historic Centre H-03",
-      detail:
-        "Observed congestion 72%. Modelled congestion reaches 82% in 38 minutes.",
-      time: formatCityTime(anchor, { seconds: false }),
-      action: "Review incident",
-      icon: TrafficCone,
-      page: "Overview",
-    },
-    {
-      id: "ADV-2026-1109-U02",
-      tone: "amber",
-      level: "WARNING",
-      title: "Heat Exposure Advisory",
-      place: "South Market / Riverside",
-      detail:
-        "Modelled apparent temperature could peak at 40.3°C. Cooling coverage is 62%.",
-      time: formatCityTime(new Date(anchor.getTime() - 12 * 60_000), {
-        seconds: false,
-      }),
-      action: "View heat exposure",
-      icon: Thermometer,
-      page: "Urban Heat",
-    },
-    {
-      id: "DATA-AQ07-M01",
-      tone: "amber",
-      level: "SOURCE OFFLINE",
-      title: "AQ-07 Scheduled Maintenance",
-      place: "Air-quality monitoring network",
-      detail:
-        "Backup station excluded from operational feeds. AQ-04 remains healthy.",
-      time: formatCityTime(new Date(anchor.getTime() - 30 * 60_000), {
-        seconds: false,
-      }),
-      action: "Inspect data health",
-      icon: Database,
-      page: "Data Health",
-    },
-  ];
-  return (
-    <motion.div {...stagger} className="ds-screen alerts-screen">
-      <DomainTitle
-        eyebrow="OPERATIONS / ALERT CENTER"
-        title="Attention where it matters."
-        description="Prioritised operational exceptions, with the next decision in view."
-      >
-        <Tag tone="red">3 ACTIVE ALERTS</Tag>
-      </DomainTitle>
-      <div className="alert-queue-header">
-        <span>PRIORITY QUEUE</span>
-        <span>SORTED BY OPERATIONAL SEVERITY</span>
-      </div>
-      <div className="alert-queue">
-        {alerts.map((a, i) => (
-          <button
-            className={`alert-item ${a.tone}`}
-            onClick={() => onOpen?.(a.page)}
-            key={a.id}
-          >
-            <div className="alert-priority">
-              0{i + 1}
-              <span />
-            </div>
-            <div className="alert-icon">
-              <a.icon size={23} />
-            </div>
-            <div className="alert-description">
-              <div>
-                <Tag tone={a.tone}>{a.level}</Tag>
-                <span className="alert-id">{a.id}</span>
-              </div>
-              <h2>{a.title}</h2>
-              <p className="alert-place">
-                <MapPin size={13} />
-                {a.place}
-              </p>
-              <p>{a.detail}</p>
-            </div>
-            <div className="alert-action">
-              <time>{a.time}</time>
-              <span>
-                {a.action}
-                <ArrowRight size={16} />
-              </span>
-            </div>
-          </button>
-        ))}
-      </div>
-      <div className="alerts-note">
-        <ShieldCheck size={17} />
-        <p>
-          Recommendations remain advisory. Operational changes require explicit
-          human approval.
-        </p>
-        <span>SYNTHETIC DEMONSTRATION EVENTS</span>
-      </div>
-    </motion.div>
-  );
-}
+export { default as AlertCenter } from "./AlertCenterPanel";

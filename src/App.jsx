@@ -1,6 +1,7 @@
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useReducer,
   useRef,
   useState,
@@ -44,8 +45,9 @@ import {
   Maximize2,
   Minimize2,
   LoaderCircle,
+  TriangleAlert,
 } from "lucide-react";
-import CityMap, { preloadCityModel } from "./components/CityMap";
+import CityMap, { preloadCityModel, retryGeographicModel } from "./components/CityMap";
 import WorkspaceMenu from "./components/WorkspaceMenu";
 import LayerMenu from "./components/LayerMenu";
 import { MATURITY_MAP_STAGES } from "./maturity.mjs";
@@ -64,11 +66,16 @@ import {
   AlertCenter,
 } from "./components/DomainScreens";
 import {
-  ApprovalDialog,
   EvidenceDrawer,
   HandoverDialog,
   KpiMethodologyDrawer,
 } from "./components/Dialogs";
+import ApprovalDialog from "./components/VersionedApprovalDialog";
+import { createInitialQualityState, evaluateDataReadiness, getQualitySummary, getSourceStatus } from "./quality.mjs";
+import { isReviewCurrent } from "./decision.mjs";
+import { createInitialIncidentState, incidentReducer, getAlertQueue } from "./incidents.mjs";
+import { createDefaultMapContext, createDefaultTwinContext } from "./view-context.mjs";
+import { readViewSession, saveViewSession } from "./view-session.mjs";
 import { lifecycleReducer, initialLifecycle } from "./lifecycle.mjs";
 import {
   formatCityTime,
@@ -186,29 +193,30 @@ function Tag({ tone = "cyan", children, dot = false }) {
     </span>
   );
 }
-function ActivePanel({ state, dispatch, onHandover, onClose, onImpact }) {
+function ActivePanel({ state, dispatch, onHandover, onClose, onImpact, readiness }) {
   const paused = state.status === "paused";
+  const unestimated = state.approvedDecision?.snapshot.forecast.status === "unestimated";
   const countdown = new Date(state.remaining * 1000)
     .toISOString()
     .slice(11, 19);
   if (state.status === "measuring" || state.status === "measured")
     return (
       <section className="incident-panel outcome-panel">
-        <Tag tone={state.status === "measured" ? "green" : "purple"}>
-          {state.status === "measured" ? "MEASURED" : "MEASURING OUTCOME"}
+        <Tag tone={state.status === "measured" ? unestimated ? "amber" : "green" : "purple"}>
+          {state.status === "measured" ? unestimated ? "MEASUREMENT COMPLETE" : "MEASURED" : "MEASURING OUTCOME"}
         </Tag>
         <div className="outcome-orbit">
           <Activity size={38} />
         </div>
         <h2>
           {state.status === "measured"
-            ? "The loop is complete."
+            ? unestimated ? "The window is complete. Evidence needs review." : "The loop is complete."
             : "A decision is only the beginning."}
         </h2>
         <p className="muted">
           {state.status === "measured"
-            ? "The completed measurement window is ready for review. Compare the actual outcome with the model’s prediction."
-            : "The intervention has closed. GreenPulse is comparing the synthetic observation window with its baseline."}
+            ? unestimated ? "This reviewed modification has no plan-specific numerical forecast or outcome dataset. Completing the window does not establish success." : "The completed measurement window is ready for review. Compare the synthetic reference outcome with its declared benchmark."
+            : unestimated ? "The intervention has closed. The demonstration observation window is running; no numerical improvement will be inferred for the modified plan." : "The intervention has closed. GreenPulse is comparing the synthetic reference observation window with its baseline."}
         </p>
         <button className="button primary" onClick={onImpact}>
           View {state.status === "measured" ? "measured impact" : "measurement"}
@@ -236,6 +244,13 @@ function ActivePanel({ state, dispatch, onHandover, onClose, onImpact }) {
         Adaptive signals
         {state.routeGuidance ? " + targeted route guidance" : ""}
       </p>
+      {state.approvedDecision && (
+        <div className="approved-version" role="status">
+          <span>Approved plan v{state.approvedDecision.snapshot.version}</span>
+          <small>{state.approvedDecision.snapshot.forecast.status === "reference" ? "Reference scenario assumptions retained" : "Modified plan · no numerical forecast"}</small>
+        </div>
+      )}
+      {readiness && !readiness.canApprove && <p className="workflow-warning">Critical evidence unavailable. Operator review required; pause remains a human decision.</p>}
       <div className={`countdown ${paused ? "paused" : ""}`}>
         <span className="eyebrow">TIME REMAINING</span>
         <strong>{countdown}</strong>
@@ -314,16 +329,16 @@ function seedEvents() {
   ]);
 }
 
-function OperationsBottom({ onHealth, lifecycle }) {
+function OperationsBottom({ onHealth, lifecycle, qualityState, qualitySummary }) {
   const [events, setEvents] = useState(seedEvents);
   useEffect(() => {
     let n = 0;
     const timer = setInterval(() => {
       n++;
       const entries = [
-        ["Traffic T14 speed", `↓ ${17 + (n % 3)} km/h`, "cyan"],
-        ["AQ-04 NO₂", "→ 47 µg/m³", "cyan"],
-        ["Incident H03", "prediction updated", "purple"],
+        getSourceStatus(qualityState, "traffic") === "healthy" ? ["Traffic T14 speed", `↓ ${17 + (n % 3)} km/h`, "cyan"] : ["Traffic group", "evidence unavailable", "amber"],
+        getSourceStatus(qualityState, "AQ-04") === "healthy" ? ["AQ-04 NO₂", "→ 47 µg/m³", "cyan"] : ["AQ-04", "evidence unavailable", "amber"],
+        ["Incident H03", evaluateDataReadiness(qualityState).canApprove ? "reference forecast available" : "human review required", "purple"],
         ["AVL feed", "healthy", "cyan"],
       ];
       const e = entries[(n - 1) % entries.length];
@@ -331,7 +346,7 @@ function OperationsBottom({ onHealth, lifecycle }) {
       setEvents((v) => [[t, ...e], ...v].slice(0, 6));
     }, 8000);
     return () => clearInterval(timer);
-  }, []);
+  }, [qualityState]);
   return (
     <div className="operations-bottom">
       <section className="event-stream">
@@ -370,22 +385,22 @@ function OperationsBottom({ onHealth, lifecycle }) {
         <div className="health-number">
           <span className="eyebrow">DATA HEALTH</span>
           <strong>
-            96<span>%</span>
+            {qualitySummary.qualityPercent ?? "—"}{qualitySummary.qualityPercent !== null && <span>%</span>}
           </strong>
-          <span className="muted">6 critical source groups · 1 degraded</span>
+          <span className="muted">{qualitySummary.sourceGroupCount} source groups · {qualitySummary.degradedCount} degraded</span>
         </div>
         <div className="mini-feeds">
           {[
-            ["Traffic", "18 sec"],
-            ["Air Quality", "52 sec"],
-            ["AVL", "14 sec"],
-            ["Weather", "2 min"],
-          ].map(([n, t]) => (
+            ["Traffic", "18 sec", "traffic"],
+            ["Air Quality", "52 sec", "AQ-04"],
+            ["AVL", "14 sec", "AVL"],
+            ["Weather", "2 min", "weather"],
+          ].map(([n, t, id]) => (
             <div key={n}>
               <i />
               <span>{n}</span>
-              <small>Healthy</small>
-              <time>{t}</time>
+              <small>{getSourceStatus(qualityState, id) === "healthy" ? "Healthy" : "Unavailable"}</small>
+              <time>{getSourceStatus(qualityState, id) === "healthy" ? t : "—"}</time>
             </div>
           ))}
         </div>
@@ -398,6 +413,22 @@ function OperationsBottom({ onHealth, lifecycle }) {
 export default function App() {
   const [page, setPage] = useState("Overview");
   const [state, dispatch] = useReducer(lifecycleReducer, initialLifecycle);
+  const [qualityState, setQualityState] = useState(createInitialQualityState);
+  const [incidents, dispatchIncident] = useReducer(incidentReducer, undefined, createInitialIncidentState);
+  const [initialViews] = useState(readViewSession);
+  const [overviewContext, setOverviewContext] = useState(initialViews.overview);
+  const [heatContext, setHeatContext] = useState(initialViews.heat);
+  const [twinContext, setTwinContext] = useState(initialViews.twin);
+  const [selectedSourceId, setSelectedSourceId] = useState(initialViews.sourceId);
+  const [alertAnchor, setAlertAnchor] = useState(() => Date.now());
+  const readiness = useMemo(() => evaluateDataReadiness(qualityState), [qualityState]);
+  const qualitySummary = useMemo(() => getQualitySummary(qualityState), [qualityState]);
+  const alerts = useMemo(() => getAlertQueue(incidents, { lifecycle: state, qualityState, anchor: alertAnchor }), [incidents, state, qualityState, alertAnchor]);
+  const activeAlertCount = alerts.filter(alert => alert.status !== "resolved").length;
+  const changeQuality = useCallback(next => {
+    setQualityState(next);
+    dispatchIncident({ type: "SOURCE_STATE_CHANGED", id: "DATA-AQ07-M01", context: { qualityState: next } });
+  }, []);
   const [layers, setLayers] = useState({
     traffic: true,
     air: true,
@@ -410,7 +441,7 @@ export default function App() {
     [handover, setHandover] = useState(false);
   const [methodologyOpen, setMethodologyOpen] = useState(false);
   const [mobileNav, setMobileNav] = useState(false),
-    [selected, setSelected] = useState(false),
+    [selected, setSelected] = useState(initialViews.overview.entity?.id === "H03"),
     [closeConfirm, setCloseConfirm] = useState(false);
   const [maturity, setMaturity] = useState("TARGET"),
     [maturityOpen, setMaturityOpen] = useState(false);
@@ -429,13 +460,22 @@ export default function App() {
   const [viewResetToken, setViewResetToken] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
   const [preparation, setPreparation] = useState("idle");
+  const preparationRequest = useRef(0);
+  const mapEnabled = !(demo && preparation === "fallback");
+  useEffect(() => {
+    saveViewSession({ overview: overviewContext, heat: heatContext, twin: twinContext, sourceId: selectedSourceId });
+  }, [overviewContext, heatContext, twinContext, selectedSourceId]);
   const selectMapIncident = useCallback((item) => {
     if (item?.type === "incident" || item?.id === "H03") {
       setSelected(true);
+      setOverviewContext(value => ({ ...value, entity: { id: "H03", type: "incident", synthetic: true } }));
       setFocusRequest((value) => value + 1);
-    }
+    } else setSelected(false);
   }, []);
-  const clearMapFocus = useCallback(() => setSelected(false), []);
+  const clearMapFocus = useCallback(() => { setSelected(false); setOverviewContext(value => ({ ...value, entity: null })); }, []);
+  const updateOverviewCamera = useCallback(camera => setOverviewContext(value => ({ ...value, camera: typeof camera === "function" ? camera(value.camera) : camera })), []);
+  const updateOverviewViewMode = useCallback(viewMode => setOverviewContext(value => ({ ...value, viewMode })), []);
+  const updateOverviewEntity = useCallback(entity => setOverviewContext(value => ({ ...value, entity })), []);
   useEffect(() => {
     const sync = () =>
       setFullscreen(document.fullscreenElement === appRef.current);
@@ -495,7 +535,24 @@ export default function App() {
   const navigate = (name) => {
     setPage(name);
     setMobileNav(false);
+  };
+  const openAlert = ({ page: destination, sourceId, alertId }) => {
+    navigate(destination);
+    if (sourceId) setSelectedSourceId(sourceId);
+    if (alertId === ID) {
+      setOverviewContext(value => ({ ...value, camera: { zoom: 1, x: 0, y: 0 }, entity: { id: "H03", type: "incident", synthetic: true } }));
+      setSelected(true);
+      setFocusRequest(value => value + 1);
+    }
+  };
+  const changeMaturity = (next) => {
+    setMaturity(next);
+    setMaturityOpen(false);
+    setOverviewContext(createDefaultMapContext(next));
+    setHeatContext(createDefaultMapContext(next));
+    setTwinContext(createDefaultTwinContext(next));
     setSelected(false);
+    setViewResetToken(value => value + 1);
   };
   const openApproval = () => {
     if (state.status === "idle") setApproval(true);
@@ -516,6 +573,13 @@ export default function App() {
     setForecastOffset(demo ? 0 : 60);
     setViewResetToken((value) => value + 1);
     dispatch({ type: "RESET" });
+    dispatchIncident({ type: "RESET" });
+    setQualityState(createInitialQualityState());
+    setAlertAnchor(Date.now());
+    setOverviewContext(createDefaultMapContext());
+    setHeatContext(createDefaultMapContext());
+    setTwinContext(createDefaultTwinContext());
+    setSelectedSourceId("traffic");
     setApproval(false);
     setHandover(false);
     setMethodologyOpen(false);
@@ -539,12 +603,14 @@ export default function App() {
     setApproval(false);
     setSelected(false);
     if (next === 0) {
+      setOverviewContext(value => ({ ...value, camera: { zoom: 1, x: 0, y: 0 } }));
       setPage("Overview");
       setForecastOffset(0);
       setSelected(true);
       setFocusRequest((value) => value + 1);
     }
     if (next === 1) {
+      setOverviewContext(value => ({ ...value, camera: { zoom: 1, x: 0, y: 0 } }));
       setPage("Overview");
       setSelected(true);
       setFocusRequest((value) => value + 1);
@@ -574,6 +640,7 @@ export default function App() {
     }
   };
   const nextStep = () => {
+    if (["loading", "error"].includes(preparation)) return;
     if (step === 4 && state.status === "idle") {
       setApproval(true);
       setToast("A human must approve this intervention before continuing.");
@@ -611,6 +678,7 @@ export default function App() {
     }
   };
   const stopDemo = () => {
+    preparationRequest.current += 1;
     setDemo(false);
     setEvidence(false);
     setApproval(false);
@@ -619,6 +687,22 @@ export default function App() {
     setCloseConfirm(false);
     leaveFullscreen();
   };
+  const prepareCity = (retry = false) => {
+    const request = ++preparationRequest.current;
+    setPreparation("loading");
+    const task = retry ? retryGeographicModel() : preloadCityModel();
+    Promise.resolve(task)
+      .then(() => {
+        if (preparationRequest.current !== request) return;
+        if (retry) setViewResetToken(value => value + 1);
+        setPreparation("ready");
+      })
+      .catch(() => {
+        if (preparationRequest.current !== request) return;
+        setPreparation("error");
+        setToast("Geography is unavailable. Retry preparation or explicitly continue with a text-only demo.");
+      });
+  };
   const startDemo = () => {
     reset();
     setMobileNav(false);
@@ -626,16 +710,8 @@ export default function App() {
     setForecastOffset(0);
     setSelected(true);
     setFocusRequest((value) => value + 1);
-    setPreparation("loading");
     enterFullscreen();
-    preloadCityModel()
-      .then(() => setPreparation("ready"))
-      .catch(() => {
-        setPreparation("error");
-        setToast(
-          "The geographic model could not be prepared. Reload the page before presenting maps.",
-        );
-      });
+    prepareCity();
   };
   useEffect(() => {
     if (!demo) return undefined;
@@ -673,7 +749,7 @@ export default function App() {
         return;
       if (event.key === "ArrowRight") {
         event.preventDefault();
-        if (preparation !== "loading") nextStep();
+        if (!["loading", "error"].includes(preparation)) nextStep();
       }
       if (event.key === "ArrowLeft" && step > 0) {
         event.preventDefault();
@@ -765,7 +841,7 @@ export default function App() {
                   <Icon size={17} strokeWidth={1.6} />
                   <span>{name}</span>
                   {name === "Alert Center" && (
-                    <span className="nav-count">3</span>
+                    <span className="nav-count">{activeAlertCount}</span>
                   )}
                   {name === "Digital Twin" && (
                     <span className="nav-ai">AI</span>
@@ -831,11 +907,7 @@ export default function App() {
                   key={m}
                   className={maturity === m ? "active" : ""}
                   aria-pressed={maturity === m}
-                  onClick={() => {
-                    setMaturity(m);
-                    setMaturityOpen(false);
-                    setViewResetToken((value) => value + 1);
-                  }}
+                  onClick={() => changeMaturity(m)}
                 >
                   {m}
                 </button>
@@ -963,6 +1035,8 @@ export default function App() {
               >
                 {preparation === "loading" ? (
                   <LoaderCircle size={12} />
+                ) : preparation === "error" || preparation === "fallback" ? (
+                  <TriangleAlert size={12} />
                 ) : (
                   <Check size={12} />
                 )}
@@ -970,8 +1044,15 @@ export default function App() {
                   ? "Preparing city"
                   : preparation === "error"
                     ? "Model unavailable"
+                    : preparation === "fallback"
+                      ? "Text-only demo"
                     : "City ready"}
               </span>
+              {preparation === "error" && <>
+                <button onClick={() => prepareCity(true)}>Retry preparation</button>
+                <button onClick={() => setPreparation("fallback")}>Continue without map</button>
+              </>}
+              {preparation === "fallback" && <button onClick={() => prepareCity(true)}>Retry preparation</button>}
               <button
                 aria-label={
                   fullscreen ? "Exit full screen" : "Enter full screen"
@@ -993,7 +1074,7 @@ export default function App() {
                 <button
                   className="next"
                   onClick={nextStep}
-                  disabled={preparation === "loading"}
+                  disabled={["loading", "error"].includes(preparation)}
                 >
                   {step === 6 ? "Finish Demo" : "Next Step"}
                   <ChevronRight size={14} />
@@ -1037,16 +1118,16 @@ export default function App() {
                 <Radio size={15} />
                 <span>
                   <strong>
-                    14 <small>/ 17</small>
+                    {qualitySummary.operational} <small>/ {qualitySummary.total}</small>
                   </strong>
                   <small>operational feeds</small>
                 </span>
               </button>
               <button onClick={() => navigate("Data Health")}>
-                <span className="quality-ring">96</span>
+                <span className="quality-ring">{qualitySummary.qualityPercent ?? "—"}</span>
                 <span>
                   <strong>
-                    96<small>%</small>
+                    {qualitySummary.qualityPercent ?? "—"}{qualitySummary.qualityPercent !== null && <small>%</small>}
                   </strong>
                   <small>data quality</small>
                 </span>
@@ -1057,7 +1138,7 @@ export default function App() {
               >
                 <Bell size={16} />
                 <span>
-                  <strong>3</strong>
+                  <strong>{activeAlertCount}</strong>
                   <small>active alerts</small>
                 </span>
               </button>
@@ -1104,7 +1185,7 @@ export default function App() {
                       Belgium · OSM geography
                     </div>
                   </div>
-                  <CityMap
+                  {mapEnabled ? <CityMap
                     key={`overview-map-${viewResetToken}`}
                     focused={selected}
                     focusRequest={focusRequest}
@@ -1114,16 +1195,22 @@ export default function App() {
                     layers={layers}
                     onSelect={selectMapIncident}
                     after={false}
-                  />
-                  <LayerMenu
+                    camera={overviewContext.camera}
+                    onCameraChange={updateOverviewCamera}
+                    viewMode={overviewContext.viewMode}
+                    onViewModeChange={updateOverviewViewMode}
+                    selectedEntity={overviewContext.entity}
+                    onSelectedEntityChange={updateOverviewEntity}
+                  /> : <div className="map-unavailable-demo" role="status"><Map size={32} /><strong>Geographic view unavailable</strong><p>Text-only presentation · The incident, evidence, scenarios and human decision workflow remain available.</p><small>LEUVEN URBAN MODEL · Synthetic demonstration data</small></div>}
+                  {mapEnabled && <LayerMenu
                     layers={layers}
                     setLayers={setLayers}
                     maturity={maturity}
                     availableLayers={
                       MATURITY_MAP_STAGES[maturity].availableLayers
                     }
-                  />
-                  <div className="map-bottom-legend" aria-label="Map legend">
+                  />}
+                  {mapEnabled && <div className="map-bottom-legend" aria-label="Map legend">
                     {maturity === "CURRENT" ? (
                       <span>Reference geography · illustrative inventory</span>
                     ) : (
@@ -1146,7 +1233,7 @@ export default function App() {
                         </span>
                       </>
                     )}
-                  </div>
+                  </div>}
                   <div className="map-location-note">
                     <span className="location-cross">+</span>
                     <span>
@@ -1181,6 +1268,8 @@ export default function App() {
                     forecast={getForecast(forecastOffset)}
                     onCompare={compare}
                     onEvidence={() => setEvidence(true)}
+                    readiness={readiness}
+                    onInspectDataHealth={() => { setSelectedSourceId(readiness.missing[0] || "traffic"); navigate("Data Health"); }}
                   />
                 ) : (
                   <ActivePanel
@@ -1191,6 +1280,7 @@ export default function App() {
                     onHandover={() => setHandover(true)}
                     onClose={() => setCloseConfirm(true)}
                     onImpact={() => navigate("KPI & Impact")}
+                    readiness={readiness}
                   />
                 )}
               </div>
@@ -1198,6 +1288,8 @@ export default function App() {
                 <OperationsBottom
                   onHealth={() => navigate("Data Health")}
                   lifecycle={state.status}
+                  qualityState={qualityState}
+                  qualitySummary={qualitySummary}
                 />
               )}
             </div>
@@ -1209,17 +1301,23 @@ export default function App() {
               maturity={maturity}
               forecastOffset={forecastOffset}
               timeline={timeline}
+              viewContext={twinContext}
+              onViewContextChange={setTwinContext}
+              mapEnabled={mapEnabled}
+              readiness={readiness}
+              approvedDecision={state.approvedDecision}
             />
           )}
-          {page === "Data Health" && <DataHealth />}
+          {page === "Data Health" && <DataHealth qualityState={qualityState} onQualityChange={changeQuality} selectedSourceId={selectedSourceId} onSelectedSourceChange={setSelectedSourceId} onBackToIncident={() => navigate("Overview")} />}
           {page === "Traffic & Emissions" && (
             <TrafficScreen
               forecastOffset={forecastOffset}
               forecastAnchor={forecastAnchor}
               timeline={timeline}
+              readiness={readiness}
             />
           )}
-          {page === "Urban Heat" && <HeatScreen maturity={maturity} />}
+          {page === "Urban Heat" && <HeatScreen maturity={maturity} viewContext={heatContext} onViewContextChange={setHeatContext} />}
           {page === "Implementation Roadmap" && <Roadmap />}
           {page === "Decision Log" && (
             <DecisionLog lifecycle={state.status} logs={state.logs} />
@@ -1229,17 +1327,16 @@ export default function App() {
               lifecycle={state.status}
               onNavigate={() => navigate("Digital Twin")}
               onMethodology={() => setMethodologyOpen(true)}
+              approvedDecision={state.approvedDecision}
             />
           )}
           {page === "Alert Center" && (
             <AlertCenter
-              onOpen={(destination) => {
-                navigate(destination);
-                if (destination === "Overview") {
-                  setSelected(true);
-                  setFocusRequest((value) => value + 1);
-                }
-              }}
+              alerts={alerts}
+              onOpen={openAlert}
+              onAcknowledge={id => dispatchIncident({ type: "ACKNOWLEDGE", id, operator: state.operator })}
+              onAssign={(id, owner) => dispatchIncident({ type: "ASSIGN", id, owner, operator: state.operator })}
+              onResolve={(id, options) => dispatchIncident({ ...options, type: "RESOLVE", id, operator: state.operator, context: { lifecycle: state, qualityState } })}
             />
           )}
         </main>
@@ -1261,8 +1358,14 @@ export default function App() {
       <ApprovalDialog
         open={approval}
         operator={state.operator}
+        qualityState={qualityState}
+        onInspectDataHealth={() => { setApproval(false); setSelectedSourceId(readiness.missing[0] || "traffic"); navigate("Data Health"); }}
         onClose={() => setApproval(false)}
         onApprove={(options) => {
+          if (!isReviewCurrent(options?.reviewSnapshot, options, readiness)) {
+            setToast("Approval blocked. Review the current plan and restore required evidence.");
+            return;
+          }
           dispatch({
             type: "APPROVE",
             humanApproved: true,
@@ -1270,6 +1373,8 @@ export default function App() {
             duration: options?.duration,
             routeGuidance: options?.routeGuidance,
             note: options?.note,
+            reviewSnapshot: options?.reviewSnapshot,
+            qualityState,
           });
           setApproval(false);
           setPage("Overview");

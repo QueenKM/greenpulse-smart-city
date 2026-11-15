@@ -28,7 +28,7 @@ Before starting the guided replay, use **CURRENT → MVP → TARGET** to show th
 
 ### Alert and evidence
 
-Start **Presentation Demo** from Overview. Allow its geographic views to prepare. Fullscreen is optional; if the browser declines it, continue with the guided in-page mode. Use **Next Step** or the arrow-key controls; approval still requires its explicit action.
+Start **Presentation Demo** from Overview. Allow its geographic views to prepare. If geography preparation fails, use **Retry preparation** without resetting the decision cycle, or explicitly choose **Continue without map**. The text-only route preserves evidence, scenarios and human approval. Fullscreen is optional; if the browser declines it, continue with the guided in-page mode. Use **Next Step** or the arrow-key controls; approval still requires its explicit action.
 
 > The historic-centre incident combines mobility and air-quality pressure. These readings would need source-specific freshness and quality checks. Fourteen of seventeen operational feeds are current in this synthetic case; the missing three are maintenance, offline air quality and delayed visitor flow. That does not establish that the whole road network is adequately sampled.
 
@@ -51,6 +51,8 @@ Open **How is this calculated?** if time allows. One sentence is enough:
 Open **Review & approve**. Point to the operator and owner before clicking anything.
 
 > The model cannot execute an action. Control Room Operator #02 reviews the evidence and constraints; Mobility Operations owns delivery, with Environment supporting. Approval records the duration and escalation condition. The proposed NO₂ threshold is an operational review trigger, not a claimed statutory limit.
+
+For the main 15-minute presentation, keep the reference 60-minute plan with route guidance so the later reference measurement example remains applicable. If you demonstrate **Modify**, point out that the score disappears and approval is disabled. A modified plan requires acknowledgement of its missing numerical forecast and **Record plan review** before approval; it will not inherit the reference impact percentages.
 
 Click **Approve & Activate** explicitly. The scenario remains a recommendation until that click. Show Pause/Resume or Handover only if useful; one control is enough to establish human accountability. Explain that street deployment would also require authenticated roles, controller integration, safety constraints and rollback procedures that this prototype does not implement.
 

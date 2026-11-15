@@ -224,6 +224,26 @@ const syntheticSensors = [
     note: "Simulated deployment · accessibility and capacity unverified",
   },
 ];
+// Route/session restoration stores identifiers, never trusted geometry or copy.
+// Resolve the current canonical sensor record before displaying any selection.
+function canonicalSelectedSensor(entity) {
+  const identifier =
+    typeof entity === "string"
+      ? entity
+      : entity && typeof entity === "object" && Object.hasOwn(entity, "id")
+        ? entity.id
+        : null;
+  const sensor = syntheticSensors.find((item) => item.id === identifier);
+  return sensor
+    ? {
+        ...sensor,
+        point: [...sensor.point],
+        coordinates: [...sensor.point],
+        synthetic: true,
+      }
+    : null;
+}
+
 const WIDTHS = {
   motorway: 10,
   trunk: 9,
@@ -581,6 +601,8 @@ function CityMap({
   onCameraChange,
   viewMode,
   onViewModeChange,
+  selectedEntity,
+  onSelectedEntityChange,
 }) {
   const stageKey =
     typeof maturity === "string" && Object.hasOwn(MATURITY_MAP_STAGES, maturity)
@@ -624,10 +646,34 @@ function CityMap({
     else setInternalPerspective(next);
   };
   const [focusAnimating, setFocusAnimating] = useState(false);
-  const focusToken = useRef(null);
+  // A remounted view must respect the camera retained by its parent. Explicit
+  // contextual jumps reset that camera before issuing a new focus request.
+  const restoredCamera = controlledCamera &&
+    (controlledCamera.zoom !== 1 || controlledCamera.x !== 0 || controlledCamera.y !== 0);
+  const focusToken = useRef(focused && restoredCamera ? `${focusRequest}:${perspective}:${stageKey}` : null);
   const focusTimer = useRef(null);
   const dragStopTimer = useRef(null);
-  const [selected, setSelected] = useState(null);
+  const [localSelectedEntity, setLocalSelectedEntity] = useState(null);
+  const selectionChangeRef = useRef(onSelectedEntityChange);
+  selectionChangeRef.current = onSelectedEntityChange;
+  const canonicalSelection = useMemo(
+    () =>
+      canonicalSelectedSensor(
+        selectedEntity === undefined ? localSelectedEntity : selectedEntity,
+      ),
+    [selectedEntity, localSelectedEntity],
+  );
+  const setSelection = useCallback((entity) => {
+    const canonical = canonicalSelectedSensor(entity);
+    setLocalSelectedEntity(canonical?.id || null);
+    selectionChangeRef.current?.(canonical);
+  }, []);
+  useEffect(() => {
+    if (selectedEntity !== undefined)
+      setLocalSelectedEntity(
+        canonicalSelectedSensor(selectedEntity)?.id || null,
+      );
+  }, [selectedEntity]);
   const [sourceOpen, setSourceOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [viewportScale, setViewportScale] = useState(1);
@@ -670,11 +716,11 @@ function CityMap({
     setInternalPerspective(stage.viewMode === "3d");
     viewModeChangeRef.current?.(stage.viewMode);
     setCamera({ zoom: 1, x: 0, y: 0 });
-    setSelected(null);
+    setSelection(null);
     setFocusAnimating(false);
     clearTimeout(focusTimer.current);
     focusToken.current = null;
-  }, [stageKey, viewResetToken, setCamera]);
+  }, [stageKey, viewResetToken, setCamera, setSelection]);
   useEffect(() => {
     if (!focused || isCurrent) {
       focusToken.current = null;
@@ -713,7 +759,7 @@ function CityMap({
     clearTimeout(focusTimer.current);
     setFocusAnimating(false);
     setCamera({ zoom: 1, x: 0, y: 0 });
-    setSelected(null);
+    setSelection(null);
     onClearFocus?.();
   };
   const visibleSensors = syntheticSensors.filter((sensor) =>
@@ -721,6 +767,13 @@ function CityMap({
       ? ["traffic", "air", "offline"].includes(sensor.type)
       : sensor.type !== "cooling" || showHeat,
   );
+  const selected =
+    !isCurrent &&
+    showSensors &&
+    canonicalSelection &&
+    visibleSensors.some((sensor) => sensor.id === canonicalSelection.id)
+      ? canonicalSelection
+      : null;
   const id = (name) => `${uid}-${name}`;
   const url = (name) => `url(#${id(name)})`;
   const groundScaleMetres = 250;
@@ -735,9 +788,11 @@ function CityMap({
         : `${buildings.length.toLocaleString("en-GB")} real building footprints`;
   const pick = (item) => {
     if (isCurrent) return;
-    setSelected(item);
+    const canonical = canonicalSelectedSensor(item);
+    if (item && !canonical) return;
+    setSelection(canonical);
     onSelect?.(
-      item || {
+      canonical || {
         id: "H03",
         title: `${metadata.city} historic centre · H-03`,
         type: "incident",
@@ -1122,8 +1177,9 @@ function CityMap({
                   <g
                     key={sensor.id}
                     transform={`translate(${x} ${y})`}
-                    className={`geo-sensor geo-sensor-${sensor.type}`}
+                    className={`geo-sensor geo-sensor-${sensor.type} ${selected?.id === sensor.id ? "is-selected" : ""}`}
                     role="button"
+                    aria-pressed={selected?.id === sensor.id}
                     tabIndex={compact ? -1 : 0}
                     aria-label={sensor.title}
                     onPointerDown={(event) => event.stopPropagation()}
@@ -1469,7 +1525,7 @@ function CityMap({
           <button
             className="geo-popover-close"
             aria-label="Close sensor details"
-            onClick={() => setSelected(null)}
+            onClick={() => setSelection(null)}
           >
             <X size={14} />
           </button>
@@ -1501,6 +1557,8 @@ export default memo(
     previous.compact === next.compact &&
     previous.comparison === next.comparison &&
     previous.onSelect === next.onSelect &&
+    previous.selectedEntity === next.selectedEntity &&
+    previous.onSelectedEntityChange === next.onSelectedEntityChange &&
     previous.focused === next.focused &&
     previous.focusRequest === next.focusRequest &&
     previous.onClearFocus === next.onClearFocus &&

@@ -892,3 +892,15 @@
     font-size: 7px;
   }
 }
+.geo-map .geo-sensor.is-selected > circle:first-child {
+  stroke-width: 2;
+  stroke-opacity: 1;
+  fill: #18394a;
+}
+.geo-map .geo-sensor.is-selected > .geo-sensor-halo {
+  stroke-opacity: 0.38;
+  animation: none;
+}
+.geo-map .geo-sensor-panel {
+  border-color: #38bdf85a;
+}

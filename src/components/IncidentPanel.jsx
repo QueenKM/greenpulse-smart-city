@@ -19,6 +19,8 @@ export default function IncidentPanel({
   onEvidence,
   forecastOffset = 0,
   forecast = null,
+  readiness,
+  onInspectDataHealth,
 }) {
   const titleId = useId();
   const minutes = forecastOffset > 0 ? forecastOffset : 38;
@@ -62,7 +64,7 @@ export default function IncidentPanel({
           <div className="gp-incident-section-label">
             <span className="gp-incident-badge is-live">
               <i />
-              LIVE
+              {readiness?.canApprove === false ? "REFERENCE" : "LIVE"}
             </span>
             <span>Synthetic</span>
           </div>
@@ -124,6 +126,13 @@ export default function IncidentPanel({
           </b>
         </p>
       </div>
+      {readiness && !readiness.canApprove && (
+        <div className="workflow-readiness" role="status">
+          <strong>Critical evidence unavailable</strong>
+          <span>Reference assumptions remain visible. Approval is blocked.</span>
+          <button type="button" onClick={onInspectDataHealth}>Inspect data health <ArrowRight size={12} /></button>
+        </div>
+      )}
       <button
         className="button primary gp-incident-compare"
         onClick={onCompare}

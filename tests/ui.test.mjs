@@ -1,10 +1,10 @@
-import test from "node:test";
+import test, { beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { build } from "esbuild";
 import { mkdir } from "node:fs/promises";
 await mkdir(new URL("../work/", import.meta.url), { recursive: true });
-await build({
+const appBuildOptions = {
   entryPoints: [new URL("../src/App.jsx", import.meta.url).pathname],
   bundle: true,
   platform: "node",
@@ -29,11 +29,59 @@ await build({
     },
   ],
   outfile: new URL("../work/App.test.mjs", import.meta.url).pathname,
+};
+await build(appBuildOptions);
+await build({
+  ...appBuildOptions,
+  plugins: [
+    ...appBuildOptions.plugins,
+    {
+      name: "controlled-geography-failure",
+      setup(b) {
+        b.onResolve({ filter: /\/CityMap$/ }, () => ({ path: "controlled-map", namespace: "fault-map" }));
+        b.onLoad({ filter: /.*/, namespace: "fault-map" }, () => ({
+          contents: `import React from 'react';
+            export const preloadCityModel=()=>globalThis.__greenpulseTestMap.request('preload');
+            export const retryGeographicModel=()=>globalThis.__greenpulseTestMap.request('retry');
+            export default function TestMap(){return React.createElement('div',{'data-testid':'controlled-city-map'},'Test geography');}`,
+          loader: "js",
+          resolveDir: process.cwd(),
+        }));
+      },
+    },
+  ],
+  outfile: new URL("../work/App.fault.test.mjs", import.meta.url).pathname,
+});
+await build({
+  ...appBuildOptions,
+  entryPoints: [new URL("../src/components/CityMap.jsx", import.meta.url).pathname],
+  plugins: [
+    ...appBuildOptions.plugins,
+    {
+      name: "recoverable-geographic-renderer",
+      setup(b) {
+        b.onResolve({ filter: /\/GeographicCityMap$/ }, () => ({ path: "recoverable-geography", namespace: "retry-map" }));
+        b.onLoad({ filter: /.*/, namespace: "retry-map" }, () => ({
+          contents: `import React from 'react';
+            export const warmGeographyViews=()=>({views:2});
+            export default function TestGeography(props){
+              if(globalThis.__greenpulseRendererFails) throw new Error('Expected geographic renderer failure');
+              return React.createElement('div',{'data-testid':'recovered-geography','data-camera':JSON.stringify(props.camera),'data-view-mode':props.viewMode,'data-entity':props.selectedEntity?.id},'Recovered test geography');
+            }`,
+          loader: "js",
+          resolveDir: process.cwd(),
+        }));
+      },
+    },
+  ],
+  outfile: new URL("../work/CityMap.retry.test.mjs", import.meta.url).pathname,
 });
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
   url: "http://localhost/",
   pretendToBeVisual: true,
 });
+globalThis.sessionStorage = dom.window.sessionStorage;
+beforeEach(() => globalThis.sessionStorage.clear());
 for (const key of [
   "window",
   "document",
@@ -104,6 +152,8 @@ const { render, screen, fireEvent, waitFor, cleanup, within, act } = await impor
   "@testing-library/react"
 );
 const { default: App } = await import("../work/App.test.mjs");
+const { default: FaultApp } = await import("../work/App.fault.test.mjs");
+const { default: RetryCityMap } = await import("../work/CityMap.retry.test.mjs");
 const button = (name) => screen.getByRole("button", { name, exact: true });
 const click = (name) => fireEvent.click(button(name));
 
@@ -1150,3 +1200,393 @@ test(
     assert.equal(sidebar.dataset.expanded, "true");
   },
 );
+
+const endUiCase = (t) => t.after(() => {
+  cleanup();
+  fullscreenElement = null;
+  delete globalThis.__greenpulseTestMap;
+});
+const alertArticle = (title) => screen.getByRole("button", { name: title, exact: true }).closest("article");
+const assertNoOperationalAuthority = () => {
+  assert.ok(screen.queryByText("Signal Plan H03") === null, "no intervention is active without human approval");
+  assert.ok(screen.queryByText("MEASURED · SYNTHETIC OUTCOME") === null, "no measured outcome exists before measurement");
+};
+
+test("modified plans require a new acknowledged review and do not inherit the reference impact", { timeout: 15000 }, async (t) => {
+  endUiCase(t);
+  render(React.createElement(App));
+  click("Digital Twin");
+  click("Review & approve");
+  const dialog = screen.getByRole("dialog", { name: "Approve intervention" });
+  assert.ok(within(dialog).getByLabelText("Reference score 88 out of 100"));
+  assert.equal(button("Approve & Activate").disabled, false);
+  click("Modify");
+  fireEvent.change(within(dialog).getByLabelText("Operating window"), { target: { value: "30" } });
+  fireEvent.click(within(dialog).getByRole("checkbox", { name: "Include targeted route guidance" }));
+  assert.equal(button("Approve & Activate").disabled, true);
+  assert.equal(within(dialog).queryByLabelText("Reference score 88 out of 100"), null);
+  assert.ok(within(dialog).getByRole("heading", { name: "Forecast requires review" }));
+  assert.ok(within(dialog).getByText("No updated numerical benefit estimate"));
+  assert.equal(button("Record plan review").disabled, true);
+  fireEvent.click(button("Approve & Activate"));
+  assertNoOperationalAuthority();
+  fireEvent.click(within(dialog).getByRole("checkbox", { name: "I understand the modified plan has no numerical forecast" }));
+  click("Record plan review");
+  assert.ok(within(dialog).getByText("V2"));
+  assert.equal(button("Approve & Activate").disabled, false);
+  fireEvent.change(within(dialog).getByLabelText(/Operator note/), { target: { value: "Thirty-minute plan, signal timing only." } });
+  assert.equal(button("Approve & Activate").disabled, false, "a note does not change the reviewed intervention");
+  click("Approve & Activate");
+  assert.ok(screen.getByText("Signal Plan H03"));
+  assert.ok(screen.getByText("Approved plan v2"));
+  click("Decision Log");
+  assert.ok(screen.getByText(/Operating window: 30 minutes · Route guidance: excluded/));
+  assert.ok(screen.getByText(/Review v2 · Forecast scope: Modified plan reviewed/));
+  click("Digital Twin");
+  assert.ok(screen.getByText("Separate reference comparison · approved plan v2 has no numerical forecast"));
+  assert.equal(button("Modified plan approved · unestimated").disabled, true);
+  assert.equal(screen.queryByRole("button", { name: "Scenario approved", exact: true }), null);
+  click("Overview");
+  click("Close Intervention");
+  click("Close & measure");
+  assert.ok(screen.getByText("MEASURING OUTCOME"));
+  await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Measurement complete. Estimate unavailable." })), { timeout: 7000 });
+  assert.ok(screen.getByText("No success or reduction claim is inferred from completing the observation window."));
+  assert.equal(screen.queryByText("−10.8%"), null);
+  assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
+});
+
+test("required traffic and AQ-04 outages block approval until source recovery and human review", { timeout: 15000 }, async (t) => {
+  endUiCase(t);
+  render(React.createElement(App));
+  for (const source of ["Traffic T12–T18", "AQ-04"]) {
+    click("Data Health");
+    click(`Inspect ${source}, Healthy`);
+    click("Simulate outage");
+    assert.ok(screen.getByText("H-03 BLOCKED"));
+    assert.ok(screen.getByText("This source blocks H-03 approval"));
+    assert.ok(screen.getByText("NOT ASSERTED"));
+    click("Traffic & Emissions");
+    assert.ok(screen.getByText("Reference forecast only. Approval is blocked until critical sources recover."));
+    click("Digital Twin");
+    click("Review & approve");
+    const dialog = screen.getByRole("dialog", { name: "Approve intervention" });
+    assert.equal(button("Approve & Activate").disabled, true);
+    assert.ok(within(dialog).getByRole("heading", { name: "Required data unavailable" }));
+    assert.ok(within(dialog).getByText(source === "AQ-04" ? /AQ-04 is offline/ : /Traffic T12–T18 is offline/));
+    fireEvent.click(button("Approve & Activate"));
+    assertNoOperationalAuthority();
+    click("Inspect data health");
+    assert.equal(screen.queryByRole("dialog"), null);
+    assert.ok(within(document.querySelector(".quality-inspector")).getByRole("heading", { name: source, exact: true }));
+    click("Restore source");
+    assert.ok(screen.getByText("H-03 READY"));
+    assertNoOperationalAuthority();
+    click("Digital Twin");
+    click("Review & approve");
+    assert.equal(button("Approve & Activate").disabled, false);
+    assert.ok(screen.getByRole("dialog", { name: "Approve intervention" }));
+    click("Cancel");
+  }
+  assertNoOperationalAuthority();
+});
+
+test("the optional AQ-07 outage changes coverage without blocking required H-03 evidence", { timeout: 10000 }, async (t) => {
+  endUiCase(t);
+  render(React.createElement(App));
+  click("Data Health");
+  click("Inspect AQ-07, Offline");
+  assert.ok(screen.getByText("Does not block H-03 approval"));
+  click("Restore source");
+  assert.match(document.querySelector(".quality-coverage").textContent, /^15/);
+  click("Simulate outage");
+  assert.match(document.querySelector(".quality-coverage").textContent, /^14/);
+  assert.ok(screen.getByText("H-03 READY"));
+  assert.ok(screen.getByText("Does not block H-03 approval"));
+  click("Digital Twin");
+  click("Review & approve");
+  assert.equal(button("Approve & Activate").disabled, false);
+  assert.ok(screen.getByLabelText("Reference score 88 out of 100"));
+  click("Cancel");
+  assertNoOperationalAuthority();
+});
+
+test("alert acknowledgement, assignment, filters and AQ-07 navigation share source state and explicit closure", { timeout: 15000 }, async (t) => {
+  endUiCase(t);
+  render(React.createElement(App));
+  click("Alert Center");
+  let traffic = alertArticle("Traffic & Air Quality Deterioration");
+  assert.equal(within(traffic).getByRole("button", { name: "Review & resolve" }).disabled, true);
+  fireEvent.click(within(traffic).getByRole("button", { name: "Acknowledge", exact: true }));
+  fireEvent.change(within(traffic).getByLabelText("Owner for INC-2026-1109-H03"), { target: { value: "Environment" } });
+  assert.equal(within(traffic).getByLabelText("Owner for INC-2026-1109-H03").value, "Environment");
+  assert.ok(within(traffic).getByRole("button", { name: "Acknowledged", exact: true }).disabled);
+  assertNoOperationalAuthority();
+  fireEvent.change(screen.getByLabelText("Search alerts"), { target: { value: "AQ-07" } });
+  assert.ok(screen.getByText("1 shown"));
+  let sourceAlert = alertArticle("AQ-07 Scheduled Maintenance");
+  fireEvent.click(within(sourceAlert).getByRole("button", { name: "Inspect data health" }));
+  assert.ok(within(document.querySelector(".quality-inspector")).getByRole("heading", { name: "AQ-07", exact: true }));
+  assert.equal(button("Inspect AQ-07, Offline").getAttribute("aria-pressed"), "true");
+  click("Restore source");
+  click("Alert Center");
+  sourceAlert = alertArticle("AQ-07 Scheduled Maintenance");
+  assert.ok(within(sourceAlert).getByText("SOURCE RESTORED"));
+  assert.equal(within(sourceAlert).getByRole("button", { name: "Review & resolve" }).disabled, true);
+  fireEvent.click(within(sourceAlert).getByRole("button", { name: "Acknowledge", exact: true }));
+  fireEvent.click(within(sourceAlert).getByRole("button", { name: "Review & resolve" }));
+  const review = within(sourceAlert).getByRole("region", { name: "Resolution review for DATA-AQ07-M01" });
+  assert.equal(within(review).getByRole("button", { name: "Confirm resolution" }).disabled, true);
+  fireEvent.change(within(review).getByLabelText(/Review note/), { target: { value: "Restored backup source reviewed." } });
+  fireEvent.click(within(review).getByRole("checkbox", { name: /I reviewed the evidence/ }));
+  fireEvent.click(within(review).getByRole("button", { name: "Confirm resolution" }));
+  assert.equal(screen.queryByRole("button", { name: "AQ-07 Scheduled Maintenance", exact: true }), null);
+  assert.match(document.querySelector(".gp-alert-count").textContent, /2 open.*1 closed/);
+  assert.equal(document.querySelector(".nav-count").textContent, "2");
+  fireEvent.change(screen.getByLabelText("Alert status"), { target: { value: "all" } });
+  sourceAlert = alertArticle("AQ-07 Scheduled Maintenance");
+  assert.ok(within(sourceAlert).getByText("Resolved after review"));
+  assert.match(sourceAlert.textContent, /Restored backup source reviewed/);
+  fireEvent.change(screen.getByLabelText("Severity"), { target: { value: "critical" } });
+  assert.ok(screen.getByText("1 shown"));
+  assert.ok(alertArticle("Traffic & Air Quality Deterioration"));
+  click("Data Health");
+  click("Inspect AQ-07, Healthy");
+  click("Simulate outage");
+  click("Alert Center");
+  sourceAlert = alertArticle("AQ-07 Scheduled Maintenance");
+  assert.ok(within(sourceAlert).getByText("New"));
+  assert.equal(document.querySelector(".nav-count").textContent, "3");
+  assert.match(document.querySelector(".gp-alert-count").textContent, /3 open/);
+  assert.equal(within(sourceAlert).getByRole("button", { name: "Acknowledge", exact: true }).disabled, false);
+  assert.equal(within(sourceAlert).getByRole("button", { name: "Review & resolve" }).disabled, true);
+  fireEvent.click(within(sourceAlert).getByRole("button", { name: "Acknowledge", exact: true }));
+  assert.equal(within(sourceAlert).getByRole("button", { name: "Review & resolve" }).disabled, true, "acknowledgement alone does not restore the unavailable source");
+  fireEvent.click(within(sourceAlert).getByRole("button", { name: "Inspect data health" }));
+  click("Restore source");
+  click("Alert Center");
+  sourceAlert = alertArticle("AQ-07 Scheduled Maintenance");
+  assert.ok(within(sourceAlert).getByRole("button", { name: "Acknowledged", exact: true }).disabled);
+  assert.equal(within(sourceAlert).getByRole("button", { name: "Review & resolve" }).disabled, false);
+  assertNoOperationalAuthority();
+});
+
+test("the traffic alert follows intervention and measurement but requires a separate human outcome closure", { timeout: 20000 }, async (t) => {
+  endUiCase(t);
+  render(React.createElement(App));
+  click("Alert Center");
+  let alert = alertArticle("Traffic & Air Quality Deterioration");
+  fireEvent.click(within(alert).getByRole("button", { name: "Acknowledge", exact: true }));
+  fireEvent.click(within(alert).getByRole("button", { name: "Review incident" }));
+  click("Compare scenarios");
+  click("Review & approve");
+  click("Approve & Activate");
+  click("Alert Center");
+  alert = alertArticle("Traffic & Air Quality Deterioration");
+  assert.ok(within(alert).getByText("In progress"));
+  assert.equal(within(alert).getByRole("button", { name: "Review & resolve" }).disabled, true);
+  click("Overview");
+  click("Pause");
+  click("Alert Center");
+  assert.ok(within(alertArticle("Traffic & Air Quality Deterioration")).getByText("Paused"));
+  click("Overview");
+  click("Resume");
+  click("Close Intervention");
+  click("Close & measure");
+  click("Alert Center");
+  alert = alertArticle("Traffic & Air Quality Deterioration");
+  assert.ok(within(alert).getByText("Measuring outcome"));
+  assert.equal(within(alert).getByRole("button", { name: "Review & resolve" }).disabled, true);
+  await waitFor(() => assert.ok(within(alertArticle("Traffic & Air Quality Deterioration")).getByText("Awaiting outcome review")), { timeout: 7000 });
+  assert.match(document.querySelector(".gp-alert-count").textContent, /3 open.*0 closed/);
+  alert = alertArticle("Traffic & Air Quality Deterioration");
+  fireEvent.click(within(alert).getByRole("button", { name: "Review & resolve" }));
+  const review = within(alert).getByRole("region", { name: "Resolution review for INC-2026-1109-H03" });
+  assert.equal(within(review).getByRole("button", { name: "Confirm resolution" }).disabled, true);
+  fireEvent.click(within(review).getByRole("checkbox", { name: /I reviewed the evidence/ }));
+  fireEvent.click(within(review).getByRole("button", { name: "Confirm resolution" }));
+  assert.equal(screen.queryByRole("button", { name: "Traffic & Air Quality Deterioration", exact: true }), null);
+  assert.equal(document.querySelector(".nav-count").textContent, "2");
+  click("Overview");
+  assert.equal(document.querySelector(".alert-stat strong").textContent, "2");
+});
+
+test("map and scenario view choices survive navigation and reload without restoring approval authority", { timeout: 15000 }, async (t) => {
+  endUiCase(t);
+  render(React.createElement(App));
+  await waitFor(() => assert.ok(document.querySelector(".geo-camera")));
+  click("Select Leuven Historic Centre H-03 scenario");
+  click("Zoom in");
+  const focusedCamera = document.querySelector(".geo-camera").getAttribute("transform");
+  click("Data Health");
+  click("Overview");
+  await waitFor(() => assert.ok(document.querySelector(".geo-camera")));
+  assert.equal(document.querySelector(".geo-camera").getAttribute("transform"), focusedCamera, "returning to a focused incident preserves the operator's zoom");
+  click("Show whole city");
+  click("Show 2D map");
+  click("Zoom in");
+  click("Scenario air-quality station AQ-04");
+  const overviewCamera = document.querySelector(".geo-camera").getAttribute("transform");
+  assert.equal(document.querySelector(".geo-sensor-air").getAttribute("aria-pressed"), "true");
+  click("Data Health");
+  click("Inspect AQ-07, Offline");
+  click("City Map");
+  await waitFor(() => assert.ok(document.querySelector(".geo-camera")));
+  assert.equal(document.querySelector(".geo-camera").getAttribute("transform"), overviewCamera);
+  assert.equal(document.querySelector(".geo-building-heights"), null);
+  assert.equal(document.querySelector(".geo-sensor-air").getAttribute("aria-pressed"), "true");
+  assert.ok(button("Close sensor details"));
+  click("Digital Twin");
+  await waitFor(() => assert.equal(cameraTransforms().length, 2));
+  fireEvent.click(screen.getByRole("button", { name: /^Scenario C,/ }));
+  const slider = screen.getByRole("slider", { name: "Drag to compare before and after" });
+  fireEvent.change(slider, { target: { value: "67" } });
+  click("Zoom in comparison maps");
+  click("Show comparison in 2D");
+  click("Pan both maps");
+  fireEvent.keyDown(screen.getByRole("application", { name: "Pan both comparison maps" }), { key: "ArrowRight" });
+  const twinCamera = cameraTransforms();
+  click("Overview");
+  await waitFor(() => assert.ok(document.querySelector(".geo-camera")));
+  assert.equal(document.querySelector(".geo-camera").getAttribute("transform"), overviewCamera);
+  assert.equal(document.querySelector(".geo-sensor-air").getAttribute("aria-pressed"), "true");
+  click("Digital Twin");
+  await waitFor(() => assert.equal(cameraTransforms().length, 2));
+  assert.equal(screen.getByRole("button", { name: /^Scenario C,/ }).getAttribute("aria-pressed"), "true");
+  assert.equal(document.querySelector(".twin-comparison-input").value, "67");
+  assert.equal(document.querySelector(".twin-comparison-input").hidden, true);
+  assert.deepEqual(cameraTransforms(), twinCamera);
+  assert.equal(button("Drag comparison").getAttribute("aria-pressed"), "true");
+  assert.equal(document.querySelectorAll(".twin-map-stage .geo-building-heights").length, 0);
+  click("View recommended scenario");
+  // Selecting another scenario intentionally recentres the divider. Retain a
+  // new explicit user choice before checking the subsequent session restore.
+  click("Drag comparison");
+  fireEvent.change(screen.getByRole("slider", { name: "Drag to compare before and after" }), { target: { value: "67" } });
+  click("Pan both maps");
+  click("Review & approve");
+  click("Approve & Activate");
+  assert.ok(screen.getByText("Signal Plan H03"));
+  cleanup();
+  render(React.createElement(App));
+  await waitFor(() => assert.ok(document.querySelector(".geo-camera")));
+  assert.equal(document.querySelector(".geo-camera").getAttribute("transform"), overviewCamera);
+  assert.equal(document.querySelector(".geo-sensor-air").getAttribute("aria-pressed"), "true");
+  assertNoOperationalAuthority();
+  click("Data Health");
+  assert.equal(button("Inspect AQ-07, Offline").getAttribute("aria-pressed"), "true");
+  click("Digital Twin");
+  await waitFor(() => assert.equal(cameraTransforms().length, 2));
+  assert.deepEqual(cameraTransforms(), twinCamera);
+  assert.equal(document.querySelector(".twin-comparison-input").value, "67");
+  assert.equal(button("Drag comparison").getAttribute("aria-pressed"), "true");
+  click("Drag comparison");
+  assert.equal(screen.getByRole("slider", { name: "Drag to compare before and after" }).value, "67");
+  assert.equal(button("Review & approve").disabled, false);
+  click("KPI & Impact");
+  assert.ok(screen.getByText("OUTCOME NOT YET MEASURED"));
+});
+
+const controlledGeography = () => {
+  const requests = [];
+  globalThis.__greenpulseTestMap = {
+    request(kind) {
+      return new Promise((resolve, reject) => requests.push({ kind, resolve, reject }));
+    },
+  };
+  return requests;
+};
+
+test("failed presentation preparation blocks progression until a successful explicit retry", { timeout: 10000 }, async (t) => {
+  endUiCase(t);
+  const requests = controlledGeography();
+  render(React.createElement(FaultApp));
+  click("Presentation Demo");
+  assert.equal(button("Next Step").disabled, true);
+  assert.equal(requests[0].kind, "preload");
+  await act(async () => requests[0].reject(new Error("Synthetic map load failure")));
+  assert.ok(screen.getByText("Model unavailable"));
+  assert.equal(button("Next Step").disabled, true);
+  fireEvent.keyDown(document, { key: "ArrowRight" });
+  assert.equal(currentStep(), "Alert");
+  click("Retry preparation");
+  assert.equal(requests[1].kind, "retry");
+  assert.equal(button("Next Step").disabled, true);
+  await act(async () => requests[1].resolve({ views: 2 }));
+  assert.ok(screen.getByText("City ready"));
+  assert.equal(button("Next Step").disabled, false);
+  assert.equal(currentStep(), "Alert");
+  assertNoOperationalAuthority();
+  click("Next Step");
+  assert.ok(screen.getByRole("dialog", { name: "Evidence → design" }));
+});
+
+test("text-only recovery keeps human approval mandatory and later map retries preserve the approved decision", { timeout: 15000 }, async (t) => {
+  endUiCase(t);
+  const requests = controlledGeography();
+  render(React.createElement(FaultApp));
+  click("Presentation Demo");
+  await act(async () => requests[0].reject(new Error("Synthetic offline map")));
+  click("Continue without map");
+  assert.ok(screen.getByText("Text-only demo"));
+  assert.ok(screen.getByText("Geographic view unavailable"));
+  assert.equal(screen.queryByTestId("controlled-city-map"), null);
+  click("Next Step");
+  click("Next Step");
+  click("Next Step");
+  assert.equal(currentStep(), "Scenarios");
+  assert.ok(screen.getByRole("region", { name: "Text-only scenario comparison" }));
+  click("Next Step");
+  assert.ok(screen.getByRole("dialog", { name: "Approve intervention" }));
+  click("Cancel");
+  click("Next Step");
+  assertNoOperationalAuthority();
+  click("Approve & Activate");
+  assert.equal(currentStep(), "Intervention");
+  assert.ok(screen.getByText("Signal Plan H03"));
+  click("Retry preparation");
+  assert.equal(button("Next Step").disabled, true);
+  await act(async () => requests[1].reject(new Error("Synthetic retry failure")));
+  assert.ok(screen.getByText("Signal Plan H03"));
+  assert.equal(currentStep(), "Intervention");
+  click("Retry preparation");
+  await act(async () => requests[2].resolve({ views: 2 }));
+  assert.ok(screen.getByText("City ready"));
+  assert.ok(screen.getByText("Signal Plan H03"));
+  assert.ok(screen.getByText("MONITORING"));
+  assert.equal(currentStep(), "Intervention");
+  assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
+  click("Decision Log");
+  assert.equal(screen.getAllByText("Approved & activated · Scenario B").length, 1);
+});
+
+test("the actual map error boundary retries locally while preserving its parent view context", { timeout: 10000 }, async (t) => {
+  endUiCase(t);
+  const originalError = console.error;
+  const expectedErrors = [];
+  console.error = (...args) => expectedErrors.push(args);
+  t.after(() => {
+    console.error = originalError;
+    delete globalThis.__greenpulseRendererFails;
+  });
+  globalThis.__greenpulseRendererFails = true;
+  const camera = { zoom: 1.9, x: -140, y: 80 };
+  render(React.createElement(RetryCityMap, {
+    camera,
+    viewMode: "2d",
+    selectedEntity: { id: "AQ-04" },
+    viewResetToken: 4,
+  }));
+  await waitFor(() => assert.ok(document.querySelector(".geo-loading-failed")));
+  assert.ok(button("Retry geographic model"));
+  globalThis.__greenpulseRendererFails = false;
+  click("Retry geographic model");
+  await waitFor(() => assert.ok(screen.getByTestId("recovered-geography")));
+  const recovered = screen.getByTestId("recovered-geography");
+  assert.deepEqual(JSON.parse(recovered.dataset.camera), camera);
+  assert.equal(recovered.dataset.viewMode, "2d");
+  assert.equal(recovered.dataset.entity, "AQ-04");
+  assert.equal(document.querySelector(".geo-loading-failed"), null);
+  assert.ok(expectedErrors.some(args => args.some(value => String(value).includes("Expected geographic renderer failure"))));
+  assertNoOperationalAuthority();
+});

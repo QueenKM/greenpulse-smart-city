@@ -1,0 +1,35 @@
+.workflow-warning,
+.workflow-readiness {
+  color: #d5b970;
+  background: #fbbf2408;
+  border-left: 2px solid #fbbf245c;
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.incident-v2 .workflow-readiness { margin: 0 0 12px; }
+.workflow-readiness strong,
+.workflow-readiness span { display: block; }
+.workflow-readiness span { color: #a99c7b; margin-top: 3px; }
+.workflow-readiness button { display: inline-flex; align-items: center; gap: 7px; padding: 8px 0 0; font-size: 11px; color: #e1c67c; }
+.approved-version { display: flex; flex-direction: column; gap: 4px; margin: 12px 0; padding-left: 10px; border-left: 2px solid #34d39955; color: #9bcab9; font-size: 11px; }
+.approved-version small { color: #789a90; line-height: 1.45; }
+.map-unavailable-demo { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; text-align: center; padding: 110px 55px 100px; background: radial-gradient(ellipse at 45% 45%, #17323e, #091820 75%); color: #7ca4b8; }
+.map-unavailable-demo strong { color: #bfced7; font-family: "Manrope Variable",sans-serif; font-size: 22px; font-weight: 500; }
+.map-unavailable-demo p { max-width: 440px; font-size: 13px; line-height: 1.7; }
+.map-unavailable-demo small { font-size: 10px; color: #5d7d8e; letter-spacing: .5px; }
+.presentation-preparation.fallback { color: #c5aa71; }
+.demo-actions { flex-wrap: wrap; }
+.demo-actions > button:disabled { cursor: not-allowed; }
+.ds-confidence > strong { display: block; margin: 7px 0; font-size: 15px; line-height: 1.4; }
+.ds-confidence > small { display: block; color: #7f9aa8; font-size: 11px; line-height: 1.6; }
+.modified-outcome-plan { display: flex; flex-wrap: wrap; justify-content: center; gap: 22px; margin: 22px 0; padding: 18px 22px; border-block: 1px solid #ffffff0b; }
+.modified-outcome-plan dt { font-size: 11px; color: #76909d; margin-bottom: 7px; }
+.modified-outcome-plan dd { margin: 0; font-size: 14px; color: #b7cedb; }
+.modified-outcome > p { max-width: 650px; }
+.modified-outcome .ds-button { margin: 20px auto 0; }
+@media (max-width: 650px) {
+  .map-unavailable-demo { padding-inline: 24px; }
+  .map-unavailable-demo strong { font-size: 18px; }
+  .modified-outcome-plan { gap: 15px; padding-inline: 10px; }
+}

@@ -89,3 +89,27 @@
     font-size: 8px;
   }
 }
+.geo-loading-failed .geo-loading-message {
+  color: #8eabc0;
+  max-width: 420px;
+}
+.geo-loading-failed .geo-loading-message > .button {
+  min-height: 42px;
+  padding: 10px 14px;
+  border-color: #38bdf84d;
+  color: #a6dff7;
+  pointer-events: auto;
+}
+.geo-loading-failed .geo-loading-message > .button:hover {
+  border-color: #38bdf899;
+  background: #38bdf810;
+}
+/* Failed comparison maps expose their local retry controls instead of letting
+   the healthy-map divider intercept the recovery action. */
+.twin-map-stage:has(.geo-loading-failed) .twin-comparison-input {
+  pointer-events: none;
+}
+.twin-map-stage:has(.geo-loading-failed) .twin-map-before,
+.twin-map-stage:has(.geo-loading-failed) .twin-map-after {
+  pointer-events: auto;
+}

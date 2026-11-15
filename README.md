@@ -36,7 +36,7 @@ The prototype brings traffic, air quality and urban heat into one operational st
 | **City operations**             | Explore real Leuven streets, buildings, parks and waterways. Select H-03 to focus its affected corridors; switch map layers and 2D/3D views.          |
 | **Shared forecast timeline**    | Move between **Now / +15 / +30 / +60 min** across the map, traffic chart and scenario comparison.                                                     |
 | **Scenario intelligence**       | Compare doing nothing, adaptive signals and traffic diversion. Use a synced before/after camera and inspect the trade-offs behind the recommendation. |
-| **Human-led intervention**      | Review, modify and explicitly approve an action. Pause, hand over and close it, with an accountable operator and demonstration decision log.          |
+| **Human-led intervention**      | Review and version a plan before explicit approval. Critical evidence gates activation; pause, hand over and close with an accountable operator.          |
 | **KPI & impact**                | Compare predicted and synthetic observed improvements; open the calculation, baseline and assumptions behind the numbers.                             |
 | **Implementation & governance** | Follow the maturity roadmap and inspect proposed owners, data stewards, decision authority, dependencies and phase gates.                             |
 
@@ -95,6 +95,14 @@ flowchart LR
 - **Layers** opens the individual overlay controls. Availability follows the selected maturity stage; your layer preferences are preserved when switching stages.
 
 </details>
+
+## Decisions that retain their context
+
+- **Current plan, current evidence:** H-03 approval requires the traffic group and AQ-04. Data Health's explicitly synthetic outage/restore controls demonstrate the rule; optional AQ-07 and Visitor Flow availability affects coverage without inventing a confidence percentage.
+- **Versioned modifications:** changing duration or route guidance invalidates the review. The operator must record a new review before approval. A modified plan has **no inherited score or numerical benefit forecast**; the original Scenario B remains a separate reference. Notes do not change the forecast.
+- **Reviewed closure:** alerts support acknowledgement, proposed-owner assignment, filtering and contextual navigation. Traffic becomes eligible for explicit resolution after measurement; completing measurement does not automatically resolve it. AQ-07 opens its source record and must be restored before its alert can be resolved.
+- **View continuity:** camera, selected mapped entity, Twin scenario, comparison position and 2D/3D preference survive navigation. The browser session retains validated view preferences only. Refresh never restores approval, active interventions, measurement or operator notes.
+- **Recoverable presentation:** use **Retry preparation** if geography fails. Progress is blocked until it loads or you explicitly choose **Continue without map**. Text-only mode retains scenario evidence and the human approval gate. Retrying the map does not reset the current decision cycle.
 
 ## Method, evidence & presentation materials
 
@@ -206,7 +214,7 @@ This produces root-relative assets while preserving the default GitHub Pages con
 
 Production builds, lifecycle rules and DOM interactions are checked automatically. Motion is replaced by a deterministic adapter in DOM tests, and fullscreen checks use a DOM API adapter. These checks do not establish browser layout, animation quality or native fullscreen behaviour; a visual browser review is still needed before a live presentation.
 
-Scenario scores, model confidence and intervention effects are illustrative assumptions. Tartu, Leuven and Pavia benchmark themes are design interpretations, not claims of equivalent municipal capability. Modified intervention parameters are recorded, while the closed-loop benchmark values remain fixed synthetic fixtures.
+Scenario scores, model confidence and intervention effects are illustrative assumptions. Tartu, Leuven and Pavia benchmark themes are design interpretations, not claims of equivalent municipal capability. Modified intervention parameters and their reviewed evidence version are recorded. Reference benchmark values remain fixed synthetic fixtures and are never attributed to a modified, unestimated plan. Completing its measurement window does not create a numerical outcome dataset.
 
 ---
 

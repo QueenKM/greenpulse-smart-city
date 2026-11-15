@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowDownRight,
@@ -23,6 +23,7 @@ import {
   calculateDecisionScore,
   getForecastAt,
 } from "../scenario.mjs";
+import { createDefaultTwinContext, normalizeTwinContext } from "../view-context.mjs";
 import "./DigitalTwin.css";
 
 const scenarios = [
@@ -222,29 +223,105 @@ function ScoreExplanation({ scenario, onClose }) {
   );
 }
 
+function TextComparison({ scenario, baseline, forecastOffset, maturityLabel, reduction, referenceOnly }) {
+  const metrics = [
+    ["Congestion", "congestion", "%"],
+    ["PM2.5", "pm", "µg/m³"],
+    ["Travel time", "travel", "min"],
+  ];
+  return (
+    <section className="twin-text-fallback" aria-label="Text-only scenario comparison">
+      <header>
+        <span className="twin-overline">TEXT-ONLY COMPARISON</span>
+        <h2>The decision stays visible.</h2>
+        <p>Map display is disabled. The scenario evidence and human approval workflow remain available.</p>
+      </header>
+      <div className="twin-fallback-horizon">
+        <span className="twin-model-note"><span className="twin-dot" /> {referenceOnly ? "REFERENCE ASSUMPTIONS" : "SIMULATED"}</span>
+        <span>{forecastOffset === 0 ? "Current synthetic baseline" : `Same +${forecastOffset}-minute horizon`}</span>
+      </div>
+      <table>
+        <thead><tr><th scope="col">Evidence</th><th scope="col">No action</th><th scope="col">Scenario {scenario.id}<small>{scenario.name}</small></th></tr></thead>
+        <tbody>{metrics.map(([label, key, unit]) => (
+          <tr key={key}><th scope="row">{label}</th><td>{baseline[key]}<small>{unit}</small></td><td>{scenario[key]}<small>{unit}</small></td></tr>
+        ))}</tbody>
+      </table>
+      <footer>
+        <div className="twin-fallback-reduction"><ArrowDownRight size={18} /><span><b>{reduction}<small> pp</small></b><small>Congestion reduction vs no action</small></span></div>
+        <span className="twin-map-maturity">{maturityLabel}</span>
+      </footer>
+      <p className="twin-fallback-note">Synthetic demonstration assumptions · no geography is displayed in this view. These estimates are not calibrated or validated for real city operations.</p>
+    </section>
+  );
+}
+
 export default function DigitalTwin({
   onApprove,
   lifecycle = "idle",
   forecastOffset = 60,
   timeline,
   maturity = "TARGET",
+  viewContext,
+  onViewContextChange,
+  mapEnabled = true,
+  readiness,
+  approvedDecision,
 }) {
-  const [selected, setSelected] = useState("B");
-  const [divider, setDivider] = useState(50);
-  const [camera, setCamera] = useState({ zoom: 1, x: 0, y: 0 });
-  const [viewMode, setViewMode] = useState(() =>
-    maturity === "TARGET" ? "3d" : "2d",
+  const [localContext, setLocalContext] = useState(() =>
+    createDefaultTwinContext(maturity),
   );
-  const [panMode, setPanMode] = useState(false);
+  const controlled = viewContext !== undefined;
+  const context = useMemo(
+    () => normalizeTwinContext(controlled ? viewContext : localContext, maturity),
+    [controlled, viewContext, localContext, maturity],
+  );
+  const contextControl = useRef({ controlled, onViewContextChange, maturity });
+  contextControl.current = { controlled, onViewContextChange, maturity };
+  const setContext = useCallback((update) => {
+    const apply = (previous) => {
+      const stage = contextControl.current.maturity;
+      const normalized = normalizeTwinContext(previous, stage);
+      return normalizeTwinContext(
+        typeof update === "function" ? update(normalized) : update,
+        stage,
+      );
+    };
+    if (contextControl.current.controlled) {
+      contextControl.current.onViewContextChange?.(apply);
+    } else {
+      setLocalContext(apply);
+    }
+  }, []);
+  const setField = useCallback((field, update) => {
+    setContext((previous) => ({
+      ...previous,
+      [field]: typeof update === "function" ? update(previous[field]) : update,
+    }));
+  }, [setContext]);
+  const setSelected = useCallback((update) => setField("scenario", update), [setField]);
+  const setDivider = useCallback((update) => setField("divider", update), [setField]);
+  const setCamera = useCallback((update) => setField("camera", update), [setField]);
+  const setViewMode = useCallback((update) => setField("viewMode", update), [setField]);
+  const setPanMode = useCallback((update) => setField("panMode", update), [setField]);
+  const { scenario: selected, divider, viewMode, panMode } = context;
+  // Divider and selection updates must not invalidate the expensive map camera.
+  const camera = useMemo(() => ({
+    zoom: context.camera.zoom,
+    x: context.camera.x,
+    y: context.camera.y,
+  }), [context.camera.zoom, context.camera.x, context.camera.y]);
   const [panning, setPanning] = useState(false);
   const [scoreOpen, setScoreOpen] = useState(false);
   const panDrag = useRef(null);
   const uid = useId();
   const mapRef = useRef(null);
   const dragging = useRef(false);
+  const previousMaturity = useRef(maturity);
   useEffect(() => {
+    if (previousMaturity.current === maturity) return;
+    previousMaturity.current = maturity;
     setViewMode(maturity === "TARGET" ? "3d" : "2d");
-  }, [maturity]);
+  }, [maturity, setViewMode]);
   const maturityLabel = {
     CURRENT: "CURRENT · reference inventory",
     MVP: "MVP · priority corridor",
@@ -287,6 +364,12 @@ export default function DigitalTwin({
       };
     });
   useEffect(() => {
+    if (!mapEnabled) {
+      dragging.current = false;
+      panDrag.current = null;
+      setPanning(false);
+      return undefined;
+    }
     const map = mapRef.current;
     const onWheel = (event) => {
       event.preventDefault();
@@ -297,7 +380,7 @@ export default function DigitalTwin({
     };
     map?.addEventListener("wheel", onWheel, { passive: false });
     return () => map?.removeEventListener("wheel", onWheel);
-  }, []);
+  }, [mapEnabled]);
   const startPan = (event) => {
     if (event.button !== 0) return;
     const point = comparisonPoint(event.clientX, event.clientY);
@@ -339,6 +422,11 @@ export default function DigitalTwin({
     "measuring",
     "measured",
   ].includes(lifecycle);
+  const referenceOnly = readiness?.canApprove === false;
+  const modifiedApproval = approvedDecision?.snapshot?.forecast.status === "unestimated";
+  const readinessDetails = Array.isArray(readiness?.reasons)
+    ? readiness.reasons.filter((reason) => typeof reason === "string").join(" · ")
+    : readiness?.label || "Critical evidence is unavailable.";
   const select = (id) => {
     setSelected(id);
     setDivider(50);
@@ -347,7 +435,7 @@ export default function DigitalTwin({
   return (
     <div className={`twin-screen ${timeline ? "twin-has-timeline" : ""}`}>
       <div className="twin-intro">
-        <p>Real Leuven geography · synthetic operating conditions</p>
+        <p className={referenceOnly || modifiedApproval ? "twin-reference-caption" : undefined} title={referenceOnly ? readinessDetails : undefined}>{modifiedApproval ? `Separate reference comparison · approved plan v${approvedDecision.snapshot.version} has no numerical forecast` : referenceOnly ? "Reference assumptions · critical evidence unavailable" : mapEnabled ? "Real Leuven geography · synthetic operating conditions" : "Text-only scenario evidence · synthetic operating conditions"}</p>
         <span className="twin-model-note">
           <span className="twin-dot" /> SIMULATED <i />
           {forecastOffset === 0
@@ -357,7 +445,7 @@ export default function DigitalTwin({
       </div>
       {timeline && <div className="twin-timeline-slot">{timeline}</div>}
       <div className="twin-workspace">
-        <section
+        {mapEnabled ? <section
           className="twin-map-stage"
           ref={mapRef}
           aria-label="Before and after city comparison"
@@ -592,7 +680,14 @@ export default function DigitalTwin({
             </a>
             <b className="twin-operational-type">SIMULATED</b>
           </div>
-        </section>
+        </section> : <TextComparison
+          scenario={scenario}
+          baseline={baseline}
+          forecastOffset={forecastOffset}
+          maturityLabel={maturityLabel}
+          reduction={congestionReduction}
+          referenceOnly={referenceOnly}
+        />}
 
         <aside className="twin-rationale">
           <div className="twin-rationale-top">
@@ -612,7 +707,7 @@ export default function DigitalTwin({
             >
               <div className="twin-rationale-title">
                 <div>
-                  <span className="twin-overline">WHY THIS SCENARIO?</span>
+                  <span className="twin-overline">{modifiedApproval ? "REFERENCE SCENARIO ONLY" : "WHY THIS SCENARIO?"}</span>
                   <h2>{scenario.name}</h2>
                 </div>
                 <div className="twin-big-score">
@@ -669,7 +764,7 @@ export default function DigitalTwin({
                 <span>
                   {approved ? (
                     <>
-                      <Check size={16} /> Scenario approved
+                      <Check size={16} /> {modifiedApproval ? "Modified plan approved · unestimated" : "Scenario approved"}
                     </>
                   ) : (
                     <>
@@ -688,9 +783,8 @@ export default function DigitalTwin({
                 <ArrowRight size={16} />
               </button>
             )}
-            <p>
-              <LockKeyhole size={11} /> Human approval required. No city systems
-              connected.
+            <p className={referenceOnly ? "twin-reference-caption" : undefined} title={referenceOnly ? readinessDetails : undefined}>
+              <LockKeyhole size={11} /> {modifiedApproval ? "These reference numbers do not describe the approved modified plan." : referenceOnly ? "Reference comparison · critical evidence unavailable" : "Human approval required. No city systems connected."}
             </p>
           </div>
         </aside>

@@ -1,25 +1,67 @@
-import React, { Component, Suspense, lazy, memo } from "react";
+import React, {
+  Component,
+  Suspense,
+  lazy,
+  memo,
+  useCallback,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { MapPinned, RotateCcw } from "lucide-react";
 import "./CityMapLoading.css";
 
-// Keep the large, locally bundled OSM geometry out of the initial application
-// download so the command room and decision controls appear immediately.
+// Share the downloaded geography and a stable lazy type per load attempt.
+// Explicit retries discard rejected lazy state without resetting the session.
 let geographicModule;
-const loadGeography = () =>
-  geographicModule ||
-  (geographicModule = import("./GeographicCityMap").catch((error) => {
-    geographicModule = undefined;
-    throw error;
-  }));
-const GeographicCityMap = lazy(loadGeography);
+let geographicLoadFailed = false;
+let geographyRevision = 0;
+const retrySubscribers = new Set();
+const subscribeToRetries = (subscriber) => {
+  retrySubscribers.add(subscriber);
+  return () => retrySubscribers.delete(subscriber);
+};
+const getRetryRevision = () => geographyRevision;
+const loadGeography = () => {
+  if (!geographicModule) {
+    const loading = import("./GeographicCityMap").catch((error) => {
+      if (geographicModule === loading) {
+        geographicModule = undefined;
+        geographicLoadFailed = true;
+      }
+      throw error;
+    });
+    geographicModule = loading;
+  }
+  return geographicModule;
+};
+// Keep one lazy identity for each load attempt. Creating a new lazy type on
+// every remount can repeatedly suspend when the shared import is already cached.
+let GeographicCityMap = lazy(loadGeography);
+const resetGeographyCache = () => {
+  geographicModule = undefined;
+  geographicLoadFailed = false;
+  GeographicCityMap = lazy(loadGeography);
+  geographyRevision += 1;
+  for (const subscriber of retrySubscribers) subscriber();
+};
+
 export async function preloadCityModel() {
+  if (geographicLoadFailed) resetGeographyCache();
   const module = await loadGeography();
   return module.warmGeographyViews();
 }
 
-function MapLoading({ failed = false }) {
+export async function retryGeographicModel() {
+  resetGeographyCache();
+  return preloadCityModel();
+}
+
+function MapLoading({ failed = false, onRetry }) {
   return (
-    <div className="city-map geo-loading" aria-busy={!failed}>
+    <div
+      className={`city-map geo-loading ${failed ? "geo-loading-failed" : ""}`}
+      aria-busy={!failed}
+    >
       <div className="geo-loading-message" role="status">
         <MapPinned size={28} strokeWidth={1.2} />
         <strong>
@@ -29,16 +71,13 @@ function MapLoading({ failed = false }) {
         </strong>
         <span>
           {failed
-            ? "Refresh to reload the bundled OpenStreetMap snapshot."
+            ? "Retry the map while keeping your decision session."
             : "Real streets, building footprints and waterways."}
         </span>
         {failed && (
-          <button
-            className="button secondary"
-            onClick={() => window.location.reload()}
-          >
+          <button className="button secondary" onClick={onRetry}>
             <RotateCcw size={14} />
-            Reload model
+            Retry geographic model
           </button>
         )}
       </div>
@@ -65,13 +104,31 @@ class MapBoundary extends Component {
     return { failed: true };
   }
   render() {
-    return this.state.failed ? <MapLoading failed /> : this.props.children;
+    return this.state.failed ? (
+      <MapLoading failed onRetry={this.props.onRetry} />
+    ) : (
+      this.props.children
+    );
   }
 }
 
 export default memo(function CityMap(props) {
+  const [retryKey, setRetryKey] = useState(0);
+  const viewResetToken = props.viewResetToken ?? 0;
+  const retryRevision = useSyncExternalStore(
+    subscribeToRetries,
+    getRetryRevision,
+    getRetryRevision,
+  );
+  const retry = useCallback(() => {
+    resetGeographyCache();
+    setRetryKey((attempt) => attempt + 1);
+  }, []);
   return (
-    <MapBoundary>
+    <MapBoundary
+      key={`${viewResetToken}:${retryKey}:${retryRevision}`}
+      onRetry={retry}
+    >
       <Suspense fallback={<MapLoading />}>
         <GeographicCityMap {...props} />
       </Suspense>

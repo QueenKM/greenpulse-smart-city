@@ -1,0 +1,35 @@
+.gp-versioned-approval .gp-dialog-scenario-line { flex-wrap: wrap; gap: 10px; margin-bottom: 21px; }
+.gp-versioned-approval .gp-versioned-forecast-label { margin-left: auto; color: #d8b875; font-size: 10px; letter-spacing: .2px; font-weight: 450; }
+.gp-versioned-approval .gp-versioned-review { padding: 16px 17px; margin-top: 21px; border: 1px solid #a78bfa2e; border-radius: 5px; background: linear-gradient(115deg, #a78bfa07, #a78bfa02); }
+.gp-versioned-approval .gp-versioned-review.needs-review { border-color: #fbbf2435; background: linear-gradient(115deg, #fbbf2408, #fbbf2402); }
+.gp-versioned-approval .gp-versioned-review-heading { display: flex; align-items: center; gap: 8px; color: #b5a2ee; }
+.gp-versioned-approval .needs-review .gp-versioned-review-heading { color: #e3bd6e; }
+.gp-versioned-approval .gp-versioned-review-heading > svg { flex: none; }
+.gp-versioned-approval .gp-versioned-review-heading h3 { margin: 0; color: inherit; font-size: 13px; font-weight: 550; line-height: 1.4; }
+.gp-versioned-approval .gp-versioned-review-heading > span { margin-left: auto; border: 1px solid #a78bfa30; border-radius: 3px; padding: 3px 5px; color: #bbacf0; font-size: 9px; letter-spacing: .5px; }
+.gp-versioned-approval .gp-versioned-review > p { margin: 9px 0 0; color: #809aa9; font-size: 11px; line-height: 1.65; }
+.gp-versioned-approval .gp-versioned-review > .gp-versioned-review-settings { color: #b8cbd4; font-size: 11px; }
+.gp-versioned-approval .gp-versioned-review > .gp-versioned-review-warning { color: #d9bd80; font-size: 12px; font-weight: 500; }
+.gp-versioned-approval .gp-versioned-reference { margin-top: 12px; border-top: 1px solid #758a9a21; padding-top: 10px; }
+.gp-versioned-approval .gp-versioned-reference summary { cursor: pointer; color: #7e94a3; font-size: 10px; line-height: 1.6; }
+.gp-versioned-approval .gp-versioned-reference summary:hover { color: #c1d1dc; }
+.gp-versioned-approval .gp-versioned-reference p { margin: 8px 0 0; color: #728b9b; font-size: 10px; line-height: 1.7; }
+.gp-versioned-approval .gp-versioned-acknowledgement { display: flex; align-items: flex-start; gap: 9px; margin-top: 15px; color: #bdcbd3; font-size: 11px; line-height: 1.6; cursor: pointer; }
+.gp-versioned-approval .gp-versioned-acknowledgement input { flex: none; width: 14px; height: 14px; margin: 2px 0 0; accent-color: #a78bfa; }
+.gp-versioned-approval .gp-versioned-record-review { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; min-height: 34px; margin-top: 13px; font-size: 11px; }
+.gp-versioned-approval .gp-versioned-review > .gp-versioned-reviewed-note { display: flex; align-items: center; gap: 6px; margin-top: 11px; color: #a89ac9; font-size: 10px; }
+.gp-versioned-approval .gp-versioned-data-block { margin-top: 14px; padding: 15px 17px; border-left: 2px solid #fb718580; background: #fb718508; }
+.gp-versioned-approval .gp-versioned-data-block > div { display: flex; align-items: center; gap: 8px; color: #ed9ea8; }
+.gp-versioned-approval .gp-versioned-data-block h3 { margin: 0; font-size: 12px; font-weight: 500; }
+.gp-versioned-approval .gp-versioned-data-block ul { margin: 10px 0; padding-left: 17px; color: #b49da5; font-size: 11px; line-height: 1.7; }
+.gp-versioned-approval .gp-versioned-data-block .button { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; margin-top: 3px; font-size: 11px; }
+.gp-versioned-approval .gp-versioned-approval-gate { margin: 0 0 12px; color: #b9a478; font-size: 11px; line-height: 1.6; text-align: center; }
+.gp-versioned-approval button:disabled { cursor: not-allowed; opacity: .43; transform: none; box-shadow: none; }
+.gp-versioned-approval .gp-dialog-human { margin-top: 20px; }
+.gp-versioned-approval :is(button, select, textarea, summary, input):focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }
+@media (max-width: 550px) {
+  .gp-versioned-approval .gp-versioned-review { padding: 14px; }
+  .gp-versioned-approval .gp-versioned-review-heading { gap: 7px; }
+  .gp-versioned-approval .gp-versioned-review-heading h3 { font-size: 12px; }
+  .gp-versioned-approval .gp-versioned-forecast-label { font-size: 9px; }
+}

@@ -1,4 +1,6 @@
 import { formatCityTime, formatCityDate } from "./time.mjs";
+import { DEFAULT_PLAN, createPlanReview, isReviewCurrent } from "./decision.mjs";
+import { evaluateDataReadiness } from "./quality.mjs";
 
 export const initialLifecycle = {
   status: "idle",
@@ -8,8 +10,17 @@ export const initialLifecycle = {
   routeGuidance: true,
   note: "",
   nextReviewAt: null,
+  approvedDecision: null,
   logs: [],
 };
+
+function immutable(value) {
+  if (value && typeof value === "object") {
+    Object.values(value).forEach(immutable);
+    Object.freeze(value);
+  }
+  return value;
+}
 
 export function lifecycleReducer(state, action) {
   const timestamp = action.timestamp ?? Date.now();
@@ -24,29 +35,49 @@ export function lifecycleReducer(state, action) {
         time: action.time || formatCityTime(recordedAt),
         date: formatCityDate(recordedAt),
         timestamp,
-        operator: action.operator || state.operator,
+        operator: action.type === "APPROVE" ? state.operator : action.operator || state.operator,
         detail:
           action.type === "APPROVE"
-            ? `Operating window: ${action.duration || 60} minutes · Route guidance: ${action.routeGuidance === false ? "excluded" : "included"}${action.note ? " · " + action.note : ""}`
+            ? `Operating window: ${next.duration} minutes · Route guidance: ${next.routeGuidance ? "included" : "excluded"}${action.note ? " · " + action.note : ""} · Review v${next.approvedDecision.snapshot.version} · Forecast scope: ${next.approvedDecision.snapshot.forecast.label}`
             : action.note || "",
+        ...(action.type === "APPROVE" ? {
+          reviewId: next.approvedDecision.snapshot.id,
+          reviewVersion: next.approvedDecision.snapshot.version,
+          forecastScope: next.approvedDecision.snapshot.forecast.status,
+        } : {}),
       },
     ],
   });
   switch (action.type) {
-    case "APPROVE":
-      return state.status === "idle" && action.humanApproved === true
-        ? log("Approved & activated · Scenario B", {
+    case "APPROVE": {
+      const plan = {
+        duration: action.duration === undefined ? DEFAULT_PLAN.duration : action.duration,
+        routeGuidance: action.routeGuidance === undefined ? DEFAULT_PLAN.routeGuidance : action.routeGuidance,
+      };
+      const readiness = evaluateDataReadiness(action.qualityState);
+      if (state.status !== "idle" || action.humanApproved !== true ||
+          !isReviewCurrent(action.reviewSnapshot, plan, readiness)) return state;
+
+      // Reconstruct the known serializable schema, then freeze a private copy.
+      // Later edits, handovers or UI references cannot alter the approved record.
+      const approvedDecision = immutable({
+        snapshot: createPlanReview(plan, action.reviewSnapshot),
+        approvedAt: recordedAt.toISOString(),
+        operator: state.operator,
+      });
+      return log("Approved & activated · Scenario B", {
             status: "active",
             remaining:
-              action.duration && action.duration !== 60
-                ? action.duration * 60
+              plan.duration !== 60
+                ? plan.duration * 60
                 : 2852,
-            duration: action.duration || 60,
-            routeGuidance: action.routeGuidance !== false,
+            duration: plan.duration,
+            routeGuidance: plan.routeGuidance,
             note: action.note || "",
             nextReviewAt: timestamp + 5 * 60 * 1000,
-          })
-        : state;
+            approvedDecision,
+          });
+    }
     case "PAUSE":
       return state.status === "active"
         ? log("Intervention paused by operator", { status: "paused" })

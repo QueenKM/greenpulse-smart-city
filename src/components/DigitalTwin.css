@@ -983,6 +983,180 @@
     font-size: 20px;
   }
 }
+
+.twin-text-fallback {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 23px;
+  overflow: auto;
+  border: 1px solid #29404b;
+  border-radius: 8px;
+  background: linear-gradient(140deg, #10222e, #071419 75%);
+}
+.twin-text-fallback > header .twin-overline {
+  color: #8eaab9;
+}
+.twin-text-fallback h2 {
+  margin: 8px 0;
+  color: #e0eff5;
+  font-size: 23px;
+  font-weight: 500;
+  letter-spacing: -0.5px;
+}
+.twin-text-fallback > header p,
+.twin-fallback-note {
+  margin: 0;
+  color: #88a1b1;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.twin-fallback-horizon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 3px;
+  color: #819ba9;
+  font-size: 10px;
+}
+.twin-text-fallback table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.twin-text-fallback th,
+.twin-text-fallback td {
+  padding: 11px 8px;
+  border-bottom: 1px solid #28404d;
+  text-align: right;
+}
+.twin-text-fallback th:first-child {
+  padding-left: 0;
+  text-align: left;
+}
+.twin-text-fallback thead th {
+  color: #93aab7;
+  font-size: 11px;
+  font-weight: 500;
+}
+.twin-text-fallback thead th:last-child {
+  color: #baa8ec;
+}
+.twin-text-fallback thead small {
+  display: block;
+  margin-top: 3px;
+  color: #8f82ae;
+  font-size: 9px;
+  font-weight: 400;
+}
+.twin-text-fallback tbody th {
+  color: #b1c4ce;
+  font-size: 12px;
+  font-weight: 400;
+}
+.twin-text-fallback td {
+  color: #d0dde5;
+  font-size: 21px;
+  letter-spacing: -0.5px;
+}
+.twin-text-fallback td:last-child {
+  color: #c9b6ff;
+  background: #a78bfa05;
+}
+.twin-text-fallback td small {
+  margin-left: 5px;
+  color: #809aa9;
+  font-size: 10px;
+  letter-spacing: 0;
+}
+.twin-text-fallback > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: auto;
+}
+.twin-fallback-reduction {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #91b9cd;
+}
+.twin-fallback-reduction > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.twin-fallback-reduction b {
+  color: #c7b5f7;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1;
+}
+.twin-fallback-reduction b small {
+  font-size: 12px;
+}
+.twin-fallback-reduction > span > small {
+  color: #829aaa;
+  font-size: 10px;
+}
+.twin-fallback-note {
+  color: #718c9d;
+  font-size: 10px;
+}
+.screen-content .twin-screen .twin-intro > .twin-reference-caption,
+.twin-approval-area > .twin-reference-caption {
+  color: #d4b15f;
+}
+@media (max-height: 820px) and (min-width: 1101px) {
+  .twin-text-fallback {
+    padding: 13px 17px;
+    gap: 7px;
+  }
+  .twin-text-fallback h2 {
+    margin: 4px 0;
+    font-size: 18px;
+  }
+  .twin-text-fallback > header p {
+    font-size: 10px;
+    line-height: 1.4;
+  }
+  .twin-text-fallback th,
+  .twin-text-fallback td {
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+  .twin-text-fallback td {
+    font-size: 17px;
+  }
+  .twin-text-fallback tbody th,
+  .twin-text-fallback thead th {
+    font-size: 10px;
+  }
+  .twin-fallback-note {
+    font-size: 9px;
+    line-height: 1.3;
+  }
+  .twin-fallback-reduction b {
+    font-size: 20px;
+  }
+}
+@media (max-width: 760px) {
+  .twin-text-fallback {
+    min-height: 350px;
+    padding: 18px;
+  }
+  .twin-text-fallback td {
+    font-size: 19px;
+  }
+  .twin-text-fallback td small {
+    margin-left: 3px;
+    font-size: 9px;
+  }
+}
 @media (max-width: 850px) {
   .twin-workspace {
     grid-template-columns: minmax(0, 1fr) 260px;

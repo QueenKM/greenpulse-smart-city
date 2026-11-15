@@ -98,7 +98,11 @@ Worked example: `100 × (72 − 64.224) / 72 = 10.8%` congestion improvement. Th
 
 The displayed average absolute prediction error is `(1.2 + 0.9 + 1.4) / 3 = 1.1667`, rounded to **1.2 percentage points**. It averages errors in the three percentage-improvement predictions; it does not average raw concentrations, minutes and congestion levels. It is not a model-validation result, confidence interval or relative percentage error.
 
-The app labels these outcomes MEASURED only after an approved intervention is closed and a visible five-second accelerated replay represents a proposed 60-minute observation window. “Actual” here means synthetic observation, not a real municipal measurement. Modified intervention settings are logged; the benchmark impact values remain fixed and are not recomputed by a physical model.
+The app labels these outcomes MEASURED only after an approved intervention is closed and a visible five-second accelerated replay represents a proposed 60-minute observation window. “Actual” here means synthetic observation, not a real municipal measurement. Modified intervention settings are logged with an immutable reviewed-plan snapshot. Changing duration or route guidance invalidates the existing review and removes the inherited 88/100 score. An operator may explicitly review a modified plan while acknowledging that its numerical benefits are unestimated. The original Scenario B projection remains a reference; it is not reused as the modified plan's forecast.
+
+The fixed benchmark is shown only for the reference plan after measurement. A modified plan's completed observation window produces no numerical result or success claim because no plan-specific outcome dataset exists. The separate reference arithmetic remains inspectable in the methodology drawer.
+
+A declared synthetic readiness policy requires the traffic group and primary AQ-04 evidence before approval. Optional AQ-07 and Visitor Flow outages remain advisory. A source-state change invalidates a previously reviewed evidence key; a new review is needed. This is a reproducible demonstration rule, not a validated model-confidence calculation or a real controller authorization system.
 
 ## 6. Feasibility and governance before a real pilot
 
