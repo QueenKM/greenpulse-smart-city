@@ -28,10 +28,10 @@ test("current inventory forbids operational layers even when they are requested"
   assert.equal(MATURITY_MAP_STAGES.CURRENT.viewMode, "2d");
 });
 
-test("MVP permits its priority layers but cannot enable the target heat capability", () => {
+test("MVP permits monitored traffic only; air and heat layers remain target capabilities", () => {
   assert.deepEqual(resolveMapLayers(allLayers, "MVP"), {
     traffic: true,
-    air: true,
+    air: false,
     heat: false,
     heritage: true,
     sensors: true,

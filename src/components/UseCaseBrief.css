@@ -1,0 +1,30 @@
+.use-case-brief{font-size:13px;color:#a8bdca;line-height:1.65}
+.ucb-label{display:block;font-size:11px;letter-spacing:.1em;color:#7d9baa;font-weight:600}
+.ucb-purpose{padding:8px 0 22px;border-bottom:1px solid #25404b}
+.ucb-purpose h3{font-size:20px;max-width:850px;line-height:1.5;font-weight:450;color:#d4e3ec;margin:8px 0}
+.ucb-purpose p,.ucb-note{color:#7291a1;font-size:12px;margin:8px 0 0}
+.ucb-evidence-grid{display:grid;grid-template-columns:1fr 1.1fr 1fr;gap:28px;padding:24px 0}
+.use-case-brief ul{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px}
+.use-case-brief li{display:flex;gap:8px;align-items:flex-start}
+.use-case-brief li>svg{flex-shrink:0;margin-top:4px;color:#6a9bb5}
+.ucb-evidence-grid>section:nth-child(2) li>svg,.ucb-claims-grid>section:nth-child(2) li>svg{color:#b29a68}
+.ucb-dot{width:4px;height:4px;flex-shrink:0;background:#8aa5b6;border-radius:100%;margin-top:9px}
+.ucb-path{padding:21px 0;border-top:1px solid #25404b;border-bottom:1px solid #25404b}
+.ucb-path ol{display:flex;list-style:none;gap:12px;margin:15px 0 0;padding:0;flex-wrap:wrap}
+.ucb-path li{font-size:12px;align-items:center;gap:7px;flex:1;min-width:115px}
+.ucb-path li>span{font-size:11px;color:#7396aa}
+.ucb-path li>svg{margin:0 0 0 auto;color:#4c7084}
+.ucb-authority{display:flex;gap:13px;padding:22px 0;color:#a99bd0}
+.ucb-authority>svg{flex-shrink:0;margin-top:3px}
+.ucb-authority .ucb-label{color:#a99bd0}
+.ucb-authority p{margin:7px 0;color:#c2d4e1}
+.ucb-authority small{font-size:12px;color:#829cad}
+.ucb-claims-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;padding:22px 0;border-top:1px solid #25404b}
+.ucb-kpis{display:flex;align-items:center;gap:25px;justify-content:space-between;border-top:1px solid #25404b;padding:21px 0 0}
+.ucb-kpis p{font-size:12px;max-width:920px;margin:9px 0 0;color:#8eabba}
+.ucb-kpis>div:last-child{display:flex;gap:6px;flex-shrink:0}
+.ucb-kpis button{display:flex;gap:8px;align-items:center;color:#b3d8eb;background:#102a39;border:1px solid #315367;padding:9px 10px;border-radius:4px;cursor:pointer}
+.ucb-kpis button:hover{background:#1b3d50}
+.ucb-kpis button:focus-visible{outline:2px solid #38bdf8;outline-offset:3px}
+@media(max-width:1050px){.ucb-evidence-grid{grid-template-columns:1fr 1fr}.ucb-evidence-grid>section:last-child{grid-column:1/-1}.ucb-evidence-grid>section:last-child ul{grid-template-columns:1fr 1fr}.ucb-path li{min-width:160px}.ucb-kpis{align-items:flex-start;flex-direction:column;gap:15px}}
+@media(max-width:620px){.ucb-evidence-grid,.ucb-claims-grid{grid-template-columns:1fr;gap:24px}.ucb-evidence-grid>section:last-child ul{grid-template-columns:1fr}.ucb-purpose h3{font-size:18px}.ucb-path li{min-width:135px}.ucb-kpis>div:last-child{flex-wrap:wrap}}

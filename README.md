@@ -1,125 +1,105 @@
 <div align="center">
 
-<img src="docs/assets/greenpulse-banner.svg" alt="GreenPulse — Urban Decision Intelligence. Target-state prototype using real Leuven geography and synthetic operational scenarios." width="100%" />
+<img src="docs/assets/greenpulse-banner.svg" alt="GreenPulse — Urban Decision Intelligence. Target-state prototype using Leuven geography and synthetic operational scenarios." width="100%" />
 
-**A map-led smart-city command center, built around accountable human decisions.**
+**Three municipal workflows. One accountable decision capability.**
 
-[**Open the live demo**](https://greenpulse-urban-intelligence.kmateva.chatgpt.site) · [GitHub Pages](https://queenkm.github.io/greenpulse-smart-city/) · [Presentation guide](docs/PRESENTATION-GUIDE.md) · [Quick start](#quick-start)
+[**Open the demo**](https://greenpulse-urban-intelligence.kmateva.chatgpt.site) · [GitHub Pages](https://queenkm.github.io/greenpulse-smart-city/) · [Presentation guide](docs/PRESENTATION-GUIDE.md) · [Quick start](#quick-start)
 
 [![Build & deployment](https://github.com/QueenKM/greenpulse-smart-city/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/QueenKM/greenpulse-smart-city/actions/workflows/deploy.yml)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white&labelColor=12232D)](https://react.dev/)
 [![Vite 6](https://img.shields.io/badge/Vite-6-A78BFA?logo=vite&logoColor=white&labelColor=12232D)](https://vite.dev/)
 
-<sub>Project artwork based on Leuven OpenStreetMap geometry; not an application screenshot.</sub>
+<sub>Project artwork uses Leuven OpenStreetMap geometry; it is not an application screenshot.</sub>
 
 </div>
-
-<br />
 
 > [!IMPORTANT]
 > **TARGET-STATE PROTOTYPE · SYNTHETIC DEMONSTRATION DATA**
 >
-> Leuven's street and building geometry is real. Incidents, sensor locations, traffic, air quality, heat zones, forecasts and outcomes are synthetic. GreenPulse is a proposed operating model, with no municipal systems connected.
+> Real Leuven geography provides spatial context only. Operational data, incidents, sensor placements and scenarios are synthetic. No municipal systems are connected. GreenPulse describes a capability to implement progressively after data validation.
 
-## The idea
+## The three workflows
 
-GreenPulse connects an urban incident to a decision: **what is happening, what might happen next, which options exist, who authorises the response, and how its outcome would be evaluated.**
+| Workflow | Evidence and purpose | Human authority |
+| :-- | :-- | :-- |
+| **Daily Traffic Management** | Review counts and queue patterns at monitored locations, using the reference inventory of 18 cameras, 4 vehicle loops, 4 controllers, 21 ITS panels and GIS. Support targeted, time-limited operations. | Mobility Department approves; an authorised traffic-signal operator executes. Municipal Police and IT / Digital Office support. |
+| **ZTL / Historic-Centre Access Management** | Compare aggregate entry patterns by gate and period, using 10 ZTL gates, 16 OCR cameras and GIS. Police and permit records require lawful, technically validated access. | Municipal Police leads operational/legal action, with Mobility, IT / Data Office and an authorised privacy lead. |
+| **Heatwave Preparedness** | Use official external forecasts, demographic registry, GIS, partial tree/green-space inventory and civil-protection plans for indicative priorities and coordinated preparedness. | Civil Protection approves / activates; Environment / Urban Planning interprets environmental evidence; Social Services coordinates outreach. |
 
-The prototype brings traffic, air quality and urban heat into one operational story. Its maturity journey makes the proposal explicit:
+The final application specification associated with **CURRENT FINAL version.pptx** takes precedence over earlier working documents. See [document integration](docs/DOCUMENT-INTEGRATION.md) for the implementation contract.
 
-**Current inventory → MVP → Capability development → GreenPulse target state**
+### Boundaries that stay visible
 
-## Explore the experience
+- **Traffic:** corridor travel time is a conditional pilot KPI. Camera/OCR timestamp linkage must be validated first; until then, counts and queue patterns do not establish network-wide congestion coverage.
+- **ZTL:** entries are not automatically violations. Compliance requires validated permit/exemption linkage. No identifiable licence plates appear in the prototype and no rule changes happen automatically.
+- **Heat:** no local temperature/humidity sensing network, validated cooling-point inventory or real-time health/exposure feed is documented. Local heat-priority maps are indicative/modelled; green-space distribution does not prove cooling.
+- **Outcomes:** estimated CO₂, measured air quality, modelled scenarios and observed outcomes are distinct. Traffic improvement does not automatically prove an air-quality or causal emissions benefit.
 
-| Capability                      | What you can do                                                                                                                                       |
-| :------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **City operations**             | Explore real Leuven streets, buildings, parks and waterways. Select H-03 to focus its affected corridors; switch map layers and 2D/3D views.          |
-| **Shared forecast timeline**    | Move between **Now / +15 / +30 / +60 min** across the map, traffic chart and scenario comparison.                                                     |
-| **Scenario intelligence**       | Compare doing nothing, adaptive signals and traffic diversion. Use a synced before/after camera and inspect the trade-offs behind the recommendation. |
-| **Human-led intervention**      | Review and version a plan before explicit approval. Critical evidence gates activation; pause, hand over and close with an accountable operator.          |
-| **KPI & impact**                | Compare predicted and synthetic observed improvements; open the calculation, baseline and assumptions behind the numbers.                             |
-| **Implementation & governance** | Follow the maturity roadmap and inspect proposed owners, data stewards, decision authority, dependencies and phase gates.                             |
+## The seven-KPI framework
 
-### One incident. A complete decision journey.
+| KPI | Definition | Readiness |
+| :-- | :-- | :-- |
+| **K1** | Pilot corridor travel time and delay | **PILOT** — subject to validated timestamp linkage between selected camera/OCR monitoring points. |
+| **K2** | Estimated tailpipe CO₂ avoided | **TARGET · ESTIMATED** — requires validated K1 and approved emission factors. |
+| **K3** | Measured NO₂ and PM2.5 | **TARGET · MEASURED** type — requires ARPA integration and/or new validated sensors; no feed is connected. |
+| **K4** | Alert-to-decision time | **PILOT-READY** through the decision log; “under 10 minutes” is an illustrative pilot target. |
+| **K5** | Heat exposure in person-hours | **TARGET** — requires validated local heat sensing. |
+| **K6** | Vulnerable residents within reach of cooling points | **PILOT** — requires a validated inventory and a pilot-defined walking-time or network-distance threshold. |
+| **K7** | Decisions fully recorded | **PILOT-READY** through the decision log; target **100%** complete logging, not decision quality. |
+
+Missing inputs return **No data**, never zero. Each relevant value carries its provenance: CURRENT, PILOT, TARGET, MEASURED, ESTIMATED, MODELLED, SYNTHETIC or NO DATA.
+
+The traffic calculation example uses **18.0 minutes → 16.2 minutes = 10% illustrative improvement**.
+
+> Illustrative values used to demonstrate the KPI calculation. The real baseline will be established during pilot preparation.
+
+18.0 minutes is not a measured municipal baseline; 16.2 minutes is not an achieved result. Formula details and dependencies are in [KPI methodology](docs/KPI-METHODOLOGY.md).
+
+## Decisions remain human
 
 ```mermaid
 flowchart LR
-    A["01 · Alert"] --> B["02 · Evidence"]
-    B --> C["03 · Prediction"]
-    C --> D["04 · Scenarios"]
-    D --> E{"05 · Human approval"}
-    E -->|Explicit approval| F["06 · Intervention"]
-    E -->|Review options| D
-    F -->|Close| G["Measuring outcome"]
-    G --> H["07 · Measured impact"]
-
-    classDef live fill:#0C2634,stroke:#38BDF8,color:#C4EBFB
-    classDef model fill:#211C33,stroke:#A78BFA,color:#DDCFFF
-    classDef simulated fill:#2D2616,stroke:#FBBF24,color:#FBE5AE
-    classDef human fill:#15232D,stroke:#8CA7B6,color:#DAE8F0
-    classDef approved fill:#102A25,stroke:#34D399,color:#BDF4E3
-    class A,B live
-    class C model
-    class D,G simulated
-    class E human
-    class F,H approved
+    A[Review source evidence] --> B[Validate freshness and coverage]
+    B --> C[Compare options]
+    C --> D{Human approval}
+    D -->|Reject or modify| C
+    D -->|Traffic approval| E[Authorised operator executes]
+    D -->|ZTL legal approval| F[Established legal process]
+    D -->|Civil Protection approval| G[Preparedness actions]
+    E --> H[Monitor and record outcome]
+    F --> H
+    G --> H
+    H --> I[Decision Log and review]
 ```
 
-**AI recommends; an identified human authorises.** No demo control or keyboard shortcut can bypass approval. Closing an intervention starts measurement; it does not immediately report success.
+**AI recommends; it never executes autonomously.** Traffic approval and authorised execution are separate actions. The Decision Log retains approvals, rejections, modifications and executions. Completing an accelerated review window does not invent a successful measured outcome.
 
-## Try the presentation
+## Architecture and delivery
 
-1. Open either [live demo](https://greenpulse-urban-intelligence.kmateva.chatgpt.site) or [GitHub Pages](https://queenkm.github.io/greenpulse-smart-city/).
-2. Select **Presentation Demo**. The app prepares its geographic views and requests fullscreen.
-3. Follow **Next Step** through the evidence, forecast and scenarios.
-4. At the approval drawer, choose **Approve & Activate** explicitly.
-5. Demonstrate **Pause / Resume**, **Handover**, then **Close Intervention** to begin the synthetic measurement replay.
+**Sources → Integration → Urban Data Hub → Analytics / Selective Digital Twin → Action & Evidence**
 
-| Control                | Behaviour                                                                                                                |
-| :--------------------- | :----------------------------------------------------------------------------------------------------------------------- |
-| **← / →**              | Previous / next presentation step. Inputs, comparison controls and approval dialogs retain their own keyboard behaviour. |
-| **Esc**                | Close the active dialog, or exit presentation when no dialog is open.                                                    |
-| **Fullscreen control** | Enter / leave fullscreen. If the browser declines it, the guided in-page mode remains available.                         |
-| **Reset Demo**         | Start a fresh synthetic decision cycle. The real wall clock keeps running.                                               |
+> Target-state architecture, implemented progressively after data validation.
 
-<details>
-<summary><strong>Replay timing and comparison details</strong></summary>
+| Period | Stage | Focus |
+| :-- | :-- | :-- |
+| **0–6 months** | **Discover & Prepare** | Validate source access, authority, privacy, timestamp linkage, pilot baselines and cooling inventory. |
+| **6–18 months** | **Integrate & Pilot** | Integrate validated priority sources and run controlled workflows with complete decision logging. |
+| **18–36 months** | **Extend Selectively** | Extend only where evidence supports it; introduce selective models and environmental KPIs after validation. |
 
-- The five-second measuring phase represents an accelerated **60-minute observation window**.
-- The default active timer starts at **00:47:32** in the 60-minute replay. Modified operating windows start at their full duration; expiry pauses for human review.
-- The actual clock uses **Europe/Sofia**, updates every second and adjusts for summer/winter time. Forecast views share a synthetic snapshot anchor.
-- **Pan both maps** moves the comparison camera; **Drag comparison** restores the before/after divider.
-- **City Control Room ▾** opens workspace shortcuts, including the map, scenarios, roadmap and presentation.
-- The desktop sidebar rests as an icon rail. Hover to expand it; moving away hides the labels without shifting the city view. Keyboard focus keeps navigation open, and mobile uses the menu button.
-- **CURRENT / MVP / TARGET** changes the map: reference geography → a proposed priority corridor → the integrated target-state model with mapped-height 3D. These are illustrative capability stages, not a verified inventory of Leuven's deployed systems.
-- **Layers** opens the individual overlay controls. Availability follows the selected maturity stage; your layer preferences are preserved when switching stages.
+Prediction, Digital Twin simulation, new environmental sensors and full KPI coverage are target capabilities. Dates do not bypass evidence, safety or legal gates. See [Governance & Roadmap](docs/GOVERNANCE-ROADMAP.md).
 
-</details>
+## Explore the prototype
 
-## Decisions that retain their context
+The main navigation follows the final scope: **Overview · Daily Traffic · ZTL Access · Heat Preparedness · Architecture · KPI Framework · Decision Log · Governance & Roadmap · Presentation Demo**.
 
-- **Current plan, current evidence:** H-03 approval requires the traffic group and AQ-04. Data Health's explicitly synthetic outage/restore controls demonstrate the rule; optional AQ-07 and Visitor Flow availability affects coverage without inventing a confidence percentage.
-- **Versioned modifications:** changing duration or route guidance invalidates the review. The operator must record a new review before approval. A modified plan has **no inherited score or numerical benefit forecast**; the original Scenario B remains a separate reference. Notes do not change the forecast.
-- **Reviewed closure:** alerts support acknowledgement, proposed-owner assignment, filtering and contextual navigation. Traffic becomes eligible for explicit resolution after measurement; completing measurement does not automatically resolve it. AQ-07 opens its source record and must be restored before its alert can be resolved.
-- **View continuity:** camera, selected mapped entity, Twin scenario, comparison position and 2D/3D preference survive navigation. The browser session retains validated view preferences only. Refresh never restores approval, active interventions, measurement or operator notes.
-- **Recoverable presentation:** use **Retry preparation** if geography fails. Progress is blocked until it loads or you explicitly choose **Continue without map**. Text-only mode retains scenario evidence and the human approval gate. Retrying the map does not reset the current decision cycle.
+The map keeps real Leuven streets, building footprints, green spaces and waterways. **CURRENT / MVP / TARGET** communicates maturity; **Layers** reveals overlays. The sidebar expands on hover or keyboard focus and uses a menu button on mobile. A guided presentation supports the decision narrative without bypassing approval or execution. View preferences survive navigation; operational approvals are not restored after refresh.
 
-## Method, evidence & presentation materials
-
-| Read                                                           | Purpose                                                                                                   |
-| :------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------- |
-| [**KPI methodology**](docs/KPI-METHODOLOGY.md)                 | Definitions, worked calculations, baselines, causal reasoning, assumptions and verification requirements. |
-| [**Governance roadmap**](docs/GOVERNANCE-ROADMAP.md)           | Proposed RACI, accountable owners, operating responsibilities and implementation gates.                   |
-| [**15-minute presentation guide**](docs/PRESENTATION-GUIDE.md) | A timed method-and-results narrative, demonstration script and references for the final slide.            |
-
-**Inside the app:** use **KPI & Impact → KPI calculation & assumptions**, **Digital Twin → How is this calculated?**, or select a roadmap phase to inspect its proposed governance.
-
-> [!NOTE]
-> The **+60-minute scenario comparison** and the **closed-loop impact benchmark** are separate synthetic examples with different comparators. Their percentages must not be combined or described as one calibrated causal simulation. The arithmetic is reproducible; the forecast assumptions and effects are unvalidated.
+The clock displays the actual date and time in **Europe/Sofia**, including daylight-saving adjustments. Synthetic scenarios use a separate demonstration context.
 
 ## Quick start
 
-**Requires Node.js 22+ and npm.**
+Requires **Node.js 22+** and npm.
 
 ```bash
 git clone https://github.com/QueenKM/greenpulse-smart-city.git
@@ -128,100 +108,39 @@ npm ci
 npm run dev
 ```
 
-Open Vite's local URL with the `/greenpulse-smart-city/` base path — normally **http://localhost:5173/greenpulse-smart-city/**.
+Open the Vite URL with the `/greenpulse-smart-city/` base, normally **http://localhost:5173/greenpulse-smart-city/**.
 
-| Command           | Purpose                                             |
-| :---------------- | :-------------------------------------------------- |
-| `npm test`        | Run lifecycle, forecast and DOM interaction checks. |
-| `npm run build`   | Create the production build in `dist/`.             |
-| `npm run preview` | Serve the production build locally.                 |
+| Command | Purpose |
+| :-- | :-- |
+| `npm test` | Run calculation, human-authority, lifecycle, provenance and interface checks. |
+| `npm run build` | Create the GitHub Pages production build in `dist/`. |
+| `npm run preview` | Preview that build locally. |
 
-Typography and geographic data are bundled locally; maps do not depend on an external tile server during a presentation.
+React, Vite, Framer Motion, Recharts and Lucide React support the interface. Typography and geographic data are bundled locally; the map does not require an external tile server for a presentation. Vite uses `base: "/greenpulse-smart-city/"` for GitHub Pages; the managed Site build uses its root path.
 
-## Geography & data provenance
+## Geography and source notice
 
-Every map persistently displays:
+Every map retains:
 
 > **LEUVEN URBAN MODEL**<br />
 > Illustrative operational scenario<br />
 > Synthetic demonstration data
 
-The geographic snapshot contains real central Leuven street hierarchy, pedestrian routes, building footprints, green spaces and waterways. Source: [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright), under [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/).
+Geography: [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright), [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/). Heights are shown only where mapped height data exists; no invented measured building heights are added. Heritage shapes are reference context rather than authoritative legal boundaries. Demonstration sensors and cooling placements are not a validated municipal inventory.
 
-- Only explicit mapped heights produce 3D building extrusions. Missing heights remain flat footprints; floor counts are not converted into invented measured heights.
-- Historic features are mapped reference sites, not authoritative legal protection boundaries.
-- Sensors and cooling points are proposed demonstration placements, not a verified municipal inventory.
-- The prototype is neither a surveyed city model nor a calibrated digital twin.
+[Geographic extract](https://queenkm.github.io/greenpulse-smart-city/data/leuven-urban-model.json) · [Source geometry](src/data/city-model.json) · [Data notice](public/data/NOTICE.txt)
 
-[Download the geographic extract](https://queenkm.github.io/greenpulse-smart-city/data/leuven-urban-model.json) · [Inspect the source database](src/data/city-model.json) · [Data notice](public/data/NOTICE.txt)
-
-<details>
-<summary><strong>Regenerate the geographic snapshot</strong></summary>
-
-Use a local OSM API XML extract covering the documented bounding box:
+To regenerate the snapshot from a local OSM XML extract:
 
 ```bash
 python scripts/build-city-model.py /path/to/leuven-osm.xml
 ```
 
-Source feature identifiers are retained. The derivative geographic database remains **ODbL 1.0**; it is separate from the application code.
+The derivative geographic database retains its ODbL notice separately from application code. Source uploads and personal upload metadata are not published in this repository.
 
-</details>
+## Supporting material
 
-### Reading the operational colours
-
-| Signal                                     | Meaning                                                     |
-| :----------------------------------------- | :---------------------------------------------------------- |
-| **Cyan · LIVE**                            | Current synthetic operational replay.                       |
-| **Purple · MODELLED**                      | Forecasts and AI-supported decision intelligence.           |
-| **Amber · SIMULATED**                      | Intervention scenarios and warnings.                        |
-| **Emerald · APPROVED / ACTIVE / MEASURED** | Approved actions and completed synthetic positive outcomes. |
-| **Rose · CRITICAL**                        | High-priority operational conditions.                       |
-
-<details>
-<summary><strong>Why does Data Health show 14 / 17 operational feeds?</strong></summary>
-
-The synthetic inventory contains seven traffic, two air-quality, four parking, two AVL, one weather and one visitor-flow feed: **17 in total**. T18 maintenance, AQ-07 offline and delayed Visitor Flow account for the three exclusions. Historic GIS is reference data and is excluded from the operational-feed count.
-
-</details>
-
-## For developers
-
-**Stack:** React · Vite · Framer Motion · Recharts · Lucide React.
-
-| Location                                 | Responsibility                                                                 |
-| :--------------------------------------- | :----------------------------------------------------------------------------- |
-| [`src/App.jsx`](src/App.jsx)             | Persistent shell, Overview and presentation coordination.                      |
-| [`src/lifecycle.mjs`](src/lifecycle.mjs) | Human approval, intervention ownership and measurement gates.                  |
-| [`src/scenario.mjs`](src/scenario.mjs)   | Shared synthetic forecast assumptions and decision-score weights.              |
-| [`src/components/`](src/components/)     | Geographic renderer, synced comparison, charts, panels and accessible drawers. |
-| [`tests/`](tests/)                       | Lifecycle, scoring and DOM interaction checks.                                 |
-| [`docs/`](docs/)                         | Methodology, governance and presentation annexes.                              |
-
-### Deployment
-
-**GitHub Pages:** the default Vite base is `/greenpulse-smart-city/`. The [Actions workflow](.github/workflows/deploy.yml) installs from the lockfile, tests and builds pull requests, and deploys successful pushes to `main`. Pull requests do not deploy.
-
-**Root-path Sites hosting:**
-
-```bash
-SITES_BUILD=1 npm run build
-```
-
-This produces root-relative assets while preserving the default GitHub Pages configuration.
-
-### Verification & limits
-
-Production builds, lifecycle rules and DOM interactions are checked automatically. Motion is replaced by a deterministic adapter in DOM tests, and fullscreen checks use a DOM API adapter. These checks do not establish browser layout, animation quality or native fullscreen behaviour; a visual browser review is still needed before a live presentation.
-
-Scenario scores, model confidence and intervention effects are illustrative assumptions. Tartu, Leuven and Pavia benchmark themes are design interpretations, not claims of equivalent municipal capability. Modified intervention parameters and their reviewed evidence version are recorded. Reference benchmark values remain fixed synthetic fixtures and are never attributed to a modified, unestimated plan. Completing its measurement window does not create a numerical outcome dataset.
-
----
-
-<div align="center">
-
-**A city in context. A decision with an owner.**
-
-[Open GreenPulse](https://greenpulse-urban-intelligence.kmateva.chatgpt.site) · [Read the methodology](docs/KPI-METHODOLOGY.md) · [Follow the roadmap](docs/GOVERNANCE-ROADMAP.md)
-
-</div>
+- [KPI definitions, formulas and readiness](docs/KPI-METHODOLOGY.md)
+- [Governance, authority and roadmap](docs/GOVERNANCE-ROADMAP.md)
+- [15-minute presentation guide](docs/PRESENTATION-GUIDE.md)
+- [Final-specification integration notes](docs/DOCUMENT-INTEGRATION.md)

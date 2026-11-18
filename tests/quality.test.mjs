@@ -36,7 +36,7 @@ test("default optional outages are visible but do not block the H-03 decision", 
   assert.deepEqual(readiness.reasons, []);
   assert.deepEqual(
     readiness.checks.filter((check) => check.required).map((check) => check.id),
-    ["traffic", "AQ-04"],
+    ["traffic"],
   );
   for (const id of ["AQ-07", "visitor"])
     assert.equal(
@@ -53,18 +53,19 @@ test("a whole traffic-group outage removes six current feeds and blocks mobility
   assert.deepEqual(readiness.missing, ["traffic"]);
   assert.match(
     readiness.reasons[0],
-    /Current speed, congestion and mobility forecast/,
+    /mobility review requires usable monitored counts and queue patterns/,
   );
   assert.equal(getQualitySummary(state).operational, 8);
   assert.equal(getQualitySummary(state).qualityPercent, null);
 });
 
-test("primary air-quality failure blocks approval even if the optional backup is restored", () => {
+test("primary air-quality failure cannot gate aggregate ZTL or traffic review", () => {
   const state = withStatus("AQ-04", "offline", withStatus("AQ-07", "healthy"));
-  const readiness = evaluateDataReadiness(state);
-  assert.equal(readiness.canApprove, false);
-  assert.deepEqual(readiness.missing, ["AQ-04"]);
-  assert.match(readiness.reasons[0], /PM2.5 and NO₂/);
+  const readiness = evaluateDataReadiness(state, "ztl");
+  assert.equal(readiness.canApprove, true);
+  assert.deepEqual(readiness.missing, []);
+  assert.equal(evaluateDataReadiness(state, "signals").canApprove, true);
+  assert.equal(evaluateDataReadiness(state, "signals").airQualityAvailable, false);
   assert.equal(getQualitySummary(state).operational, 14);
 });
 
@@ -109,9 +110,10 @@ test("optional outages do not fabricate a confidence or quality penalty", () => 
 
 test("delayed or invalid required statuses fail closed", () => {
   for (const status of ["delayed", "maintenance", "unexpected", null]) {
-    const state = withStatus("AQ-04", status);
-    assert.equal(evaluateDataReadiness(state).canApprove, false);
-    assert.deepEqual(evaluateDataReadiness(state).missing, ["AQ-04"]);
+    const state = withStatus("ztl", status);
+    assert.equal(evaluateDataReadiness(state, "ztl").canApprove, false);
+    assert.deepEqual(evaluateDataReadiness(state, "ztl").missing, ["ztl"]);
+    assert.equal(evaluateDataReadiness(state, "signals").canApprove, true);
   }
   assert.equal(
     getSourceStatus(withStatus("AQ-04", "unexpected"), "AQ-04"),
@@ -151,4 +153,26 @@ test("quality state is serializable, independent and never mutated by policy eva
   getQualitySummary(DEFAULT_QUALITY_STATE);
   assert.equal(JSON.stringify(DEFAULT_QUALITY_STATE), before);
   assert.deepEqual(second, { version: 1, overrides: {} });
+});
+
+
+test("required source gates follow the selected use case rather than a universal air-quality dependency", () => {
+  const sources = (action) => evaluateDataReadiness(undefined, action).checks.filter((check) => check.required).map((check) => check.id);
+  assert.deepEqual(sources("signals"), ["traffic"]);
+  assert.deepEqual(sources("guidance"), ["traffic"]);
+  assert.deepEqual(sources("ztl"), ["ztl", "reference"]);
+  assert.deepEqual(sources("transit"), ["traffic", "AVL"]);
+  assert.deepEqual(sources("policy"), ["reference"]);
+  assert.equal(evaluateDataReadiness(withStatus("parking", "offline"), "signals").canApprove, true);
+  assert.equal(evaluateDataReadiness(withStatus("parking", "offline"), "guidance").canApprove, true);
+  assert.equal(evaluateDataReadiness(withStatus("weather", "offline"), "ztl").canApprove, true);
+  assert.equal(evaluateDataReadiness(withStatus("AVL", "offline"), "transit").canApprove, false);
+});
+
+test("action-specific evidence keys are distinct and unsupported decisions fail closed", () => {
+  assert.notEqual(evaluateDataReadiness(undefined, "signals").key, evaluateDataReadiness(undefined, "guidance").key);
+  for (const action of ["UNKNOWN", "constructor", "__proto__", ""]) {
+    assert.equal(evaluateDataReadiness(undefined, action).canApprove, false);
+    assert.equal(evaluateDataReadiness(undefined, action).status, "blocked");
+  }
 });

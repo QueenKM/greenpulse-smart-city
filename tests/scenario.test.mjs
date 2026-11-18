@@ -10,13 +10,13 @@ import {
 
 test("forecast horizons preserve one common observed starting state for every intervention", () => {
   assert.deepEqual(FORECAST_MINUTES, [0, 15, 30, 60]);
-  const current = { congestion: 72, pm: 27, travel: 28, speed: 19 };
+  const current = { congestion: 72, pm: 27, travel: 18, speed: 19 };
   for (const scenario of ["A", "B", "C"])
     assert.deepEqual(getForecast(0, scenario), current);
   assert.deepEqual(getForecastAt(30, "A"), getForecast(30, "A"));
 });
 
-test("the no-action forecast respects the displayed observation and future thresholds", () => {
+test("the no-action sample-share replay respects the displayed observation and remains separate from the K1 ratio", () => {
   for (const [minute, congestion] of [
     [0, 72],
     [15, 76],
@@ -42,8 +42,8 @@ test("intervention outcomes compare against the same future no-action city", () 
   assert.equal(diversion.congestion, 61);
   assert.equal(signals.pm, 29);
   assert.equal(diversion.pm, 28);
-  assert.equal(signals.travel, 25);
-  assert.equal(diversion.travel, 23);
+  assert.equal(signals.travel, 16.2);
+  assert.equal(diversion.travel, 15.7);
   assert.equal(passive.congestion - signals.congestion, 21);
   assert.equal(passive.congestion - diversion.congestion, 26);
   for (const minute of [15, 30, 60])
@@ -76,4 +76,13 @@ test("transparent positive weights reproduce the recommended eighty-eight score 
     calculateDecisionScore([91, 88, 94, 100, 100]) >
       calculateDecisionScore(criteriaB),
   );
+});
+
+
+test("the supplied K1 travel illustration is a ten-percent prediction without an inferred pollution reduction", () => {
+  const baseline = getForecast(0, "B"), predicted = getForecast(60, "B");
+  assert.equal(baseline.travel, 18);
+  assert.equal(predicted.travel, 16.2);
+  assert.ok(Math.abs((predicted.travel - baseline.travel) / baseline.travel * 100 + 10) < 1e-9);
+  assert.notEqual(predicted.pm / baseline.pm, predicted.travel / baseline.travel);
 });

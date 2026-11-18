@@ -21,7 +21,6 @@ import CityMap from "./CityMap";
 import {
   SCORE_WEIGHTS,
   calculateDecisionScore,
-  getForecastAt,
 } from "../scenario.mjs";
 import { createDefaultTwinContext, normalizeTwinContext } from "../view-context.mjs";
 import "./DigitalTwin.css";
@@ -30,35 +29,32 @@ const scenarios = [
   {
     id: "A",
     name: "Do Nothing",
-    congestion: 87,
-    pm: 34,
-    travel: 33,
+    pm: null,
+    travel: 18,
     accessibility: "NONE",
     scores: [12, 10, 50, 100, 100],
     explanation:
-      "Without intervention, congestion and air-quality pressure continue to build across the historic centre.",
+      "An illustrative reference case for comparing operational options. No validated municipal forecast is available.",
   },
   {
     id: "B",
     name: "Adaptive Signals",
-    congestion: 66,
-    pm: 29,
-    travel: 25,
+    pm: null,
+    travel: 16.2,
     accessibility: "LOW",
     scores: [91, 88, 94, 100, 63],
     explanation:
-      "Highest overall benefit with low accessibility impact and full compatibility with historic-centre constraints.",
+      "The illustrative scoring exercise favours a limited signal trial. Safety, accessibility, historic constraints and Mobility approval still require validation.",
   },
   {
     id: "C",
     name: "Traffic Diversion",
-    congestion: 61,
-    pm: 28,
-    travel: 23,
+    pm: null,
+    travel: null,
     accessibility: "MEDIUM",
     scores: [94, 93, 67, 88, 49],
     explanation:
-      "Greater traffic reduction, with additional accessibility trade-offs and more operational coordination.",
+      "A diversion option to review for access and coordination trade-offs. No validated travel-time or environmental result is available.",
   },
 ].map((scenario) => ({
   ...scenario,
@@ -153,8 +149,8 @@ function ScoreExplanation({ scenario, onClose }) {
         </header>
         <p className="twin-score-introduction">
           Scenario {scenario.id} · {scenario.name}. A weighted comparison of
-          synthetic criteria at the <strong>+60-minute decision horizon</strong>
-          , regardless of the map time currently selected.{" "}
+          synthetic criteria for a <strong>target-state method illustration</strong>
+          , independent of the map time selected.{" "}
           {scenario.explanation}
         </p>
         <table>
@@ -203,9 +199,8 @@ function ScoreExplanation({ scenario, onClose }) {
             measure of “more effort”.
           </p>
           <p>
-            <strong>Accessibility:</strong> retained local access. Temporary
-            diversion lowers the score; congestion also reduces access when no
-            action is taken.
+            <strong>Accessibility:</strong> assumed retained local access in
+            this illustrative exercise. Scores are not validated access impacts.
           </p>
           <p>
             <strong>Historic compatibility:</strong> a design assumption about
@@ -223,36 +218,16 @@ function ScoreExplanation({ scenario, onClose }) {
   );
 }
 
-function TextComparison({ scenario, baseline, forecastOffset, maturityLabel, reduction, referenceOnly }) {
-  const metrics = [
-    ["Congestion", "congestion", "%"],
-    ["PM2.5", "pm", "µg/m³"],
-    ["Travel time", "travel", "min"],
-  ];
-  return (
-    <section className="twin-text-fallback" aria-label="Text-only scenario comparison">
-      <header>
-        <span className="twin-overline">TEXT-ONLY COMPARISON</span>
-        <h2>The decision stays visible.</h2>
-        <p>Map display is disabled. The scenario evidence and human approval workflow remain available.</p>
-      </header>
-      <div className="twin-fallback-horizon">
-        <span className="twin-model-note"><span className="twin-dot" /> {referenceOnly ? "REFERENCE ASSUMPTIONS" : "SIMULATED"}</span>
-        <span>{forecastOffset === 0 ? "Current synthetic baseline" : `Same +${forecastOffset}-minute horizon`}</span>
-      </div>
-      <table>
-        <thead><tr><th scope="col">Evidence</th><th scope="col">No action</th><th scope="col">Scenario {scenario.id}<small>{scenario.name}</small></th></tr></thead>
-        <tbody>{metrics.map(([label, key, unit]) => (
-          <tr key={key}><th scope="row">{label}</th><td>{baseline[key]}<small>{unit}</small></td><td>{scenario[key]}<small>{unit}</small></td></tr>
-        ))}</tbody>
-      </table>
-      <footer>
-        <div className="twin-fallback-reduction"><ArrowDownRight size={18} /><span><b>{reduction}<small> pp</small></b><small>Congestion reduction vs no action</small></span></div>
-        <span className="twin-map-maturity">{maturityLabel}</span>
-      </footer>
-      <p className="twin-fallback-note">Synthetic demonstration assumptions · no geography is displayed in this view. These estimates are not calibrated or validated for real city operations.</p>
-    </section>
-  );
+function TextComparison({ scenario, baseline, maturityLabel }) {
+  const travel = value => Number.isFinite(value) ? `${value.toFixed(1)} min` : "No data";
+  return <section className="twin-text-fallback" aria-label="Text-only scenario comparison">
+    <header><span className="twin-overline">TARGET · MODELLED / SYNTHETIC COMPARISON</span><h2>The decision stays visible.</h2><p>Map display is disabled. The illustrative options and human approval workflow remain available.</p></header>
+    <table><thead><tr><th scope="col">KPI method example</th><th scope="col">Illustrative baseline</th><th scope="col">Scenario {scenario.id}<small>{scenario.name}</small></th></tr></thead>
+      <tbody><tr><th scope="row">K1 · PILOT / conditional</th><td>{travel(baseline.travel)}<small>SYNTHETIC</small></td><td>{travel(scenario.travel)}<small>{scenario.travel === null ? "NO DATA" : "MODELLED"}</small></td></tr><tr><th scope="row">K3 · NO₂ / PM2.5</th><td>No data<small>NO DATA</small></td><td>No data<small>NO DATA</small></td></tr></tbody></table>
+    <footer><div className="twin-fallback-reduction"><ArrowDownRight size={18} /><span><b>{scenario.id === "B" ? "10%" : "No data"}</b><small>Illustrative travel-time improvement · MODELLED</small></span></div><span className="twin-map-maturity">{maturityLabel}</span></footer>
+    <p className="twin-fallback-note">Illustrative values used to demonstrate the KPI calculation. The real baseline will be established during pilot preparation.</p>
+    <p className="twin-fallback-note">Traffic improvement does not automatically prove air-quality improvement. No calibrated prediction or achieved result is shown.</p>
+  </section>;
 }
 
 export default function DigitalTwin({
@@ -404,18 +379,14 @@ export default function DigitalTwin({
     if (event.currentTarget.hasPointerCapture?.(event.pointerId))
       event.currentTarget.releasePointerCapture(event.pointerId);
   };
-  const scenario = {
-    ...scenarios.find((s) => s.id === selected),
-    ...getForecastAt(forecastOffset, selected),
-  };
-  const scenarioRows = scenarios.map((item) => ({
-    ...item,
-    ...getForecastAt(forecastOffset, item.id),
-  }));
-  const baseline = getForecastAt(forecastOffset, "A");
-  const congestionReduction =
-    Math.round((baseline.congestion - scenario.congestion) * 10) / 10;
+  // The presentation's worked example is a fixed method illustration, never
+  // an interpolated municipal prediction or a measured before/after outcome.
+  const scenario = scenarios.find((item) => item.id === selected);
+  const scenarioRows = scenarios;
+  const baseline = scenarios[0];
+  const illustrativeImprovementPercent = selected === "B" ? 10 : null;
   const approved = [
+    "approved",
     "active",
     "paused",
     "handover",
@@ -434,13 +405,13 @@ export default function DigitalTwin({
 
   return (
     <div className={`twin-screen ${timeline ? "twin-has-timeline" : ""}`}>
-      <div className="twin-intro">
-        <p className={referenceOnly || modifiedApproval ? "twin-reference-caption" : undefined} title={referenceOnly ? readinessDetails : undefined}>{modifiedApproval ? `Separate reference comparison · approved plan v${approvedDecision.snapshot.version} has no numerical forecast` : referenceOnly ? "Reference assumptions · critical evidence unavailable" : mapEnabled ? "Real Leuven geography · synthetic operating conditions" : "Text-only scenario evidence · synthetic operating conditions"}</p>
+      <div className="twin-intro"><strong className="twin-target-boundary">TARGET · Selective Digital Twin · MODELLED / SYNTHETIC exploration. No calibrated municipal prediction or causal air-quality effect.</strong>
+        <p className={referenceOnly || modifiedApproval ? "twin-reference-caption" : undefined} title={referenceOnly ? readinessDetails : undefined}>Illustrative values used to demonstrate the KPI calculation. The real baseline will be established during pilot preparation.</p>
         <span className="twin-model-note">
-          <span className="twin-dot" /> SIMULATED <i />
+          <span className="twin-dot" /> MODELLED · SYNTHETIC <i />
           {forecastOffset === 0
-            ? "Current synthetic baseline"
-            : `+${forecastOffset}-minute projection`}
+            ? "Illustrative baseline"
+            : `+${forecastOffset}-minute exploration`}
         </span>
       </div>
       {timeline && <div className="twin-timeline-slot">{timeline}</div>}
@@ -463,7 +434,7 @@ export default function DigitalTwin({
               scenario="A"
               layers={{
                 traffic: true,
-                air: true,
+                air: false,
                 heritage: true,
                 sensors: false,
               }}
@@ -486,7 +457,7 @@ export default function DigitalTwin({
               after={selected !== "A"}
               layers={{
                 traffic: true,
-                air: true,
+                air: false,
                 heritage: true,
                 sensors: false,
               }}
@@ -498,7 +469,7 @@ export default function DigitalTwin({
               <span className="twin-overline">
                 LEUVEN · HISTORIC CENTRE · H-03
               </span>
-              <h2>See the decision before it happens.</h2>
+              <h2>Compare options before a human decision.</h2>
             </div>
             <span className="twin-projection-label">
               <GitCompareArrows size={13} /> BEFORE / AFTER
@@ -653,10 +624,10 @@ export default function DigitalTwin({
             <ArrowDownRight size={19} />
             <span>
               <b>
-                {congestionReduction}
-                <small> pp</small>
+                {illustrativeImprovementPercent === null ? "No data" : illustrativeImprovementPercent}
+                <small>{illustrativeImprovementPercent === null ? "" : "%"}</small>
               </b>
-              <small>modelled congestion reduction</small>
+              <small>illustrative K1 travel-time improvement</small>
             </span>
           </div>
           <div
@@ -678,14 +649,14 @@ export default function DigitalTwin({
             >
               ODbL
             </a>
-            <b className="twin-operational-type">SIMULATED</b>
+            <b className="twin-operational-type">MODELLED · SYNTHETIC</b>
           </div>
         </section> : <TextComparison
           scenario={scenario}
           baseline={baseline}
           forecastOffset={forecastOffset}
           maturityLabel={maturityLabel}
-          reduction={congestionReduction}
+          reduction={illustrativeImprovementPercent}
           referenceOnly={referenceOnly}
         />}
 
@@ -717,15 +688,15 @@ export default function DigitalTwin({
               </div>
               <p className="twin-rationale-description" role="status">
                 {selected === "C"
-                  ? "Lower congestion; medium impact on access and more coordination."
+                  ? "Diversion requires additional access and coordination review. No validated numerical outcome is available."
                   : selected === "B"
-                    ? "Best balance: low disruption, with 5 pp more congestion than C."
-                    : "No delivery burden; accepts worsening congestion and air quality."}
-                <span>Trade-off at the +60-minute decision horizon</span>
+                    ? "Illustrative K1 example: 18.0 → 16.2 minutes, a modelled 10% improvement. This is not an achieved result."
+                    : "Illustrative baseline: 18.0 minutes. The real corridor baseline is not yet established."}
+                <span>TARGET · synthetic criteria, not validated outcome evidence</span>
               </p>
               <div
                 className="twin-score-bars"
-                aria-label="Criteria at the sixty-minute decision horizon"
+                aria-label="Synthetic illustrative criteria, not validated outcome evidence"
               >
                 {scoreLabels.map((label, index) => (
                   <div className="twin-score-item" key={label}>
@@ -798,23 +769,23 @@ export default function DigitalTwin({
           <div>
             <span className="twin-overline">INTERVENTION OPTIONS</span>
             <span className="twin-scenario-subtitle">
-              A transparent comparison of synthetic interventions.
+              TARGET · MODELLED / SYNTHETIC options. No calibrated municipal prediction.
             </span>
           </div>
           <span className="twin-scenario-horizon">
             SAME CITY ·{" "}
             {forecastOffset === 0
-              ? "CURRENT BASELINE"
+              ? "ILLUSTRATIVE BASELINE"
               : `+${forecastOffset} MIN HORIZON`}
           </span>
         </div>
         <div className="twin-scenario-columns" aria-hidden="true">
           <span>SCENARIO</span>
-          <span>CONGESTION</span>
-          <span>PM2.5</span>
-          <span>TRAVEL TIME</span>
+          <span>TRAFFIC EFFECT</span>
+          <span>NO₂ / PM2.5</span>
+          <span>K1 · PILOT EXAMPLE</span>
           <span>ACCESSIBILITY IMPACT</span>
-          <span>60-MIN DECISION SCORE</span>
+          <span>SYNTHETIC DECISION SCORE</span>
         </div>
         {scenarioRows.map((s) => (
           <button
@@ -841,19 +812,19 @@ export default function DigitalTwin({
               </span>
             </span>
             <span className="twin-row-value">
-              <span className="twin-mobile-label">Congestion</span>
-              {s.congestion}
-              <small>%</small>
+              <span className="twin-mobile-label">Traffic effect</span>
+              No data
+              <small>NO DATA</small>
             </span>
             <span className="twin-row-value">
-              <span className="twin-mobile-label">PM2.5</span>
-              {s.pm}
-              <small>µg/m³</small>
+              <span className="twin-mobile-label">NO₂ / PM2.5</span>
+              No data
+              <small>NO DATA · TARGET</small>
             </span>
             <span className="twin-row-value">
-              <span className="twin-mobile-label">Travel time</span>
-              {s.travel}
-              <small>min</small>
+              <span className="twin-mobile-label">K1 · PILOT / conditional</span>
+              {s.travel === null ? "No data" : s.travel.toFixed(1)}
+              <small>{s.travel === null ? "NO DATA" : s.id === "A" ? "min · SYNTHETIC" : "min · MODELLED"}</small>
             </span>
             <span
               className={"twin-accessibility " + s.accessibility.toLowerCase()}

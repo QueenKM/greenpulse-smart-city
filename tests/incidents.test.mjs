@@ -29,7 +29,7 @@ test("initial incidents are independent records and preserve contextual destinat
   assert.equal(get(state, INCIDENT_IDS.airQuality).sourceId, "AQ-07");
   assert.equal(get(state, INCIDENT_IDS.airQuality).page, "Data Health");
   assert.equal(get(state, INCIDENT_IDS.traffic).page, "Overview");
-  assert.equal(get(state, INCIDENT_IDS.heat).page, "Urban Heat");
+  assert.equal(get(state, INCIDENT_IDS.heat).page, "Heat Preparedness");
 });
 
 test("acknowledgement records its operator without activating or resolving an incident", () => {
@@ -117,13 +117,13 @@ test("heat advisory closure requires acknowledgement and review without implying
 test("assignment accepts proposed known owners and cannot overwrite incident severity or bypass resolution", () => {
   const id = INCIDENT_IDS.traffic;
   const state = createInitialIncidentState();
-  assert.equal(INCIDENT_OWNERS.includes("Environment"), true);
+  assert.equal(INCIDENT_OWNERS.includes("Environment / Urban Planning"), true);
   for (const owner of ["Unknown department", "", undefined, "Mobility Operations (confirmed Leuven owner)"]) {
     assert.equal(incidentReducer(state, { type: "ASSIGN", id, owner, operator }), state);
   }
-  const next = incidentReducer(state, { type: "ASSIGN", id, owner: "Environment", operator, time: "10:03:00", severity: "warning", resolved: true, acknowledged: true });
+  const next = incidentReducer(state, { type: "ASSIGN", id, owner: "Environment / Urban Planning", operator, time: "10:03:00", severity: "warning", resolved: true, acknowledged: true });
   const alert = get(next, id);
-  assert.equal(alert.owner, "Environment");
+  assert.equal(alert.owner, "Environment / Urban Planning");
   assert.equal(next[id].assignedBy, operator);
   assert.equal(next[id].assignedAt, "10:03:00");
   assert.equal(alert.severity, "critical");
@@ -135,7 +135,7 @@ test("assignment accepts proposed known owners and cannot overwrite incident sev
 
 test("unknown actions and incident IDs cannot alter state; Reset returns a clean cycle", () => {
   const state = createInitialIncidentState();
-  for (const action of [{ type: "ACKNOWLEDGE", id: "__proto__" }, { type: "ASSIGN", id: "not-an-incident", owner: "Environment" }, { type: "ACTIVATE", id: INCIDENT_IDS.traffic }]) {
+  for (const action of [{ type: "ACKNOWLEDGE", id: "__proto__" }, { type: "ASSIGN", id: "not-an-incident", owner: "Environment / Urban Planning" }, { type: "ACTIVATE", id: INCIDENT_IDS.traffic }]) {
     assert.equal(incidentReducer(state, action), state);
   }
   const changed = acknowledge(state, INCIDENT_IDS.heat);
@@ -147,7 +147,7 @@ test("a recurring AQ-07 fault reopens a fresh alert while retaining the reviewed
   const id = INCIDENT_IDS.airQuality;
   const healthy = restoreAQ();
   const offline = createInitialQualityState();
-  const assigned = incidentReducer(createInitialIncidentState(), { type: "ASSIGN", id, owner: "Environment", operator });
+  const assigned = incidentReducer(createInitialIncidentState(), { type: "ASSIGN", id, owner: "Environment / Urban Planning", operator });
   const ack = acknowledge(assigned, id);
   const resolve = { type: "RESOLVE", id, humanReviewed: true, operator, time: "10:07:00", reviewNote: "Synthetic restoration reviewed.", context: { qualityState: healthy } };
   const closed = incidentReducer(ack, resolve);
@@ -156,7 +156,7 @@ test("a recurring AQ-07 fault reopens a fresh alert while retaining the reviewed
   assert.equal(closed[id].resolved, true);
   assert.deepEqual(closed[id].resolutionHistory, []);
   assert.equal(get(reopened, id, { qualityState: offline }).status, "new");
-  assert.equal(reopened[id].owner, "Environment");
+  assert.equal(reopened[id].owner, "Environment / Urban Planning");
   assert.equal(reopened[id].acknowledged, false);
   assert.equal(reopened[id].acknowledgedBy, null);
   assert.equal(reopened[id].resolved, false);
@@ -165,7 +165,7 @@ test("a recurring AQ-07 fault reopens a fresh alert while retaining the reviewed
   assert.equal(reopened[id].reviewNote, "");
   assert.equal(reopened[id].reopenedAt, "10:09:00");
   assert.deepEqual(reopened[id].resolutionHistory, [{
-    owner: "Environment",
+    owner: "Environment / Urban Planning",
     acknowledgedBy: operator,
     acknowledgedAt: "10:01:00",
     resolvedBy: operator,

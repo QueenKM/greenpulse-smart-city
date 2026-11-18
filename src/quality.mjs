@@ -1,6 +1,6 @@
 // Explicit demonstration policy: coverage and evidence eligibility are separate.
 // No quality or model-confidence score is inferred from an outage.
-const POLICY_VERSION = "h03-quality-v1";
+const POLICY_VERSION = "final-presentation-quality-v3";
 const OVERRIDE_STATUSES = new Set([
   "healthy",
   "offline",
@@ -20,7 +20,7 @@ export const QUALITY_SOURCES = Object.freeze([
     freshness: "18 sec",
     quality: 98,
     required: true,
-    usedBy: "Traffic speed · congestion · mobility forecast · H-03 approval",
+    usedBy: "Synthetic monitored counts and queue patterns · traffic review",
     fallback:
       "T12–T17 provide the required group input; T18 remains in maintenance. A whole-group outage has no approved substitute.",
     note: "T12–T17 streaming · T18 in maintenance",
@@ -36,12 +36,28 @@ export const QUALITY_SOURCES = Object.freeze([
     healthyFeeds: 1,
     freshness: "52 sec",
     quality: 98,
-    required: true,
-    usedBy: "PM2.5 · NO₂ · air-quality evidence · H-03 approval",
+    required: false,
+    usedBy: "TARGET K3 · synthetic hourly PM2.5 / NO₂ example; no ARPA or validated municipal sensor connected",
     fallback:
-      "AQ-07 is an optional backup, not an automatically approved substitute. AQ-04 must be restored before H-03 approval.",
-    note: "Primary evidence for the combined traffic and air-quality decision",
+      "No measured municipal K3 values are available. This synthetic example never gates aggregate ZTL review and does not establish an air-quality effect.",
+    note: "SYNTHETIC environmental example; TARGET municipal integration",
     icon: "air",
+  }),
+  Object.freeze({
+    id: "ztl",
+    label: "ZTL aggregate demonstration",
+    detail: "Synthetic gate / period entry counts; no licence plates",
+    group: "ZTL access",
+    defaultStatus: "healthy",
+    totalFeeds: 0,
+    healthyFeeds: 0,
+    freshness: "SYNTHETIC replay",
+    quality: null,
+    required: false,
+    usedBy: "Aggregate gate and period comparison; Police review",
+    fallback: "No real gate, OCR, police or permit system is connected. Recorded entries do not establish a violation.",
+    note: "Separate synthetic replay; excluded from the 17-feed denominator. Legal and privacy approval remain mandatory.",
+    icon: "traffic",
   }),
   Object.freeze({
     id: "parking",
@@ -56,7 +72,7 @@ export const QUALITY_SOURCES = Object.freeze([
     required: false,
     usedBy: "Parking occupancy · route-guidance context",
     fallback:
-      "Parking context is optional to the H-03 evidence gate; traffic and AQ-04 remain the required inputs.",
+      "Parking is required for parking redirection; it is supporting context for the signal-timing pilot.",
     note: "Off-street parking capacity",
     icon: "parking",
   }),
@@ -73,7 +89,7 @@ export const QUALITY_SOURCES = Object.freeze([
     required: false,
     usedBy: "Vehicle positions · service headways · transport context",
     fallback:
-      "Public transport context is advisory for this H-03 use case; it does not replace the required traffic group.",
+      "Transit requests require AVL evidence. Bus punctuality is also a signal-pilot guardrail requiring explicit operator review.",
     note: "Two feeds: vehicle positions and service headways",
     icon: "transit",
   }),
@@ -90,7 +106,7 @@ export const QUALITY_SOURCES = Object.freeze([
     required: false,
     usedBy: "Temperature · wind · heat and dispersion context",
     fallback:
-      "Weather is contextual to this mobility decision. The H-03 approval policy still requires traffic and AQ-04.",
+      "Official external forecasts support heat preparedness after validation. No local temperature/humidity sensor network is documented; synthetic weather does not validate K5.",
     note: "Temperature, wind and humidity",
     icon: "weather",
   }),
@@ -107,7 +123,7 @@ export const QUALITY_SOURCES = Object.freeze([
     required: false,
     usedBy: "Optional air-quality redundancy; excluded while offline",
     fallback:
-      "AQ-04 remains the primary required station. Losing AQ-07 does not block H-03 when AQ-04 is healthy.",
+      "TARGET synthetic air-quality redundancy only. Daily Traffic and ZTL approval do not depend on AQ-04; no ARPA feed or municipal sensor is connected.",
     note: "Scheduled maintenance · excluded from operational feeds",
     icon: "air",
   }),
@@ -170,34 +186,45 @@ export function getSourceStatus(state = DEFAULT_QUALITY_STATE, id) {
   return source.defaultStatus;
 }
 
-export function evaluateDataReadiness(state = DEFAULT_QUALITY_STATE) {
+export function evaluateDataReadiness(state = DEFAULT_QUALITY_STATE, action = "signals") {
+  const requiredByAction = {
+    signals: ["traffic"],
+    guidance: ["traffic"],
+    ztl: ["ztl", "reference"],
+    transit: ["traffic", "AVL"],
+    policy: ["reference"],
+  };
+  const validAction = Object.hasOwn(requiredByAction, action);
+  const required = validAction ? requiredByAction[action] : ["traffic"];
   const checks = QUALITY_SOURCES.map((source) => ({
     id: source.id,
     label: source.label,
-    required: source.required,
+    required: required.includes(source.id),
     status: getSourceStatus(state, source.id),
     usedBy: source.usedBy,
     fallback: source.fallback,
   }));
   const unavailable = checks.filter(
-    (check) => check.required && check.status !== "healthy",
+    (check) => check.required && !["healthy", "reference"].includes(check.status),
   );
   const reasons = unavailable.map((check) =>
     check.id === "traffic"
-      ? `Traffic T12–T18 is ${check.status}. Current speed, congestion and mobility forecast require the traffic group before H-03 approval.`
-      : `AQ-04 is ${check.status}. PM2.5 and NO₂ evidence from the primary station is required before H-03 approval.`,
+      ? `Traffic T12–T18 is ${check.status}. The mobility review requires usable monitored counts and queue patterns. K1 additionally requires validated timestamp linkage.`
+      : `${check.label} is ${check.status}. This source is required for the selected ${action} decision.`,
   );
+  if (!validAction) reasons.push("Select a documented use-case action before reviewing source readiness.");
   return {
-    canApprove: unavailable.length === 0,
-    status: unavailable.length === 0 ? "ready" : "blocked",
-    key: `${POLICY_VERSION};T18=maintenance|${checks.map((check) => `${check.id}=${check.status}`).join("|")}`,
+    canApprove: validAction && unavailable.length === 0,
+    status: validAction && unavailable.length === 0 ? "ready" : "blocked",
+    key: `${POLICY_VERSION};action=${action};T18=maintenance|${checks.map((check) => `${check.id}=${check.status}`).join("|")}`,
     missing: unavailable.map((check) => check.id),
     reasons,
     checks,
     label:
-      unavailable.length === 0
-        ? "H-03 evidence ready"
+      validAction && unavailable.length === 0
+        ? "Selected use-case evidence ready"
         : "Approval blocked · required evidence unavailable",
+    airQualityAvailable: getSourceStatus(state, "AQ-04") === "healthy" && getSourceStatus(state, "weather") === "healthy",
   };
 }
 

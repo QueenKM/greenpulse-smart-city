@@ -59,20 +59,27 @@ import DigitalTwin from "./components/DigitalTwin";
 import {
   DataHealth,
   TrafficScreen,
-  HeatScreen,
-  Roadmap,
   DecisionLog,
-  ImpactScreen,
   AlertCenter,
 } from "./components/DomainScreens";
 import {
-  EvidenceDrawer,
+  Drawer,
   HandoverDialog,
-  KpiMethodologyDrawer,
 } from "./components/Dialogs";
+import EvidenceDrawer from "./components/DocumentEvidence";
+import Roadmap from "./components/DocumentRoadmap";
+import HeatWorkspace from "./components/HeatWorkspace";
+import KpiWorkbench from "./components/KpiWorkbench";
+import TrafficUseCasePanel from "./components/TrafficUseCasePanel";
+import ReferenceInventory from "./components/ReferenceInventory";
+import ZtlWorkspace from "./components/ZtlWorkspace";
+import ArchitectureWorkspace from "./components/ArchitectureWorkspace";
 import ApprovalDialog from "./components/VersionedApprovalDialog";
 import { createInitialQualityState, evaluateDataReadiness, getQualitySummary, getSourceStatus } from "./quality.mjs";
-import { isReviewCurrent } from "./decision.mjs";
+import { isReviewCurrent, evaluateTrafficContext, MODEL_VERSION } from "./decision.mjs";
+import { createTrafficUseCaseContext, TRAFFIC_ACTIONS } from "./use-case-spec.mjs";
+import { createInitialHeatState, heatReducer, deriveHeatMetrics } from "./heat-use-case.mjs";
+import { decisionRecords } from "./document-workflow.mjs";
 import { createInitialIncidentState, incidentReducer, getAlertQueue } from "./incidents.mjs";
 import { createDefaultMapContext, createDefaultTwinContext } from "./view-context.mjs";
 import { readViewSession, saveViewSession } from "./view-session.mjs";
@@ -86,53 +93,33 @@ import {
 
 const ID = "INC-2026-1109-H03";
 const sections = [
-  [
-    "OPERATIONS",
-    [
-      ["Overview", Activity],
-      ["Alert Center", Bell],
-      ["City Map", Map],
-      ["Data Health", Database],
-    ],
-  ],
-  [
-    "DECISION INTELLIGENCE",
-    [
-      ["Traffic & Emissions", Route],
-      ["Urban Heat", Thermometer],
-      ["Digital Twin", Layers3],
-    ],
-  ],
-  [
-    "GOVERNANCE",
-    [
-      ["Decision Log", History],
-      ["KPI & Impact", ChartNoAxesCombined],
-      ["Implementation Roadmap", GitBranch],
-    ],
-  ],
+  ["SHARED DECISION CAPABILITY", [["Overview", Activity]]],
+  ["OPERATIONAL WORKFLOWS", [["Daily Traffic", Route], ["ZTL Access", ShieldCheck], ["Heat Preparedness", Thermometer]]],
+  ["FOUNDATIONS & ACCOUNTABILITY", [["Architecture", Layers3], ["KPI Framework", ChartNoAxesCombined], ["Decision Log", History], ["Governance & Roadmap", GitBranch]]],
 ];
 const subtitles = {
   Overview: "Leuven, Belgium. A clearer operational picture.",
   "Alert Center": "Prioritise what needs a human decision.",
   "City Map": "A shared operational picture of the city.",
   "Data Health": "Trust begins at the source.",
-  "Traffic & Emissions": "Understand the pressure. Anticipate the next hour.",
-  "Urban Heat": "Anticipate heat. Protect the most exposed.",
+  "Daily Traffic": "Monitored counts and queue patterns. Conditional corridor pilot.",
+  "ZTL Access": "Aggregate entries support human and legal review of historic-centre access.",
+  Architecture: "One shared municipal decision capability. Five progressive layers.",
+  "Heat Preparedness": "Official forecasts and indicative priority areas support preparedness.",
   "Digital Twin": "Compare interventions before acting in the physical city.",
   "Decision Log": "Every decision has a human owner.",
-  "KPI & Impact": "From modelled benefit to measured outcome.",
-  "Implementation Roadmap":
+  "KPI Framework": "Seven defined indicators. Readiness and evidence before results.",
+  "Governance & Roadmap":
     "GreenPulse is the destination. A progressive path to get there.",
 };
 const demoSteps = [
   "Alert",
   "Evidence",
-  "Prediction",
+  "Operational options",
   "Scenarios",
   "Human approval",
-  "Intervention",
-  "Measured impact",
+  "Authorised execution",
+  "Outcome review",
 ];
 const maturityInfo = {
   CURRENT: [
@@ -143,14 +130,14 @@ const maturityInfo = {
   ],
   MVP: [
     "First connected workflow",
-    "Priority traffic and air-quality corridor",
+    "Counts and queues at selected monitored points",
     "Limited monitoring coverage in 2D",
-    "Proposed forecasting and human approval",
+    "Conditional timestamp linkage; human approval",
   ],
   TARGET: [
     "GreenPulse target state",
-    "City-wide, multi-domain layers",
-    "Mapped-height 3D and scenario intelligence",
+    "Selective extensions after validation",
+    "Target modelling and environmental integration",
     "Proposed closed-loop measurement",
   ],
 };
@@ -193,7 +180,8 @@ function Tag({ tone = "cyan", children, dot = false }) {
     </span>
   );
 }
-function ActivePanel({ state, dispatch, onHandover, onClose, onImpact, readiness }) {
+function ActivePanel({ state, dispatch, onHandover, onClose, onImpact, onExecute, readiness }) {
+  if (state.status === "approved") return <section className="incident-panel approved-awaiting"><Tag tone="amber">APPROVED · AWAITING AUTHORISED EXECUTION</Tag><div className="outcome-orbit"><ShieldCheck size={38} /></div><h2>Approval is recorded. Execution is a separate human action.</h2><p className="muted">{state.approvedDecision?.authority} approved the reviewed {state.action === "ztl" ? "access proposal" : "traffic plan"}. No intervention is active.</p><dl className="active-details"><div><dt>Approval authority</dt><dd>{state.approvedDecision?.authority}</dd></div><div><dt>Execution responsibility</dt><dd>{state.action === "ztl" ? "Municipal Police · established legal process" : "Authorised traffic-signal operator"}</dd></div></dl><button className="button primary" onClick={onExecute}>Review authorised execution <ArrowRight size={16}/></button><p className="accountability-note">SYNTHETIC prototype only. No controller, gate or municipal system is connected.</p></section>;
   const paused = state.status === "paused";
   const unestimated = state.approvedDecision?.snapshot.forecast.status === "unestimated";
   const countdown = new Date(state.remaining * 1000)
@@ -202,24 +190,24 @@ function ActivePanel({ state, dispatch, onHandover, onClose, onImpact, readiness
   if (state.status === "measuring" || state.status === "measured")
     return (
       <section className="incident-panel outcome-panel">
-        <Tag tone={state.status === "measured" ? unestimated ? "amber" : "green" : "purple"}>
-          {state.status === "measured" ? unestimated ? "MEASUREMENT COMPLETE" : "MEASURED" : "MEASURING OUTCOME"}
+        <Tag tone={state.status === "measured" ? "amber" : "purple"}>
+          {state.status === "measured" ? "MEASUREMENT WINDOW COMPLETE" : "MEASURING OUTCOME"}
         </Tag>
         <div className="outcome-orbit">
           <Activity size={38} />
         </div>
         <h2>
           {state.status === "measured"
-            ? unestimated ? "The window is complete. Evidence needs review." : "The loop is complete."
+            ? "The window is complete. Evidence needs review."
             : "A decision is only the beginning."}
         </h2>
         <p className="muted">
           {state.status === "measured"
-            ? unestimated ? "This reviewed modification has no plan-specific numerical forecast or outcome dataset. Completing the window does not establish success." : "The completed measurement window is ready for review. Compare the synthetic reference outcome with its declared benchmark."
-            : unestimated ? "The intervention has closed. The demonstration observation window is running; no numerical improvement will be inferred for the modified plan." : "The intervention has closed. GreenPulse is comparing the synthetic reference observation window with its baseline."}
+            ? unestimated ? "This reviewed modification has no plan-specific numerical forecast or outcome dataset. Completing the window does not establish success." : "Enter explicit demonstration observations in the KPI workbench. A completed window does not supply trip times, emission factors or measured air-quality data."
+            : "The demonstration observation window is running. No numerical observation or improvement will be inferred from its completion."}
         </p>
         <button className="button primary" onClick={onImpact}>
-          View {state.status === "measured" ? "measured impact" : "measurement"}
+          View KPI evidence
           <ArrowRight size={16} />
         </button>
         <p className="accountability-note">
@@ -239,10 +227,9 @@ function ActivePanel({ state, dispatch, onHandover, onClose, onImpact, readiness
         </Tag>
       </div>
       <div className="incident-id">{ID}</div>
-      <h2>Signal Plan H03</h2>
+      <h2>{state.action === "ztl" ? "ZTL Access Review H03" : state.action === "guidance" ? "Route Guidance H03" : "Signal Plan H03"}</h2>
       <p className="muted">
-        Adaptive signals
-        {state.routeGuidance ? " + targeted route guidance" : ""}
+        {state.action === "ztl" ? "Human legal-process review · protected access retained" : state.action === "guidance" ? "Parking and route guidance · synthetic message trial" : `Adaptive signals${state.routeGuidance ? " + targeted route guidance" : ""}`}
       </p>
       {state.approvedDecision && (
         <div className="approved-version" role="status">
@@ -273,18 +260,18 @@ function ActivePanel({ state, dispatch, onHandover, onClose, onImpact, readiness
         </div>
         <div>
           <dt>Owner</dt>
-          <dd>Mobility Operations</dd>
+          <dd>{state.action === "ztl" ? "Municipal Police" : "Mobility Department"}</dd>
         </div>
         <div>
           <dt>Supporting department</dt>
-          <dd>Environment</dd>
+          <dd>{state.action === "ztl" ? "Mobility · IT / Data Office · Privacy lead" : "Municipal Police · IT / Digital Office"}</dd>
         </div>
         <div>
           <dt>Next review</dt>
           <dd>
             {state.nextReviewAt
               ? formatCityTime(new Date(state.nextReviewAt), { seconds: false })
-              : "—"}
+              : "No data"}
           </dd>
         </div>
       </dl>
@@ -317,7 +304,7 @@ function ActivePanel({ state, dispatch, onHandover, onClose, onImpact, readiness
 function seedEvents() {
   const timestamp = Date.now();
   return [
-    [0, "Traffic T14 speed", "↓ 17 km/h", "cyan"],
+    [0, "Selected point T14", "167 vehicles / 30 min", "cyan"],
     [24, "AQ-04 NO₂", "→ 47 µg/m³", "cyan"],
     [51, "Incident H03", "prediction updated", "purple"],
     [69, "Parking P3 occupancy", "→ 93%", "cyan"],
@@ -336,7 +323,7 @@ function OperationsBottom({ onHealth, lifecycle, qualityState, qualitySummary })
     const timer = setInterval(() => {
       n++;
       const entries = [
-        getSourceStatus(qualityState, "traffic") === "healthy" ? ["Traffic T14 speed", `↓ ${17 + (n % 3)} km/h`, "cyan"] : ["Traffic group", "evidence unavailable", "amber"],
+        getSourceStatus(qualityState, "traffic") === "healthy" ? ["Selected point T14 queue", `${5 + (n % 3)} vehicles · SYNTHETIC`, "cyan"] : ["Traffic group", "evidence unavailable", "amber"],
         getSourceStatus(qualityState, "AQ-04") === "healthy" ? ["AQ-04 NO₂", "→ 47 µg/m³", "cyan"] : ["AQ-04", "evidence unavailable", "amber"],
         ["Incident H03", evaluateDataReadiness(qualityState).canApprove ? "reference forecast available" : "human review required", "purple"],
         ["AVL feed", "healthy", "cyan"],
@@ -353,7 +340,7 @@ function OperationsBottom({ onHealth, lifecycle, qualityState, qualitySummary })
         <div className="stream-heading">
           <span className="eyebrow">
             <Radio size={13} />
-            LIVE EVENT STREAM
+            SYNTHETIC EVENT REPLAY
           </span>
           <span className="stream-live">
             <i />
@@ -383,9 +370,9 @@ function OperationsBottom({ onHealth, lifecycle, qualityState, qualitySummary })
       </section>
       <button className="health-summary" onClick={onHealth}>
         <div className="health-number">
-          <span className="eyebrow">DATA HEALTH</span>
+          <span className="eyebrow">DATA HEALTH · SYNTHETIC</span>
           <strong>
-            {qualitySummary.qualityPercent ?? "—"}{qualitySummary.qualityPercent !== null && <span>%</span>}
+            {qualitySummary.qualityPercent ?? "No data"}{qualitySummary.qualityPercent !== null && <span>%</span>}
           </strong>
           <span className="muted">{qualitySummary.sourceGroupCount} source groups · {qualitySummary.degradedCount} degraded</span>
         </div>
@@ -400,7 +387,7 @@ function OperationsBottom({ onHealth, lifecycle, qualityState, qualitySummary })
               <i />
               <span>{n}</span>
               <small>{getSourceStatus(qualityState, id) === "healthy" ? "Healthy" : "Unavailable"}</small>
-              <time>{getSourceStatus(qualityState, id) === "healthy" ? t : "—"}</time>
+              <time>{getSourceStatus(qualityState, id) === "healthy" ? t : "No data"}</time>
             </div>
           ))}
         </div>
@@ -413,6 +400,20 @@ function OperationsBottom({ onHealth, lifecycle, qualityState, qualitySummary })
 export default function App() {
   const [page, setPage] = useState("Overview");
   const [state, dispatch] = useReducer(lifecycleReducer, initialLifecycle);
+  const [heatState, dispatchHeat] = useReducer(heatReducer, undefined, createInitialHeatState);
+  const [trafficContext, setTrafficContext] = useState(() => ({ ...createTrafficUseCaseContext(), aqEvidenceConfirmed: false, parkingOccupancy: 93 }));
+  const [trafficTab, setTrafficTab] = useState("use-case");
+  const [healthTab, setHealthTab] = useState("feeds");
+  const [approvalAction, setApprovalAction] = useState("signals");
+  const [executionOpen, setExecutionOpen] = useState(false);
+  const [executionOperator, setExecutionOperator] = useState("");
+  const [executionConfirmed, setExecutionConfirmed] = useState(false);
+  const [executionLegal, setExecutionLegal] = useState(false);
+  const [proposalAction, setProposalAction] = useState(null);
+  const [proposalNote, setProposalNote] = useState("");
+  const [proposals, setProposals] = useState([]);
+  const [observations, setObservations] = useState({});
+  const [kpiFocus, setKpiFocus] = useState("K1");
   const [qualityState, setQualityState] = useState(createInitialQualityState);
   const [incidents, dispatchIncident] = useReducer(incidentReducer, undefined, createInitialIncidentState);
   const [initialViews] = useState(readViewSession);
@@ -421,7 +422,10 @@ export default function App() {
   const [twinContext, setTwinContext] = useState(initialViews.twin);
   const [selectedSourceId, setSelectedSourceId] = useState(initialViews.sourceId);
   const [alertAnchor, setAlertAnchor] = useState(() => Date.now());
-  const readiness = useMemo(() => evaluateDataReadiness(qualityState), [qualityState]);
+  const readiness = useMemo(() => evaluateDataReadiness(qualityState, trafficContext.action), [qualityState, trafficContext.action]);
+  const heatMetrics = useMemo(() => deriveHeatMetrics(heatState), [heatState]);
+  const heatWithMetrics = useMemo(() => ({ ...heatState, metrics: heatMetrics }), [heatState, heatMetrics]);
+  const records = useMemo(() => decisionRecords(state, heatState, proposals), [state, heatState, proposals]);
   const qualitySummary = useMemo(() => getQualitySummary(qualityState), [qualityState]);
   const alerts = useMemo(() => getAlertQueue(incidents, { lifecycle: state, qualityState, anchor: alertAnchor }), [incidents, state, qualityState, alertAnchor]);
   const activeAlertCount = alerts.filter(alert => alert.status !== "resolved").length;
@@ -484,6 +488,12 @@ export default function App() {
   }, []);
   const active = ["active", "paused"].includes(state.status);
   useEffect(() => {
+    if (heatState.status !== "measuring") return undefined;
+    const delay = Math.max(0, (heatState.measurementStartedAt || Date.now()) + 5010 - Date.now());
+    const timer = setTimeout(() => dispatchHeat({ type: "MEASUREMENT_COMPLETE" }), delay);
+    return () => clearTimeout(timer);
+  }, [heatState.status, heatState.measurementStartedAt]);
+  useEffect(() => {
     if (state.status !== "active") return;
     const t = setInterval(
       () => dispatch({ type: "TICK", time: formatCityTime() }),
@@ -499,10 +509,10 @@ export default function App() {
           type: "MEASUREMENT_COMPLETE",
           time: formatCityTime(),
         }),
-      5000,
+      Math.max(0, (state.measurementStartedAt || Date.now()) + 5010 - Date.now()),
     );
     return () => clearTimeout(t);
-  }, [state.status]);
+  }, [state.status, state.measurementStartedAt]);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(""), 3800);
@@ -554,7 +564,11 @@ export default function App() {
     setSelected(false);
     setViewResetToken(value => value + 1);
   };
-  const openApproval = () => {
+  const openApproval = (requested = "signals") => {
+    const action = typeof requested === "string" && Object.hasOwn(TRAFFIC_ACTIONS, requested) ? requested : "signals";
+    if (["transit", "policy"].includes(action)) { setProposalAction(action); setProposalNote(""); return; }
+    setTrafficContext(value => ({ ...value, action }));
+    setApprovalAction(action);
     if (state.status === "idle") setApproval(true);
     else {
       setToast(
@@ -573,6 +587,18 @@ export default function App() {
     setForecastOffset(demo ? 0 : 60);
     setViewResetToken((value) => value + 1);
     dispatch({ type: "RESET" });
+    dispatchHeat({ type: "RESET" });
+    setTrafficContext({ ...createTrafficUseCaseContext(), aqEvidenceConfirmed: false, parkingOccupancy: 93 });
+    setTrafficTab("use-case");
+    setApprovalAction("signals");
+    setProposalAction(null);
+    setExecutionOpen(false);
+    setExecutionOperator("");
+    setExecutionConfirmed(false);
+    setExecutionLegal(false);
+    setProposals([]);
+    setObservations({});
+    setKpiFocus("K1");
     dispatchIncident({ type: "RESET" });
     setQualityState(createInitialQualityState());
     setAlertAnchor(Date.now());
@@ -618,7 +644,8 @@ export default function App() {
       setEvidence(true);
     }
     if (next === 2) {
-      setPage("Traffic & Emissions");
+      setTrafficTab("analysis");
+      setPage("Daily Traffic");
       setForecastOffset(30);
     }
     if (next === 3) {
@@ -626,6 +653,8 @@ export default function App() {
       setForecastOffset(60);
     }
     if (next === 4) {
+      setApprovalAction("signals");
+      setTrafficContext(value => ({ ...value, action: "signals" }));
       setPage("Digital Twin");
       setForecastOffset(60);
       if (state.status === "idle") setApproval(true);
@@ -635,7 +664,7 @@ export default function App() {
       setForecastOffset(0);
     }
     if (next === 6) {
-      setPage("KPI & Impact");
+      setPage("KPI Framework");
       if (active) dispatch({ type: "CLOSE", time: formatCityTime() });
     }
   };
@@ -646,6 +675,7 @@ export default function App() {
       setToast("A human must approve this intervention before continuing.");
       return;
     }
+    if (step === 5 && !["active", "paused", "measuring", "measured"].includes(state.status)) { setToast("An authorised operator must explicitly execute the approved prototype plan."); return; }
     if (step < 6) demoGo(step + 1);
     else stopDemo();
   };
@@ -870,7 +900,7 @@ export default function App() {
           <div className="operator">
             <div className="operator-avatar">02</div>
             <span>
-              Control Room Operator<small>Mobility Operations</small>
+              Control Room Operator<small>Municipal decision support</small>
             </span>
             <ShieldCheck size={16} />
           </div>
@@ -980,7 +1010,7 @@ export default function App() {
               <button
                 className="text-button"
                 onClick={() => {
-                  navigate("Implementation Roadmap");
+                  navigate("Governance & Roadmap");
                   setMaturityOpen(false);
                 }}
               >
@@ -1102,7 +1132,7 @@ export default function App() {
               />
               {page === "Digital Twin"
                 ? "SCENARIO INTELLIGENCE"
-                : page === "Implementation Roadmap"
+                : page === "Governance & Roadmap"
                   ? "THE PATH TO GREENPULSE"
                   : "GREENPULSE COMMAND CENTER"}
             </div>
@@ -1117,16 +1147,16 @@ export default function App() {
                   <strong>
                     {qualitySummary.operational} <small>/ {qualitySummary.total}</small>
                   </strong>
-                  <small>operational feeds</small>
+                  <small>SYNTHETIC feeds</small>
                 </span>
               </button>
               <button onClick={() => navigate("Data Health")}>
-                <span className="quality-ring">{qualitySummary.qualityPercent ?? "—"}</span>
+                <span className="quality-ring">{qualitySummary.qualityPercent ?? "No data"}</span>
                 <span>
                   <strong>
-                    {qualitySummary.qualityPercent ?? "—"}{qualitySummary.qualityPercent !== null && <small>%</small>}
+                    {qualitySummary.qualityPercent ?? "No data"}{qualitySummary.qualityPercent !== null && <small>%</small>}
                   </strong>
-                  <small>data quality</small>
+                  <small>SYNTHETIC quality</small>
                 </span>
               </button>
               <button
@@ -1136,7 +1166,7 @@ export default function App() {
                 <Bell size={16} />
                 <span>
                   <strong>{activeAlertCount}</strong>
-                  <small>active alerts</small>
+                  <small>SYNTHETIC alerts</small>
                 </span>
               </button>
               <LocalClock />
@@ -1144,7 +1174,7 @@ export default function App() {
           ) : (
             <div className="heading-context">
               <Tag tone={page === "Digital Twin" ? "amber" : "cyan"} dot>
-                {page === "Digital Twin" ? "SIMULATED" : "DEMONSTRATION"}
+                {page === "Digital Twin" ? "MODELLED · TARGET" : "SYNTHETIC PROTOTYPE"}
               </Tag>
               <span>Leuven · Historic Centre · H-03</span>
               <LocalClock />
@@ -1158,6 +1188,7 @@ export default function App() {
             <div
               className={`overview-layout ${page === "City Map" ? "map-page" : ""}`}
             >
+              {page === "Overview" && <nav className="shared-workflow-nav" aria-label="Three operational workflows"><span>ONE SHARED MUNICIPAL DECISION CAPABILITY</span>{[["Daily Traffic", "01"], ["ZTL Access", "02"], ["Heat Preparedness", "03"]].map(([name, number]) => <button key={name} onClick={() => navigate(name)}><small>{number}</small>{name}<ArrowUpRight size={13} /></button>)}</nav>}
               {timeline}
               <div className="operations-stage">
                 <section className="map-surface geo-context">
@@ -1209,20 +1240,20 @@ export default function App() {
                   />}
                   {mapEnabled && <div className="map-bottom-legend" aria-label="Map legend">
                     {maturity === "CURRENT" ? (
-                      <span>Reference geography · illustrative inventory</span>
+                      <span>CURRENT · reference geography, unconnected inventory</span>
                     ) : (
                       <>
                         <span>
                           <i className="cyan" />
-                          Free flow
+                          SYNTHETIC · low queue
                         </span>
                         <span>
                           <i className="amber" />
-                          Elevated
+                          SYNTHETIC · elevated
                         </span>
                         <span>
                           <i className="red" />
-                          Congested
+                          SYNTHETIC · queue
                         </span>
                         <span className="heritage-key">
                           <i />
@@ -1274,9 +1305,10 @@ export default function App() {
                     dispatch={(action) =>
                       dispatch({ ...action, time: formatCityTime() })
                     }
+                    onExecute={() => { setExecutionOperator(""); setExecutionConfirmed(false); setExecutionLegal(false); setExecutionOpen(true); }}
                     onHandover={() => setHandover(true)}
                     onClose={() => setCloseConfirm(true)}
-                    onImpact={() => navigate("KPI & Impact")}
+                    onImpact={() => navigate("KPI Framework")}
                     readiness={readiness}
                   />
                 )}
@@ -1305,27 +1337,24 @@ export default function App() {
               approvedDecision={state.approvedDecision}
             />
           )}
-          {page === "Data Health" && <DataHealth qualityState={qualityState} onQualityChange={changeQuality} selectedSourceId={selectedSourceId} onSelectedSourceChange={setSelectedSourceId} onBackToIncident={() => navigate("Overview")} />}
-          {page === "Traffic & Emissions" && (
-            <TrafficScreen
+          {page === "Data Health" && <div className="document-domain"><nav className="document-tabs" aria-label="Data Health views"><button aria-pressed={healthTab === "feeds"} onClick={() => setHealthTab("feeds")}>Synthetic feeds & decision gates</button><button aria-pressed={healthTab === "inventory"} onClick={() => setHealthTab("inventory")}>Supplied reference inventory</button></nav>{healthTab === "feeds" ? <DataHealth action={trafficContext.action} qualityState={qualityState} onQualityChange={changeQuality} selectedSourceId={selectedSourceId} onSelectedSourceChange={setSelectedSourceId} onBackToIncident={() => navigate("Overview")} /> : <ReferenceInventory />}</div>}
+          {page === "Daily Traffic" && (
+            <div className="document-domain"><nav className="document-tabs" aria-label="Traffic workspace views"><button aria-pressed={trafficTab === "analysis"} onClick={() => setTrafficTab("analysis")}>Counts & queue patterns</button><button aria-pressed={trafficTab === "use-case"} onClick={() => setTrafficTab("use-case")}>Purpose, evidence & decision path</button></nav>{trafficTab === "analysis" ? <TrafficScreen
               forecastOffset={forecastOffset}
               forecastAnchor={forecastAnchor}
               timeline={timeline}
               readiness={readiness}
-            />
+            /> : <TrafficUseCasePanel context={trafficContext} onContextChange={setTrafficContext} readiness={readiness} onReview={openApproval} onOpenKpi={() => { setKpiFocus("K1"); navigate("KPI Framework"); }} />}</div>
           )}
-          {page === "Urban Heat" && <HeatScreen maturity={maturity} viewContext={heatContext} onViewContextChange={setHeatContext} />}
-          {page === "Implementation Roadmap" && <Roadmap />}
+          {page === "ZTL Access" && <ZtlWorkspace maturity={maturity} onReview={openApproval} onOpenKpi={id => { setKpiFocus(id || "K7"); navigate("KPI Framework"); }} />}
+          {page === "Architecture" && <ArchitectureWorkspace />}
+          {page === "Heat Preparedness" && <HeatWorkspace state={heatState} dispatch={dispatchHeat} maturity={maturity} viewContext={heatContext} onViewContextChange={setHeatContext} mapEnabled={mapEnabled} onOpenKpi={id => { setKpiFocus(id); navigate("KPI Framework"); }} />}
+          {page === "Governance & Roadmap" && <Roadmap />}
           {page === "Decision Log" && (
-            <DecisionLog lifecycle={state.status} logs={state.logs} />
+            <DecisionLog lifecycle={state.status} logs={[...state.logs, ...heatState.logs.map(log => ({ ...log, time: formatCityTime(new Date(log.timestamp)), date: formatCityDate(new Date(log.timestamp)), detail: `${log.authority || "Civil Protection"} · synthetic preparedness record` })), ...proposals.map(record => ({ event: record.recommendation, time: formatCityTime(new Date(record.decision.time)), date: formatCityDate(new Date(record.decision.time)), operator: record.decision.actor, detail: record.result.summary }))].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))} />
           )}
-          {page === "KPI & Impact" && (
-            <ImpactScreen
-              lifecycle={state.status}
-              onNavigate={() => navigate("Digital Twin")}
-              onMethodology={() => setMethodologyOpen(true)}
-              approvedDecision={state.approvedDecision}
-            />
+          {page === "KPI Framework" && (
+            <KpiWorkbench initialKpiId={kpiFocus} trafficLifecycle={{ ...state, requests: proposals }} heatState={heatWithMetrics} alertAt={alertAnchor} observations={observations} onObservationsChange={setObservations} decisionRecords={records} onNavigate={navigate} />
           )}
           {page === "Alert Center" && (
             <AlertCenter
@@ -1356,10 +1385,19 @@ export default function App() {
         open={approval}
         operator={state.operator}
         qualityState={qualityState}
+        maturity={maturity}
+        action={approvalAction}
+        trafficContext={trafficContext}
+        onTrafficContextChange={setTrafficContext}
+        onInspectTrafficContext={() => { setApproval(false); setTrafficTab("use-case"); navigate("Daily Traffic"); }}
+        onModify={options => { dispatch({ type: "MODIFY", humanReviewed: true, reason: options.reason, action: options.action, qualityState }); }}
+        onDecline={options => { dispatch({ type: "OVERRIDE", humanReviewed: true, reason: options.reason, action: options.action, qualityState }); setApproval(false); setToast("Human override recorded. No intervention was activated."); }}
         onInspectDataHealth={() => { setApproval(false); setSelectedSourceId(readiness.missing[0] || "traffic"); navigate("Data Health"); }}
         onClose={() => setApproval(false)}
         onApprove={(options) => {
-          if (!isReviewCurrent(options?.reviewSnapshot, options, readiness)) {
+          const gate = evaluateTrafficContext(trafficContext, options?.action);
+          const inputs = evaluateDataReadiness(qualityState, options?.action);
+          if (!["MVP", "TARGET"].includes(maturity) || options?.authorityConfirmed !== true || options.authority !== gate.authority || (gate.requiresPolice && (options.policeReviewed !== true || options.legalProcessConfirmed !== true || options.privacyReviewed !== true)) || !isReviewCurrent(options?.reviewSnapshot, options, inputs, trafficContext)) {
             setToast("Approval blocked. Review the current plan and restore required evidence.");
             return;
           }
@@ -1368,6 +1406,14 @@ export default function App() {
             humanApproved: true,
             time: formatCityTime(),
             duration: options?.duration,
+            action: options?.action,
+            trafficContext,
+            authority: options?.authority,
+            authorityConfirmed: options?.authorityConfirmed,
+            policeReviewed: options?.policeReviewed,
+            legalProcessConfirmed: options?.legalProcessConfirmed,
+            privacyReviewed: options?.privacyReviewed,
+            maturity,
             routeGuidance: options?.routeGuidance,
             note: options?.note,
             reviewSnapshot: options?.reviewSnapshot,
@@ -1377,18 +1423,27 @@ export default function App() {
           setPage("Overview");
           setForecastOffset(0);
           if (demo) setStep(5);
-          setToast("Human approval recorded. Signal Plan H03 is now active.");
+          setToast("Human approval recorded. Authorised execution is still required.");
         }}
       />
+      <Drawer open={executionOpen} onClose={() => setExecutionOpen(false)} title="Authorised execution" label="HUMAN EXECUTION · SYNTHETIC PROTOTYPE" footer={<button className="button primary" disabled={state.status !== "approved" || executionOperator.trim().length < 3 || !executionConfirmed || (state.action === "ztl" && !executionLegal)} onClick={() => {
+        const role = state.action === "ztl" ? "Municipal Police" : "Authorised traffic-signal operator";
+        dispatch({ type: "EXECUTE", humanExecuted: true, authority: role, operatorRole: role, operator: executionOperator.trim(), legalProcessConfirmed: executionLegal });
+        setExecutionOpen(false); setToast("Human execution recorded. Synthetic operating window started.");
+      }}>Execute approved prototype plan <ArrowRight size={15}/></button>}>
+        <p>The approved plan remains inactive until the responsible person records execution. This action operates the demonstration only.</p>
+        <p><strong>Required role: {state.action === "ztl" ? "Municipal Police" : "Authorised traffic-signal operator"}</strong></p>
+        <label className="document-request-note">Execution operator<input value={executionOperator} onChange={event => setExecutionOperator(event.target.value)} /></label>
+        <label className="document-confirm"><input type="checkbox" checked={executionConfirmed} onChange={event => setExecutionConfirmed(event.target.checked)}/>I confirm the authorised operator role and approved plan</label>
+        {state.action === "ztl" && <label className="document-confirm"><input type="checkbox" checked={executionLegal} onChange={event => setExecutionLegal(event.target.checked)}/>Municipal Police confirms the established legal process and protected exemptions</label>}
+        <p>No physical traffic signal, access rule, enforcement action or public message is changed.</p>
+      </Drawer>
       <EvidenceDrawer
         open={evidence}
         onClose={() => setEvidence(false)}
         onNext={demo && step === 1 ? () => demoGo(2) : undefined}
       />
-      <KpiMethodologyDrawer
-        open={methodologyOpen}
-        onClose={() => setMethodologyOpen(false)}
-      />
+      <Drawer open={Boolean(proposalAction)} onClose={() => setProposalAction(null)} title="Record departmental proposal" label="HUMAN REQUEST · NO OPERATIONAL ACTIVATION" footer={<button className="button primary" disabled={proposalNote.trim().length < 3} onClick={() => { const timestamp = Date.now(); setProposals(value => [...value, { id: `PROPOSAL-${timestamp}`, data: { useCase: "traffic", context: trafficContext }, modelVersion: MODEL_VERSION, recommendation: TRAFFIC_ACTIONS[proposalAction].label, decision: { actor: state.operator, time: new Date(timestamp).toISOString(), approvedOrOverride: "request" }, result: { status: "pending", summary: proposalNote.trim() } }]); setProposalAction(null); setToast("Departmental request recorded. No service or policy was changed."); }}>Record request</button>}><p>{proposalAction && TRAFFIC_ACTIONS[proposalAction]?.implementedScope}</p><p>Proposed decision owner: {proposalAction && TRAFFIC_ACTIONS[proposalAction]?.authority}</p><label className="document-request-note">Evidence and proposed follow-up<textarea rows={4} value={proposalNote} onChange={event => setProposalNote(event.target.value)} /></label><p>Synthetic demonstration record. This does not contact an operator, publish a message or change municipal rules.</p></Drawer>
       <HandoverDialog
         open={handover}
         onClose={() => setHandover(false)}
@@ -1449,7 +1504,7 @@ export default function App() {
                 onClick={() => {
                   dispatch({ type: "CLOSE", time: formatCityTime() });
                   setCloseConfirm(false);
-                  navigate("KPI & Impact");
+                  navigate("KPI Framework");
                 }}
               >
                 Close & measure

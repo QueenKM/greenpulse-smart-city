@@ -154,8 +154,95 @@ const { render, screen, fireEvent, waitFor, cleanup, within, act } = await impor
 const { default: App } = await import("../work/App.test.mjs");
 const { default: FaultApp } = await import("../work/App.fault.test.mjs");
 const { default: RetryCityMap } = await import("../work/CityMap.retry.test.mjs");
-const button = (name) => screen.getByRole("button", { name, exact: true });
-const click = (name) => fireEvent.click(button(name));
+const pageName = (name) => ({
+  "Traffic & Emissions": "Daily Traffic",
+  "Urban Heat": "Heat Preparedness",
+  "KPI & Impact": "KPI Framework",
+  "Implementation Roadmap": "Governance & Roadmap",
+}[name] || name);
+const button = (name) => screen.getByRole("button", { name: pageName(name), exact: true });
+const click = (name) => {
+  const direct = screen.queryByRole("button", { name: pageName(name), exact: true });
+  if (direct) return fireEvent.click(direct);
+  const destinations = { "City Map": "City map", "Digital Twin": "Selective Digital Twin · TARGET", "Selective Digital Twin": "Selective Digital Twin · TARGET", "Alert Center": "Alert Center", "Data Health": "Data Health" };
+  if (destinations[name]) {
+    fireEvent.click(button("City Control Room workspace menu"));
+    return fireEvent.click(screen.getByRole("menuitem", { name: destinations[name], exact: true }));
+  }
+  return fireEvent.click(button(name));
+};
+
+// Exercise every human review control rather than calling the reducer or
+// silently bypassing disabled approval buttons in positive-path tests.
+const checkIfNeeded = (name, scope = screen) => {
+  const checkbox = scope.getByRole("checkbox", { name, exact: true });
+  if (!checkbox.checked) fireEvent.click(checkbox);
+  assert.equal(checkbox.checked, true);
+};
+const reviewCurrentPlan = ({ authority = "Mobility Department" } = {}) => {
+  const dialog = screen.getByRole("dialog", { name: "Approve intervention" });
+  const scope = within(dialog);
+  for (const name of [
+    "Pedestrian safety and crossing delay reviewed",
+    "Bus punctuality and access reviewed",
+    "Residential congestion displacement reviewed",
+    "Historic-centre compatibility reviewed",
+    "Time-limited trial and rollback plan reviewed",
+  ]) checkIfNeeded(name, scope);
+  for (const name of [
+    "Synthetic queue-pattern trigger reviewed; municipal operating threshold remains to be agreed",
+    "Aggregate entries reviewed by gate and period; entries are not automatically violations",
+    "I understand this action-specific or modified plan has no numerical forecast",
+  ]) {
+    const box = scope.queryByRole("checkbox", { name, exact: true });
+    if (box && !box.checked) fireEvent.click(box);
+  }
+  const record = scope.queryByRole("button", { name: "Record plan review", exact: true });
+  if (record) {
+    assert.equal(record.disabled, false, "review requires all safety checks and evidence");
+    fireEvent.click(record);
+  }
+  fireEvent.change(scope.getByLabelText("Acting as the proposed approving authority"), { target: { value: authority } });
+  checkIfNeeded("I confirm this synthetic decision as the proposed approving authority", scope);
+  for (const name of [
+    "Municipal Police operational review confirmed for this synthetic ZTL decision",
+    "Established legal procedure reviewed; no automatic ZTL rule changes",
+    "Authorised privacy review confirmed; no identifiable licence-plate records",
+  ]) {
+    const checkbox = scope.queryByRole("checkbox", { name, exact: true });
+    if (checkbox && !checkbox.checked) fireEvent.click(checkbox);
+  }
+  assert.equal(button("Approve intervention").disabled, false);
+  return dialog;
+};
+const executeApprovedPlan = () => {
+  assert.equal(screen.queryByText("MONITORING"), null, "approval alone cannot execute the intervention");
+  click("Review authorised execution");
+  const scope = within(screen.getByRole("dialog", { name: "Authorised execution" }));
+  fireEvent.change(scope.getByLabelText("Execution operator"), { target: { value: "Authorised Operator #02" } });
+  checkIfNeeded("I confirm the authorised operator role and approved plan", scope);
+  const legal = scope.queryByRole("checkbox", { name: "Municipal Police confirms the established legal process and protected exemptions", exact: true });
+  if (legal && !legal.checked) fireEvent.click(legal);
+  assert.equal(button("Execute approved prototype plan").disabled, false);
+  click("Execute approved prototype plan");
+};
+const approveCurrentPlan = (options) => {
+  reviewCurrentPlan(options);
+  click("Approve intervention");
+  executeApprovedPlan();
+};
+const selectKpi = (id) => fireEvent.click(within(screen.getByRole("navigation", { name: "KPI selector" })).getByRole("button", { name: new RegExp(`^${id}\\b`) }));
+const expectBlankActual = () => {
+  assert.equal(document.querySelector(".kw-actual-summary strong")?.textContent, "No data");
+  assert.equal(screen.getByLabelText(/^Observed trip durations \(minutes\)/).value, "");
+};
+const completePilotWindow = async () => {
+  const linkage = screen.getByRole("checkbox", { name: "I have reviewed the selected monitoring-point timestamp linkage for this synthetic pilot exercise. This does not validate a municipal connection.", exact: true });
+  await waitFor(() => assert.equal(linkage.disabled, false), { timeout: 7000 });
+  assert.equal(screen.getByLabelText(/^Observed trip durations \(minutes\)/).disabled, true, "measurement completion does not validate timestamp linkage");
+  fireEvent.click(linkage);
+  assert.equal(screen.getByLabelText(/^Observed trip durations \(minutes\)/).disabled, false);
+};
 
 test(
   "all navigation and decision controls preserve the approval and measurement gates",
@@ -212,7 +299,7 @@ test(
       "Overview",
     ]) {
       click(name);
-      assert.ok(screen.getAllByRole("heading", { name, exact: true }).length);
+      assert.ok(screen.getAllByRole("heading", { name: pageName(name), exact: true }).length);
     }
     click("Layers");
     for (const name of [
@@ -231,7 +318,7 @@ test(
       fireEvent.click(b);
     }
     fireEvent.keyDown(document, { key: "Escape" });
-    click("Compare scenarios");
+    click("Explore target scenarios");
     const slider = screen.getByRole("slider", {
       name: "Drag to compare before and after",
     });
@@ -243,7 +330,7 @@ test(
     click("Cancel");
     await waitFor(() => assert.equal(screen.queryByRole("dialog"), null));
     click("Review & approve");
-    click("Approve & Activate");
+    approveCurrentPlan();
     assert.ok(screen.getByText("Signal Plan H03"));
     assert.ok(screen.getByText("MONITORING"));
     click("Pause");
@@ -262,14 +349,19 @@ test(
     );
     click("Close Intervention");
     click("Close & measure");
-    assert.ok(screen.getByText("MEASURING OUTCOME"));
+    assert.ok(screen.getByText(/^MEASURING OUTCOME/));
     assert.equal(screen.queryByText("−10.8%"), null);
-    await waitFor(() => assert.ok(screen.getByText("−10.8%")), {
-      timeout: 7000,
-    });
-    assert.ok(screen.getByText("MEASURED · SYNTHETIC OUTCOME"));
+    const observedTrips = screen.getByLabelText(/^Observed trip durations \(minutes\)/);
+    assert.equal(observedTrips.disabled, true);
+    await completePilotWindow();
+    expectBlankActual();
+    fireEvent.change(observedTrips, { target: { value: "16, 17" } });
+    assert.equal(document.querySelector(".kw-actual-summary strong").textContent, "16.5 min");
+    assert.ok(screen.getByText("1.82%"));
+    assert.equal(screen.queryByText("−10.8%"), null);
     click("Decision Log");
-    assert.ok(screen.getByText("Approved & activated · Scenario B"));
+    assert.ok(screen.getByText(/^Human approval recorded/));
+    assert.ok(screen.getByText("Authorised operator execution recorded · synthetic trial started"));
     cleanup();
   },
 );
@@ -298,14 +390,20 @@ test(
     click("Next Step");
     assert.ok(screen.getByRole("dialog", { name: "Approve intervention" }));
     assert.equal(screen.queryByText("Signal Plan H03"), null);
-    click("Approve & Activate");
+    reviewCurrentPlan();
+    click("Approve intervention");
+    assert.equal(screen.queryByText("MONITORING"), null);
+    assert.equal(currentStep(), "Authorised execution");
+    click("Next Step");
+    assert.equal(currentStep(), "Authorised execution", "presentation navigation cannot substitute for authorised execution");
+    assert.equal(screen.queryByText("MONITORING"), null);
+    executeApprovedPlan();
     assert.ok(screen.getByText("Signal Plan H03"));
     click("Next Step");
-    assert.ok(screen.getByText("MEASURING OUTCOME"));
+    assert.ok(screen.getByText(/^MEASURING OUTCOME/));
     assert.equal(screen.queryByText("−10.8%"), null);
-    await waitFor(() => assert.ok(screen.getByText("−10.8%")), {
-      timeout: 7000,
-    });
+    await completePilotWindow();
+    expectBlankActual();
     click("Reset Demo");
     assert.equal(screen.queryByText("Signal Plan H03"), null);
     assert.equal(screen.queryByText("−10.8%"), null);
@@ -349,7 +447,7 @@ test(
 
     const details = document.querySelector(".gp-incident-details");
     assert.equal(details.open, false);
-    assert.ok(button("Compare scenarios"));
+    assert.ok(button("Explore target scenarios"));
     fireEvent.click(
       screen.getByText("Evidence & model details", { selector: "summary" }),
     );
@@ -362,24 +460,18 @@ test(
 
     click("Show forecast in 15 minutes");
     assert.equal(map.dataset.forecastMinute, "15");
-    assert.match(
-      document.querySelector(".gp-incident-forecast-value").textContent,
-      /^76%/,
-    );
-    click("Traffic & Emissions");
+    assert.equal(document.querySelector(".gp-incident-forecast-value").textContent, "No data", "target exploration never fabricates a current network-wide congestion forecast");
+    click("Daily Traffic");
+    click("Counts & queue patterns");
+    assert.ok(screen.getByRole("heading", { name: "Counts and queue patterns" }));
+    assert.match(document.querySelector(".traffic-screen").textContent, /No data/);
+    click("Digital Twin");
+    await waitFor(() => assert.equal(cameraTransforms().length, 2));
     assert.equal(
       button("Show forecast in 15 minutes").getAttribute("aria-pressed"),
       "true",
     );
-    assert.match(document.querySelector(".forecast-big").textContent, /^76/);
     click("Show forecast in 30 minutes");
-    assert.match(document.querySelector(".forecast-big").textContent, /^80/);
-    click("Digital Twin");
-    await waitFor(() => assert.equal(cameraTransforms().length, 2));
-    assert.equal(
-      button("Show forecast in 30 minutes").getAttribute("aria-pressed"),
-      "true",
-    );
     assert.ok(
       [...document.querySelectorAll(".twin-map-stage .geo-map")].every(
         (node) => node.dataset.forecastMinute === "30",
@@ -504,7 +596,7 @@ test(
     assert.equal(currentStep(), "Evidence");
     assert.ok(screen.getByRole("dialog", { name: "Evidence → design" }));
     fireEvent.keyDown(document, { key: "ArrowRight" });
-    assert.equal(currentStep(), "Prediction");
+    assert.equal(currentStep(), "Operational options");
     fireEvent.keyDown(document, { key: "ArrowRight" });
     assert.equal(currentStep(), "Scenarios");
     await waitFor(() => assert.equal(cameraTransforms().length, 2));
@@ -543,12 +635,12 @@ test(
     fireEvent.keyDown(document, { key: "ArrowRight" });
     assert.ok(screen.getByRole("dialog", { name: "Approve intervention" }));
     assert.equal(screen.queryByText("Signal Plan H03"), null);
-    click("Approve & Activate");
-    assert.equal(currentStep(), "Intervention");
+    approveCurrentPlan();
+    assert.equal(currentStep(), "Authorised execution");
     assert.ok(screen.getByText("Signal Plan H03"));
     click("Exit full screen");
     assert.equal(document.fullscreenElement, null);
-    assert.equal(currentStep(), "Intervention");
+    assert.equal(currentStep(), "Authorised execution");
     click("Enter full screen");
     assert.equal(
       document.fullscreenElement,
@@ -632,120 +724,78 @@ test(
 );
 
 test(
-  "pending impact explains its synthetic KPI arithmetic without activating or measuring an intervention",
+  "the seven final-presentation KPIs preserve provenance, readiness and missing inputs",
   { timeout: 10000 },
   async (t) => {
-    t.after(() => {
-      cleanup();
-      fullscreenElement = null;
-    });
+    t.after(() => { cleanup(); fullscreenElement = null; });
     render(React.createElement(App));
-    click("KPI & Impact");
-    assert.ok(screen.getByText("OUTCOME NOT YET MEASURED"));
+    click("KPI Framework");
+    const selector = screen.getByRole("navigation", { name: "KPI selector" });
+    assert.equal(within(selector).getAllByRole("button").length, 7);
+    assert.ok(screen.getByRole("region", { name: "KPI definition and method" }));
+    assert.match(document.querySelector(".kw-detail").textContent, /PILOT/);
+    assert.ok(screen.getByText("Illustrative values used to demonstrate the KPI calculation. The real baseline will be established during pilot preparation."));
+    assert.match(document.querySelector(".kw-baseline-journey").textContent, /18.*16\.2/);
+    assert.match(document.querySelector(".kw-primary-result").textContent, /MODELLED/);
+    expectBlankActual();
+    assert.equal(screen.getByLabelText(/^Observed trip durations \(minutes\)/).disabled, true);
+    selectKpi("K2");
+    assert.match(document.querySelector(".kw-detail").textContent, /TARGET/);
+    assert.match(document.querySelector(".kw-primary-result").textContent, /ESTIMATED/);
+    assert.ok(within(document.querySelector(".kw-primary-result")).getByText("No data"));
+    assert.equal(screen.getByLabelText("Vehicle-km, row 1").value, "");
+    assert.equal(screen.getByLabelText("Before kg/km, row 1").value, "");
+    selectKpi("K3");
+    assert.match(document.querySelector(".kw-detail").textContent, /TARGET/);
+    assert.match(document.querySelector(".kw-primary-result").textContent, /MEASURED/);
+    assert.ok(within(document.querySelector(".kw-primary-result")).getAllByText("No data").length);
+    assert.equal(screen.getByLabelText("PM2.5 matched-reference hourly values (µg/m³)").disabled, true);
+    assert.ok(screen.getByText("Annual-average context only. This hourly comparison does not demonstrate annual compliance."));
+    selectKpi("K4");
+    assert.match(document.querySelector(".kw-detail").textContent, /PILOT-READY/);
+    assert.match(document.querySelector(".kw-detail").textContent, /illustrative pilot target/i);
+    for (const [id, readiness] of [["K5", "TARGET"], ["K6", "PILOT"], ["K7", "PILOT-READY"]]) {
+      selectKpi(id);
+      assert.match(document.querySelector(".kw-detail").textContent, new RegExp(readiness));
+      assert.ok(within(document.querySelector(".kw-primary-result")).getAllByText("No data").length);
+      assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
+    }
+    assert.match(document.querySelector(".kw-detail").textContent, /100%/);
+    assert.match(document.querySelector(".kw-detail").textContent, /completeness.*not.*quality/i);
     assert.equal(screen.queryByText("Signal Plan H03"), null);
-    assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
-
-    const explanation = button("KPI calculation & assumptions");
-    explanation.focus();
-    fireEvent.click(explanation);
-    const dialog = screen.getByRole("dialog", {
-      name: "How impact is calculated",
-    });
-    const congestionExample = within(dialog)
-      .getByRole("heading", { name: "Congestion index", exact: true })
-      .closest("article");
-    assert.ok(congestionExample);
-    assert.ok(within(congestionExample).getByText("72", { selector: "dd" }));
-    assert.ok(
-      within(congestionExample).getByText("64.224", { selector: "dd" }),
-    );
-    assert.ok(within(congestionExample).getByText("10.8%"));
-    assert.ok(within(dialog).getByText("10.8% relative reduction"));
-    assert.ok(
-      within(dialog).getByRole("heading", {
-        name: "Scenario comparison ≠ measurement benchmark",
-      }),
-    );
-    assert.ok(
-      within(dialog).getByText(
-        "These are separate synthetic fixtures, not outputs from one calibrated simulation and not measured municipal data. The 60-minute scenario values must not be used to derive the example impact percentages.",
-      ),
-    );
-    assert.equal(screen.queryByText("Signal Plan H03"), null);
-    assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
-
-    fireEvent.keyDown(document, { key: "Escape" });
-    await waitFor(() =>
-      assert.equal(
-        screen.queryByRole("dialog", { name: "How impact is calculated" }),
-        null,
-      ),
-    );
-    assert.equal(document.activeElement, explanation);
-    assert.ok(screen.getByText("OUTCOME NOT YET MEASURED"));
-    assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
     click("Overview");
     assert.equal(screen.queryByText("Signal Plan H03"), null);
   },
 );
 
 test(
-  "the MVP roadmap exposes proposed ownership and an acceptance gate with accessible disclosure controls",
+  "final roadmap exposes three progressive phases without claiming operational readiness",
   { timeout: 10000 },
   async (t) => {
-    t.after(() => {
-      cleanup();
-      fullscreenElement = null;
-    });
+    t.after(() => { cleanup(); fullscreenElement = null; });
     render(React.createElement(App));
-    click("Implementation Roadmap");
-    const mvpPhase = screen
-      .getByRole("heading", { name: "MVP", exact: true })
-      .closest("button.maturity-phase");
-    assert.ok(mvpPhase);
-    fireEvent.click(mvpPhase);
-
-    const governance = screen.getByRole("region", {
-      name: "MVP · decision ownership & stage gate",
-    });
-    assert.ok(
-      within(governance).getByText(
-        "Proposed governance · validate against municipal inventory",
-      ),
-    );
-    assert.ok(within(governance).getByText("Mobility Operations (proposed)"));
-    assert.ok(within(governance).getByText("Proposed acceptance gate"));
-    assert.ok(
-      within(governance).getByText(
-        "Baseline agreed; feed-quality thresholds and source owners approved; human approval, rollback and audit trail tested.",
-      ),
-    );
-    assert.ok(
-      within(governance).getByText(
-        "Roles and gates are proposals, not a verified Leuven organisational structure. City geography provides context only.",
-      ),
-    );
-
-    const disclosure = within(governance).getByRole("button");
-    assert.equal(disclosure.getAttribute("aria-expanded"), "true");
-    assert.equal(mvpPhase.getAttribute("aria-expanded"), "true");
-    const detailsId = disclosure.getAttribute("aria-controls");
-    assert.ok(document.getElementById(detailsId));
-    fireEvent.click(disclosure);
-    assert.equal(disclosure.getAttribute("aria-expanded"), "false");
-    assert.equal(mvpPhase.getAttribute("aria-expanded"), "false");
-    assert.equal(document.getElementById(detailsId), null);
-    assert.equal(
-      within(governance).queryByText("Mobility Operations (proposed)"),
-      null,
-    );
-    fireEvent.click(disclosure);
-    assert.equal(disclosure.getAttribute("aria-expanded"), "true");
-    assert.equal(mvpPhase.getAttribute("aria-expanded"), "true");
-    assert.ok(document.getElementById(detailsId));
-    assert.ok(within(governance).getByText("Mobility Operations (proposed)"));
+    click("Governance & Roadmap");
+    for (const name of ["Discover & Prepare", "Integrate & Pilot", "Extend Selectively"]) assert.ok(screen.getAllByText(name, { exact: false }).length);
+    assert.match(document.querySelector(".main-shell").textContent, /0[––-]6 months/i);
+    assert.match(document.querySelector(".main-shell").textContent, /6[––-]18 months/i);
+    assert.match(document.querySelector(".main-shell").textContent, /18[––-]36 months/i);
+    assert.equal(screen.queryByText("How the two use cases were prioritised"), null);
+    assert.equal(screen.queryByRole("table", { name: "Document use-case prioritisation" }), null);
+    assert.match(document.querySelector(".main-shell").textContent, /Mobility Department/);
+    assert.match(document.querySelector(".main-shell").textContent, /Municipal Police/);
+    assert.match(document.querySelector(".main-shell").textContent, /Civil Protection/);
+    assert.equal(screen.queryByText("Signal Plan H03"), null);
   },
 );
+
+test("the target-state architecture has exactly five progressively implemented layers", async (t) => {
+  t.after(() => { cleanup(); fullscreenElement = null; });
+  render(React.createElement(App));
+  click("Architecture");
+  assert.ok(screen.getByText("Target-state architecture, implemented progressively after data validation."));
+  for (const layer of ["Sources", "Integration", "Urban Data Hub", "Analytics / Selective Digital Twin", "Action & Evidence"]) assert.ok(screen.getAllByText(layer, { exact: true }).length);
+  assert.equal(screen.queryByText("Signal Plan H03"), null);
+});
 
 test(
   "the workspace dropdown navigates every destination and starts the guided presentation",
@@ -762,8 +812,8 @@ test(
     assert.equal(screen.queryByRole("menu"), null);
     for (const [destination, page] of [
       ["City map", "City Map"],
-      ["Scenario intelligence", "Digital Twin"],
-      ["Implementation roadmap", "Implementation Roadmap"],
+      ["Selective Digital Twin · TARGET", "Digital Twin"],
+      ["Governance & Roadmap", "Governance & Roadmap"],
       ["City overview", "Overview"],
     ]) {
       fireEvent.click(trigger);
@@ -771,7 +821,7 @@ test(
       const menu = screen.getByRole("menu", {
         name: "City Control Room workspace menu",
       });
-      assert.equal(within(menu).getAllByRole("menuitem").length, 5);
+      assert.equal(within(menu).getAllByRole("menuitem").length, 7);
       fireEvent.click(within(menu).getByRole("menuitem", { name: destination }));
       assert.equal(screen.queryByRole("menu"), null);
       assert.equal(document.querySelector(".page-heading h1").textContent, page);
@@ -839,16 +889,17 @@ test(
     assert.equal(map.querySelector(".geo-building-footprints path").getAttribute("d"), flatFootprint);
     assert.ok(map.querySelector(".geo-mvp-coverage"));
     assert.ok(map.querySelector(".geo-traffic-overlay.visible"));
-    assert.ok(map.querySelector(".geo-air.visible"));
+    assert.equal(map.querySelector(".geo-air.visible"), null, "environmental sensing is TARGET, not a current pilot source");
     assert.equal(map.querySelector(".geo-heat-overlay.visible"), null);
-    assert.equal(map.querySelectorAll(".geo-synthetic-sensors .geo-sensor").length, 4);
-    assert.deepEqual([...map.querySelectorAll(".geo-sensor-id")].map((node) => node.textContent).sort(), ["AQ-04", "AQ-07", "T12", "T14"]);
+    assert.equal(map.querySelectorAll(".geo-synthetic-sensors .geo-sensor").length, 2);
+    assert.deepEqual([...map.querySelectorAll(".geo-sensor-id")].map((node) => node.textContent).sort(), ["T12", "T14"]);
     assert.equal(map.querySelectorAll(".geo-sensor-parking,.geo-sensor-cooling").length, 0);
     const mvpTrafficLength = [...map.querySelectorAll(".geo-traffic-line")].reduce((sum, node) => sum + node.getAttribute("d").length, 0);
     click("Layers");
     group = screen.getByRole("group", { name: "Map layers" });
     assert.equal(within(group).getByRole("button", { name: "Urban Heat", exact: true }).disabled, true);
-    for (const name of ["Traffic", "Air Quality", "Heritage", "Sensors"]) {
+    assert.equal(within(group).getByRole("button", { name: "Air Quality", exact: true }).disabled, true);
+    for (const name of ["Traffic", "Heritage", "Sensors"]) {
       assert.equal(within(group).getByRole("button", { name, exact: true }).disabled, false);
     }
     fireEvent.keyDown(document, { key: "Escape" });
@@ -877,7 +928,7 @@ test(
     assert.equal(screen.queryByText("Signal Plan H03"), null);
     assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
     click("KPI & Impact");
-    assert.ok(screen.getByText("OUTCOME NOT YET MEASURED"));
+    expectBlankActual();
   },
 );
 
@@ -908,7 +959,7 @@ test(
     click("Urban Heat");
     await waitFor(() => assert.ok(document.querySelector(".heat-map .geo-map[data-maturity='TARGET']")));
     assert.ok(document.querySelector(".heat-map .geo-heat-overlay.visible"));
-    assert.equal(document.querySelectorAll(".heat-map .geo-sensor-cooling").length, 3);
+    assert.equal(document.querySelectorAll(".heat-map .geo-sensor-cooling").length, 0);
     click("MVP");
     assert.equal(document.querySelector(".heat-map .geo-map").dataset.maturity, "MVP");
     assert.equal(document.querySelector(".heat-map .geo-heat-overlay.visible"), null);
@@ -1108,7 +1159,7 @@ test(
     assert.equal(sidebar.dataset.expanded, "true");
     fireEvent.pointerLeave(sidebar, { pointerType: "mouse" });
     assert.equal(sidebar.dataset.expanded, "true");
-    act(() => button("Data Health").focus());
+    act(() => button("Architecture").focus());
     assert.equal(sidebar.dataset.expanded, "true");
     act(() => button("Evidence").focus());
     assert.ok(document.activeElement === button("Evidence"));
@@ -1171,9 +1222,9 @@ test(
     assert.ok(button("Close navigation"));
     fireEvent.pointerLeave(sidebar, { pointerType: "touch" });
     assert.equal(sidebar.classList.contains("open"), true);
-    fireEvent.pointerDown(button("Data Health"), { pointerType: "touch" });
-    fireEvent.click(button("Data Health"));
-    assert.equal(document.querySelector(".page-heading h1").textContent, "Data Health");
+    fireEvent.pointerDown(button("Architecture"), { pointerType: "touch" });
+    fireEvent.click(button("Architecture"));
+    assert.equal(document.querySelector(".page-heading h1").textContent, "Architecture");
     assert.equal(sidebar.classList.contains("open"), false);
     assert.equal(screen.queryByRole("button", { name: "Close navigation" }), null);
 
@@ -1208,7 +1259,7 @@ const endUiCase = (t) => t.after(() => {
 });
 const alertArticle = (title) => screen.getByRole("button", { name: title, exact: true }).closest("article");
 const assertNoOperationalAuthority = () => {
-  assert.ok(screen.queryByText("Signal Plan H03") === null, "no intervention is active without human approval");
+  for (const title of ["Signal Plan H03", "ZTL Plan H03", "Route Guidance H03"]) assert.ok(screen.queryByText(title) === null, "no intervention is active without human approval");
   assert.ok(screen.queryByText("MEASURED · SYNTHETIC OUTCOME") === null, "no measured outcome exists before measurement");
 };
 
@@ -1218,76 +1269,83 @@ test("modified plans require a new acknowledged review and do not inherit the re
   click("Digital Twin");
   click("Review & approve");
   const dialog = screen.getByRole("dialog", { name: "Approve intervention" });
-  assert.ok(within(dialog).getByLabelText("Reference score 88 out of 100"));
-  assert.equal(button("Approve & Activate").disabled, false);
+  assert.equal(button("Approve intervention").disabled, true);
+  reviewCurrentPlan();
+  assert.ok(within(dialog).getByText("K1 · PILOT / CONDITIONAL · CORRIDOR TRAVEL TIME"));
+  const oldVersion = Number(within(dialog).getByText(/^V\d+$/).textContent.slice(1));
   click("Modify");
   fireEvent.change(within(dialog).getByLabelText("Operating window"), { target: { value: "30" } });
   fireEvent.click(within(dialog).getByRole("checkbox", { name: "Include targeted route guidance" }));
-  assert.equal(button("Approve & Activate").disabled, true);
-  assert.equal(within(dialog).queryByLabelText("Reference score 88 out of 100"), null);
+  assert.equal(button("Approve intervention").disabled, true);
+  assert.equal(within(dialog).queryByText("K1 · PILOT / CONDITIONAL · CORRIDOR TRAVEL TIME"), null);
   assert.ok(within(dialog).getByRole("heading", { name: "Forecast requires review" }));
   assert.ok(within(dialog).getByText("No updated numerical benefit estimate"));
   assert.equal(button("Record plan review").disabled, true);
-  fireEvent.click(button("Approve & Activate"));
+  fireEvent.click(button("Approve intervention"));
   assertNoOperationalAuthority();
-  fireEvent.click(within(dialog).getByRole("checkbox", { name: "I understand the modified plan has no numerical forecast" }));
-  click("Record plan review");
-  assert.ok(within(dialog).getByText("V2"));
-  assert.equal(button("Approve & Activate").disabled, false);
+  reviewCurrentPlan();
+  const version = Number(within(dialog).getByText(/^V\d+$/).textContent.slice(1));
+  assert.equal(version, oldVersion + 1);
   fireEvent.change(within(dialog).getByLabelText(/Operator note/), { target: { value: "Thirty-minute plan, signal timing only." } });
-  assert.equal(button("Approve & Activate").disabled, false, "a note does not change the reviewed intervention");
-  click("Approve & Activate");
+  assert.equal(button("Approve intervention").disabled, false, "a note does not change the reviewed intervention");
+  click("Approve intervention");
+  executeApprovedPlan();
   assert.ok(screen.getByText("Signal Plan H03"));
-  assert.ok(screen.getByText("Approved plan v2"));
+  assert.ok(screen.getByText(`Approved plan v${version}`));
   click("Decision Log");
   assert.ok(screen.getByText(/Operating window: 30 minutes · Route guidance: excluded/));
-  assert.ok(screen.getByText(/Review v2 · Forecast scope: Modified plan reviewed/));
+  assert.ok(screen.getByText(new RegExp(`Review v${version} · Model`)));
+  assert.equal(screen.getAllByText("Human modification recorded · approval required").length, 2, "each reviewed plan modification is logged");
   click("Digital Twin");
-  assert.ok(screen.getByText("Separate reference comparison · approved plan v2 has no numerical forecast"));
+  assert.ok(screen.getByText("These reference numbers do not describe the approved modified plan."));
   assert.equal(button("Modified plan approved · unestimated").disabled, true);
-  assert.equal(screen.queryByRole("button", { name: "Scenario approved", exact: true }), null);
   click("Overview");
   click("Close Intervention");
   click("Close & measure");
-  assert.ok(screen.getByText("MEASURING OUTCOME"));
-  await waitFor(() => assert.ok(screen.getByRole("heading", { name: "Measurement complete. Estimate unavailable." })), { timeout: 7000 });
-  assert.ok(screen.getByText("No success or reduction claim is inferred from completing the observation window."));
+  assert.ok(screen.getByText(/^MEASURING OUTCOME/));
+  const trips = screen.getByLabelText(/^Observed trip durations \(minutes\)/);
+  assert.equal(trips.disabled, true);
+  await completePilotWindow();
+  assert.ok(screen.getAllByText("No data").length);
+  expectBlankActual();
+  fireEvent.change(trips, { target: { value: "16, 17" } });
+  assert.equal(document.querySelector(".kw-actual-summary strong").textContent, "16.5 min");
+  assert.equal(screen.queryByText("1.82%"), null, "reference forecast error is not attributed to a modified plan");
   assert.equal(screen.queryByText("−10.8%"), null);
   assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
 });
 
-test("required traffic and AQ-04 outages block approval until source recovery and human review", { timeout: 15000 }, async (t) => {
+test("traffic source failure blocks the traffic pilot without making AQ a ZTL approval prerequisite", { timeout: 15000 }, async (t) => {
   endUiCase(t);
   render(React.createElement(App));
-  for (const source of ["Traffic T12–T18", "AQ-04"]) {
-    click("Data Health");
-    click(`Inspect ${source}, Healthy`);
-    click("Simulate outage");
-    assert.ok(screen.getByText("H-03 BLOCKED"));
-    assert.ok(screen.getByText("This source blocks H-03 approval"));
-    assert.ok(screen.getByText("NOT ASSERTED"));
-    click("Traffic & Emissions");
-    assert.ok(screen.getByText("Reference forecast only. Approval is blocked until critical sources recover."));
-    click("Digital Twin");
-    click("Review & approve");
-    const dialog = screen.getByRole("dialog", { name: "Approve intervention" });
-    assert.equal(button("Approve & Activate").disabled, true);
-    assert.ok(within(dialog).getByRole("heading", { name: "Required data unavailable" }));
-    assert.ok(within(dialog).getByText(source === "AQ-04" ? /AQ-04 is offline/ : /Traffic T12–T18 is offline/));
-    fireEvent.click(button("Approve & Activate"));
-    assertNoOperationalAuthority();
-    click("Inspect data health");
-    assert.equal(screen.queryByRole("dialog"), null);
-    assert.ok(within(document.querySelector(".quality-inspector")).getByRole("heading", { name: source, exact: true }));
-    click("Restore source");
-    assert.ok(screen.getByText("H-03 READY"));
-    assertNoOperationalAuthority();
-    click("Digital Twin");
-    click("Review & approve");
-    assert.equal(button("Approve & Activate").disabled, false);
-    assert.ok(screen.getByRole("dialog", { name: "Approve intervention" }));
-    click("Cancel");
-  }
+  click("Data Health");
+  click("Inspect Traffic T12–T18, Healthy");
+  click("Simulate outage");
+  assert.ok(screen.getByText("H-03 BLOCKED"));
+  click("Digital Twin");
+  click("Review & approve");
+  let dialog = screen.getByRole("dialog", { name: "Approve intervention" });
+  assert.equal(button("Approve intervention").disabled, true);
+  assert.ok(within(dialog).getByRole("heading", { name: "Required data unavailable" }));
+  fireEvent.click(button("Approve intervention"));
+  assertNoOperationalAuthority();
+  click("Inspect data health");
+  click("Restore source");
+  assert.ok(screen.getByText("H-03 READY"));
+  click("Inspect AQ-04, Healthy");
+  click("Simulate outage");
+  assert.ok(screen.getByText("H-03 READY"));
+  click("Digital Twin");
+  click("Review & approve");
+  reviewCurrentPlan();
+  assert.equal(button("Approve intervention").disabled, false);
+  click("Cancel");
+  click("ZTL Access");
+  click("Review ZTL proposal");
+  dialog = screen.getByRole("dialog", { name: "Approve intervention" });
+  assert.equal(within(dialog).queryByRole("checkbox", { name: /air-quality evidence/ }), null);
+  assert.match(dialog.textContent, /Aggregate entries/);
+  click("Cancel");
   assertNoOperationalAuthority();
 });
 
@@ -1305,8 +1363,9 @@ test("the optional AQ-07 outage changes coverage without blocking required H-03 
   assert.ok(screen.getByText("Does not block H-03 approval"));
   click("Digital Twin");
   click("Review & approve");
-  assert.equal(button("Approve & Activate").disabled, false);
-  assert.ok(screen.getByLabelText("Reference score 88 out of 100"));
+  assert.equal(button("Approve intervention").disabled, true);
+  reviewCurrentPlan();
+  assert.ok(screen.getByText("K1 · PILOT / CONDITIONAL · CORRIDOR TRAVEL TIME"));
   click("Cancel");
   assertNoOperationalAuthority();
 });
@@ -1315,11 +1374,11 @@ test("alert acknowledgement, assignment, filters and AQ-07 navigation share sour
   endUiCase(t);
   render(React.createElement(App));
   click("Alert Center");
-  let traffic = alertArticle("Traffic & Air Quality Deterioration");
+  let traffic = alertArticle("Recurring queue at a monitored location");
   assert.equal(within(traffic).getByRole("button", { name: "Review & resolve" }).disabled, true);
   fireEvent.click(within(traffic).getByRole("button", { name: "Acknowledge", exact: true }));
-  fireEvent.change(within(traffic).getByLabelText("Owner for INC-2026-1109-H03"), { target: { value: "Environment" } });
-  assert.equal(within(traffic).getByLabelText("Owner for INC-2026-1109-H03").value, "Environment");
+  fireEvent.change(within(traffic).getByLabelText("Owner for INC-2026-1109-H03"), { target: { value: "Environment / Urban Planning" } });
+  assert.equal(within(traffic).getByLabelText("Owner for INC-2026-1109-H03").value, "Environment / Urban Planning");
   assert.ok(within(traffic).getByRole("button", { name: "Acknowledged", exact: true }).disabled);
   assertNoOperationalAuthority();
   fireEvent.change(screen.getByLabelText("Search alerts"), { target: { value: "AQ-07" } });
@@ -1342,21 +1401,21 @@ test("alert acknowledgement, assignment, filters and AQ-07 navigation share sour
   fireEvent.click(within(review).getByRole("button", { name: "Confirm resolution" }));
   assert.equal(screen.queryByRole("button", { name: "AQ-07 Scheduled Maintenance", exact: true }), null);
   assert.match(document.querySelector(".gp-alert-count").textContent, /2 open.*1 closed/);
-  assert.equal(document.querySelector(".nav-count").textContent, "2");
+  assert.equal(document.querySelector(".nav-count"), null, "secondary alert tools do not add an unrequested main navigation section");
   fireEvent.change(screen.getByLabelText("Alert status"), { target: { value: "all" } });
   sourceAlert = alertArticle("AQ-07 Scheduled Maintenance");
   assert.ok(within(sourceAlert).getByText("Resolved after review"));
   assert.match(sourceAlert.textContent, /Restored backup source reviewed/);
   fireEvent.change(screen.getByLabelText("Severity"), { target: { value: "critical" } });
   assert.ok(screen.getByText("1 shown"));
-  assert.ok(alertArticle("Traffic & Air Quality Deterioration"));
+  assert.ok(alertArticle("Recurring queue at a monitored location"));
   click("Data Health");
   click("Inspect AQ-07, Healthy");
   click("Simulate outage");
   click("Alert Center");
   sourceAlert = alertArticle("AQ-07 Scheduled Maintenance");
   assert.ok(within(sourceAlert).getByText("New"));
-  assert.equal(document.querySelector(".nav-count").textContent, "3");
+  assert.equal(document.querySelector(".nav-count"), null);
   assert.match(document.querySelector(".gp-alert-count").textContent, /3 open/);
   assert.equal(within(sourceAlert).getByRole("button", { name: "Acknowledge", exact: true }).disabled, false);
   assert.equal(within(sourceAlert).getByRole("button", { name: "Review & resolve" }).disabled, true);
@@ -1375,38 +1434,38 @@ test("the traffic alert follows intervention and measurement but requires a sepa
   endUiCase(t);
   render(React.createElement(App));
   click("Alert Center");
-  let alert = alertArticle("Traffic & Air Quality Deterioration");
+  let alert = alertArticle("Recurring queue at a monitored location");
   fireEvent.click(within(alert).getByRole("button", { name: "Acknowledge", exact: true }));
   fireEvent.click(within(alert).getByRole("button", { name: "Review incident" }));
-  click("Compare scenarios");
+  click("Explore target scenarios");
   click("Review & approve");
-  click("Approve & Activate");
+  approveCurrentPlan();
   click("Alert Center");
-  alert = alertArticle("Traffic & Air Quality Deterioration");
+  alert = alertArticle("Recurring queue at a monitored location");
   assert.ok(within(alert).getByText("In progress"));
   assert.equal(within(alert).getByRole("button", { name: "Review & resolve" }).disabled, true);
   click("Overview");
   click("Pause");
   click("Alert Center");
-  assert.ok(within(alertArticle("Traffic & Air Quality Deterioration")).getByText("Paused"));
+  assert.ok(within(alertArticle("Recurring queue at a monitored location")).getByText("Paused"));
   click("Overview");
   click("Resume");
   click("Close Intervention");
   click("Close & measure");
   click("Alert Center");
-  alert = alertArticle("Traffic & Air Quality Deterioration");
+  alert = alertArticle("Recurring queue at a monitored location");
   assert.ok(within(alert).getByText("Measuring outcome"));
   assert.equal(within(alert).getByRole("button", { name: "Review & resolve" }).disabled, true);
-  await waitFor(() => assert.ok(within(alertArticle("Traffic & Air Quality Deterioration")).getByText("Awaiting outcome review")), { timeout: 7000 });
+  await waitFor(() => assert.ok(within(alertArticle("Recurring queue at a monitored location")).getByText("Awaiting outcome review")), { timeout: 7000 });
   assert.match(document.querySelector(".gp-alert-count").textContent, /3 open.*0 closed/);
-  alert = alertArticle("Traffic & Air Quality Deterioration");
+  alert = alertArticle("Recurring queue at a monitored location");
   fireEvent.click(within(alert).getByRole("button", { name: "Review & resolve" }));
   const review = within(alert).getByRole("region", { name: "Resolution review for INC-2026-1109-H03" });
   assert.equal(within(review).getByRole("button", { name: "Confirm resolution" }).disabled, true);
   fireEvent.click(within(review).getByRole("checkbox", { name: /I reviewed the evidence/ }));
   fireEvent.click(within(review).getByRole("button", { name: "Confirm resolution" }));
-  assert.equal(screen.queryByRole("button", { name: "Traffic & Air Quality Deterioration", exact: true }), null);
-  assert.equal(document.querySelector(".nav-count").textContent, "2");
+  assert.equal(screen.queryByRole("button", { name: "Recurring queue at a monitored location", exact: true }), null);
+  assert.equal(document.querySelector(".nav-count"), null, "secondary alert tools do not add an unrequested main navigation section");
   click("Overview");
   assert.equal(document.querySelector(".alert-stat strong").textContent, "2");
 });
@@ -1465,7 +1524,7 @@ test("map and scenario view choices survive navigation and reload without restor
   fireEvent.change(screen.getByRole("slider", { name: "Drag to compare before and after" }), { target: { value: "67" } });
   click("Pan both maps");
   click("Review & approve");
-  click("Approve & Activate");
+  approveCurrentPlan();
   assert.ok(screen.getByText("Signal Plan H03"));
   cleanup();
   render(React.createElement(App));
@@ -1484,7 +1543,7 @@ test("map and scenario view choices survive navigation and reload without restor
   assert.equal(screen.getByRole("slider", { name: "Drag to compare before and after" }).value, "67");
   assert.equal(button("Review & approve").disabled, false);
   click("KPI & Impact");
-  assert.ok(screen.getByText("OUTCOME NOT YET MEASURED"));
+  expectBlankActual();
 });
 
 const controlledGeography = () => {
@@ -1541,23 +1600,23 @@ test("text-only recovery keeps human approval mandatory and later map retries pr
   click("Cancel");
   click("Next Step");
   assertNoOperationalAuthority();
-  click("Approve & Activate");
-  assert.equal(currentStep(), "Intervention");
+  approveCurrentPlan();
+  assert.equal(currentStep(), "Authorised execution");
   assert.ok(screen.getByText("Signal Plan H03"));
   click("Retry preparation");
   assert.equal(button("Next Step").disabled, true);
   await act(async () => requests[1].reject(new Error("Synthetic retry failure")));
   assert.ok(screen.getByText("Signal Plan H03"));
-  assert.equal(currentStep(), "Intervention");
+  assert.equal(currentStep(), "Authorised execution");
   click("Retry preparation");
   await act(async () => requests[2].resolve({ views: 2 }));
   assert.ok(screen.getByText("City ready"));
   assert.ok(screen.getByText("Signal Plan H03"));
   assert.ok(screen.getByText("MONITORING"));
-  assert.equal(currentStep(), "Intervention");
+  assert.equal(currentStep(), "Authorised execution");
   assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
   click("Decision Log");
-  assert.equal(screen.getAllByText("Approved & activated · Scenario B").length, 1);
+  assert.equal(screen.getAllByText(/^Human approval recorded/).length, 1);
 });
 
 test("the actual map error boundary retries locally while preserving its parent view context", { timeout: 10000 }, async (t) => {
@@ -1588,5 +1647,142 @@ test("the actual map error boundary retries locally while preserving its parent 
   assert.equal(recovered.dataset.entity, "AQ-04");
   assert.equal(document.querySelector(".geo-loading-failed"), null);
   assert.ok(expectedErrors.some(args => args.some(value => String(value).includes("Expected geographic renderer failure"))));
+  assertNoOperationalAuthority();
+});
+
+
+test("ZTL actions require Police, legal and privacy approval before separate human execution", { timeout: 12000 }, async (t) => {
+  endUiCase(t);
+  render(React.createElement(App));
+  click("ZTL Access");
+  assert.match(document.querySelector(".main-shell").textContent, /Recorded entries are not automatically violations/);
+  assert.match(document.querySelector(".main-shell").textContent, /permit.*exemption/i);
+  click("Review ZTL proposal");
+  const dialog = screen.getByRole("dialog", { name: "Approve intervention" });
+  const scope = within(dialog);
+  assert.equal(button("Approve intervention").disabled, true);
+  for (const name of ["Residents", "Emergency vehicles", "People with disabilities", "Deliveries", "Public transport"]) assert.equal(scope.getByRole("checkbox", { name, exact: true }).checked, true);
+  for (const name of ["Pedestrian safety and crossing delay reviewed", "Bus punctuality and access reviewed", "Residential congestion displacement reviewed", "Historic-centre compatibility reviewed", "Time-limited trial and rollback plan reviewed", "Aggregate entries reviewed by gate and period; entries are not automatically violations", "I understand this action-specific or modified plan has no numerical forecast"]) checkIfNeeded(name, scope);
+  click("Record plan review");
+  fireEvent.change(scope.getByLabelText("Acting as the proposed approving authority"), { target: { value: "Mobility Department" } });
+  assert.equal(button("Approve intervention").disabled, true, "Mobility alone cannot approve Police legal action");
+  fireEvent.change(scope.getByLabelText("Acting as the proposed approving authority"), { target: { value: "Municipal Police" } });
+  checkIfNeeded("I confirm this synthetic decision as the proposed approving authority", scope);
+  assert.equal(button("Approve intervention").disabled, true);
+  checkIfNeeded("Municipal Police operational review confirmed for this synthetic ZTL decision", scope);
+  checkIfNeeded("Established legal procedure reviewed; no automatic ZTL rule changes", scope);
+  assert.equal(button("Approve intervention").disabled, true, "legal acknowledgement alone does not complete privacy review");
+  checkIfNeeded("Authorised privacy review confirmed; no identifiable licence-plate records", scope);
+  assert.equal(button("Approve intervention").disabled, false);
+  click("Approve intervention");
+  assert.equal(screen.queryByText("MONITORING"), null);
+  executeApprovedPlan();
+  assert.ok(screen.getByText("MONITORING"));
+  click("Decision Log");
+  assert.match(document.querySelector(".decision-log-screen").textContent, /Municipal Police/);
+  assert.ok(screen.getByText("Human legal-process execution recorded · synthetic only"));
+});
+
+test("K7 distinguishes a pending result from a documented inconclusive window without claiming measured benefit", { timeout: 12000 }, async (t) => {
+  endUiCase(t);
+  render(React.createElement(App));
+  click("Digital Twin");
+  click("Review & approve");
+  approveCurrentPlan();
+  click("KPI & Impact");
+  selectKpi("K7");
+  assert.match(document.querySelector(".kw-primary-result").textContent, /0%.*0.*complete.*1.*recorded/);
+  assert.match(screen.getByRole("region", { name: "Decision record coverage" }).textContent, /Missing: result\.status/);
+  selectKpi("K4");
+  assert.ok(screen.getByText("The recorded demo decision is within the illustrative pilot target."));
+  click("Overview");
+  click("Close Intervention");
+  click("Close & measure");
+  await completePilotWindow();
+  expectBlankActual();
+  selectKpi("K7");
+  assert.match(document.querySelector(".kw-primary-result").textContent, /100%.*1.*complete.*1.*recorded/);
+  assert.ok(within(screen.getByRole("region", { name: "Decision record coverage" })).getByText("inconclusive"));
+  assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
+});
+
+test("heat preparedness requires Civil Protection and records human actions without inventing local exposure", { timeout: 18000 }, async (t) => {
+  endUiCase(t);
+  render(React.createElement(App));
+  click("Heat Preparedness");
+  assert.match(document.querySelector(".main-shell").textContent, /No documented local temperature \/ humidity sensor network/);
+  assert.match(document.querySelector(".main-shell").textContent, /No validated cooling-point inventory/);
+  click("CURRENT");
+  assert.equal(button("Review preparedness response").disabled, true);
+  click("MVP");
+  assert.equal(button("Review preparedness response").disabled, false, "manual preparedness can be piloted without pretending local sensors exist");
+  click("Review preparedness response");
+  const scope = within(screen.getByRole("dialog", { name: "Review heat preparedness" }));
+  assert.equal(button("Approve & activate preparedness").disabled, true);
+  fireEvent.change(scope.getByLabelText("Approval authority"), { target: { value: "Civil Protection" } });
+  fireEvent.change(scope.getByLabelText("Accountable Civil Protection approver"), { target: { value: "Civil Protection Duty Officer #01" } });
+  for (const name of ["Official forecast source, issue time and coverage reviewed", "Aggregated territorial information and indicative priority areas reviewed", "Social Services outreach and support arrangements reviewed", "Accessibility and protected access reviewed", "Civil Protection safety and escalation procedures reviewed"]) checkIfNeeded(name, scope);
+  assert.equal(button("Approve & activate preparedness").disabled, true);
+  fireEvent.click(button("Approve & activate preparedness"));
+  assert.equal(screen.queryByRole("button", { name: "Pause preparedness", exact: true }), null);
+  checkIfNeeded("I am the accountable Civil Protection approver and authorise this synthetic preparedness response.", scope);
+  assert.equal(button("Approve & activate preparedness").disabled, false);
+  click("Approve & activate preparedness");
+  assert.ok(button("Pause preparedness"));
+  click("Pause preparedness");
+  assert.ok(button("Resume preparedness"));
+  click("Resume preparedness");
+  click("Close for post-event review");
+  assert.equal(screen.queryByText("MEASURED · SYNTHETIC OUTCOME"), null);
+  click("KPI Framework");
+  selectKpi("K5");
+  assert.ok(within(document.querySelector(".kw-primary-result")).getAllByText("No data").length);
+  assert.match(document.querySelector(".kw-detail").textContent, /TARGET/);
+  selectKpi("K6");
+  assert.ok(within(document.querySelector(".kw-primary-result")).getAllByText("No data").length);
+  click("Decision Log");
+  assert.match(document.querySelector(".decision-log-screen").textContent, /Civil Protection/);
+});
+
+test("CURRENT inventory cannot activate a target-state traffic plan even with reviewed synthetic safeguards", { timeout: 10000 }, async (t) => {
+  endUiCase(t);
+  render(React.createElement(App));
+  click("CURRENT");
+  click("Digital Twin");
+  click("Review & approve");
+  const dialog = screen.getByRole("dialog", { name: "Approve intervention" });
+  const scope = within(dialog);
+  for (const name of ["Pedestrian safety and crossing delay reviewed", "Bus punctuality and access reviewed", "Residential congestion displacement reviewed", "Historic-centre compatibility reviewed", "Time-limited trial and rollback plan reviewed", "Synthetic queue-pattern trigger reviewed; municipal operating threshold remains to be agreed"]) checkIfNeeded(name, scope);
+  fireEvent.change(scope.getByLabelText("Acting as the proposed approving authority"), { target: { value: "Mobility Department" } });
+  checkIfNeeded("I confirm this synthetic decision as the proposed approving authority", scope);
+  assert.equal(button("Record plan review").disabled, true);
+  assert.equal(button("Approve intervention").disabled, true);
+  fireEvent.click(button("Approve intervention"));
+  assertNoOperationalAuthority();
+  click("Cancel");
+  click("TARGET");
+  click("Review & approve");
+  assert.equal(button("Approve intervention").disabled, true, "maturity change does not confer authority confirmation");
+  reviewCurrentPlan();
+  assertNoOperationalAuthority();
+});
+
+test("a declined recommendation records the human reason without activating an intervention", { timeout: 10000 }, async (t) => {
+  endUiCase(t);
+  render(React.createElement(App));
+  click("Digital Twin");
+  click("Review & approve");
+  click("Record override");
+  assert.equal(button("Record override decision").disabled, true);
+  fireEvent.change(screen.getByLabelText("Override reason"), { target: { value: "Defer until the pedestrian crossing review is independently verified." } });
+  click("Record override decision");
+  assert.equal(screen.queryByRole("dialog", { name: "Approve intervention" }), null);
+  assertNoOperationalAuthority();
+  click("Decision Log");
+  assert.ok(screen.getByText("Recommendation rejected · human decision recorded"));
+  assert.ok(screen.getByText("Defer until the pedestrian crossing review is independently verified."));
+  click("KPI & Impact");
+  selectKpi("K7");
+  assert.match(document.querySelector(".kw-primary-result").textContent, /100%.*1.*complete.*1.*recorded/);
   assertNoOperationalAuthority();
 });

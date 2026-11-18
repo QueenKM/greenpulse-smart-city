@@ -19,11 +19,14 @@ export function calculateDecisionScore(scores) {
 }
 
 const endpoints = {
-  A: { congestion: 87, pm: 34, travel: 33, speed: 13 },
-  B: { congestion: 66, pm: 29, travel: 25, speed: 23 },
-  C: { congestion: 61, pm: 28, travel: 23, speed: 25 },
+  A: { congestion: 87, pm: 34, travel: 18, speed: 13 },
+  B: { congestion: 66, pm: 29, travel: 16.2, speed: 23 },
+  C: { congestion: 61, pm: 28, travel: 15.7, speed: 25 },
 };
-const baseline = { congestion: 72, pm: 27, travel: 28, speed: 19 };
+// K1 uses the document's 18.0 → 16.2-minute illustration. Scenario C, the
+// congested-sample share, speed and ambient readings remain separate synthetic
+// operational assumptions; none is a calibrated consequence of K1.
+const baseline = { congestion: 72, pm: 27, travel: 18, speed: 19 };
 const noActionCongestion = [
   [0, 72],
   [15, 76],

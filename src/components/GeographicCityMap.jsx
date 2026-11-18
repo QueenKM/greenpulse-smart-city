@@ -164,7 +164,7 @@ const syntheticSensors = [
     type: "traffic",
     point: nearPoint(0),
     title: "Scenario traffic sensor T14",
-    value: "19 km/h · Congestion 72%",
+    value: "SYNTHETIC · 167 vehicles / 30 min · queue 5 vehicles",
     note: "Synthetic reading · proposed sensor location",
   },
   {
@@ -172,7 +172,7 @@ const syntheticSensors = [
     type: "traffic",
     point: nearPoint(3),
     title: "Scenario traffic sensor T12",
-    value: "32 km/h · Congestion 41%",
+    value: "SYNTHETIC · 124 vehicles / 30 min · queue 3 vehicles",
     note: "Synthetic reading · proposed sensor location",
   },
   {
@@ -181,7 +181,7 @@ const syntheticSensors = [
     point: nearPoint(1),
     title: "Scenario air-quality station AQ-04",
     value: "PM2.5 27 µg/m³ · NO₂ 47 µg/m³",
-    note: "Synthetic reading · proposed monitoring location",
+    note: "TARGET · synthetic monitoring assumption; no municipal station connected",
   },
   {
     id: "AQ-07",
@@ -205,7 +205,7 @@ const syntheticSensors = [
     point: atPlace(park1, nearPoint(7)),
     title: "Proposed cooling point C01",
     value: park1?.name || "Scenario refuge location",
-    note: "Simulated deployment · not an operating cooling facility",
+    note: "MODELLED / SYNTHETIC · no validated cooling-point inventory",
   },
   {
     id: "C02",
@@ -213,7 +213,7 @@ const syntheticSensors = [
     point: atPlace(park2, nearPoint(8)),
     title: "Proposed cooling point C02",
     value: park2?.name || "Scenario refuge location",
-    note: "Simulated deployment · not an operating cooling facility",
+    note: "MODELLED / SYNTHETIC · no validated cooling-point inventory",
   },
   {
     id: "C03",
@@ -764,7 +764,7 @@ function CityMap({
   };
   const visibleSensors = syntheticSensors.filter((sensor) =>
     isMVP
-      ? ["traffic", "air", "offline"].includes(sensor.type)
+      ? ["traffic"].includes(sensor.type)
       : sensor.type !== "cooling" || showHeat,
   );
   const selected =

@@ -46,7 +46,7 @@ export default function ForecastTimeline({
         className={`forecast-time-status ${value === 0 ? "live" : "modelled"}`}
       >
         <i />
-        {value === 0 ? "LIVE" : "MODELLED"}
+        {value === 0 ? "SYNTHETIC" : "MODELLED · TARGET"}
         <time dateTime={when.toISOString()}>
           {formatCityTime(when, { seconds: false })}
         </time>

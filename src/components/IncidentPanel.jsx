@@ -1,7 +1,6 @@
 import React, { useId } from "react";
 import {
   ArrowRight,
-  ArrowUpRight,
   BookOpen,
   ChevronDown,
   Clock3,
@@ -23,11 +22,6 @@ export default function IncidentPanel({
   onInspectDataHealth,
 }) {
   const titleId = useId();
-  const minutes = forecastOffset > 0 ? forecastOffset : 38;
-  const congestion =
-    forecastOffset > 0
-      ? (forecast?.congestion ?? Math.round(72 + (forecastOffset / 60) * 15))
-      : 82;
 
   return (
     <section
@@ -39,13 +33,13 @@ export default function IncidentPanel({
         <span className="gp-incident-id">{ID}</span>
         <span className="gp-incident-badge is-critical">
           <i />
-          CRITICAL
+          SYNTHETIC ALERT
         </span>
       </div>
       <h2 className="gp-incident-title" id={titleId}>
-        Traffic & Air Quality
+        Recurring queue
         <br />
-        Deterioration
+        at a monitored location
       </h2>
       <div className="gp-incident-location-row">
         <p className="gp-incident-location">
@@ -64,67 +58,56 @@ export default function IncidentPanel({
           <div className="gp-incident-section-label">
             <span className="gp-incident-badge is-live">
               <i />
-              {readiness?.canApprove === false ? "REFERENCE" : "LIVE"}
+              SYNTHETIC
             </span>
             <span>Synthetic</span>
           </div>
           <dl className="gp-incident-metrics">
             <div>
-              <dt>Traffic speed</dt>
+              <dt>Selected-point count</dt>
               <dd>
-                19<small> km/h</small>
+                167<small> vehicles / 30 min</small>
               </dd>
             </div>
             <div>
-              <dt>Congestion</dt>
+              <dt>Indicative queue</dt>
               <dd>
-                72<small>%</small>
+                5<small> vehicles</small>
               </dd>
             </div>
             <div>
-              <dt>PM2.5</dt>
+              <dt>Corridor travel time</dt>
               <dd>
-                27<small> µg/m³</small>
+                <small>No data · PILOT</small>
               </dd>
             </div>
           </dl>
         </div>
 
         <div className="gp-incident-forecast" aria-live="polite">
-          <div>
-            <span className="gp-incident-badge is-modelled">MODELLED</span>
-            <p title={`Congestion in ${minutes} minutes`}>
-              <span className="gp-incident-forecast-description">
-                Congestion
-              </span>
-              <strong>+{minutes} min</strong>
-            </p>
-          </div>
-          <strong className="gp-incident-forecast-value">
-            {congestion}
-            <small>%</small>
-            <ArrowUpRight size={18} />
-          </strong>
+          <div><span className="gp-incident-badge is-modelled">PILOT · CONDITIONAL</span><p><span className="gp-incident-forecast-description">K1 timestamp linkage</span><strong>Validation required</strong></p></div>
+          <strong className="gp-incident-forecast-value gp-no-data">No data</strong>
         </div>
       </div>
 
       <div className="gp-incident-recommendation">
         <span className="gp-incident-recommendation-label">
           <GitBranch size={13} />
-          AI RECOMMENDATION
+          AI-SUPPORTED OPTION · TARGET
         </span>
         <h3>
-          Adaptive traffic signal timing<span>+ targeted route guidance</span>
+          Review a time-limited signal plan<span>Mobility approval → authorised execution</span>
         </h3>
         <p className="gp-incident-expected">
-          <span>Expected</span>
+          <span>K1 illustration</span>
           <b>
-            −12% <small>congestion</small>
+            −10% <small>travel time</small>
           </b>
           <b>
-            −8% <small>emissions</small>
+            18.0 → 16.2 <small>min · MODELLED</small>
           </b>
         </p>
+        <p className="gp-illustration-note">Illustrative values used to demonstrate the KPI calculation. The real baseline will be established during pilot preparation.</p>
       </div>
       {readiness && !readiness.canApprove && (
         <div className="workflow-readiness" role="status">
@@ -137,7 +120,7 @@ export default function IncidentPanel({
         className="button primary gp-incident-compare"
         onClick={onCompare}
       >
-        Compare scenarios
+        Explore target scenarios
         <ArrowRight size={16} />
       </button>
 
@@ -153,8 +136,8 @@ export default function IncidentPanel({
               <dd>18 sec freshness</dd>
             </div>
             <div>
-              <dt>AQ-04</dt>
-              <dd>52 sec freshness</dd>
+              <dt>NO₂ / PM2.5 · TARGET</dt>
+              <dd>No data · integration required</dd>
             </div>
             <div>
               <dt>Forecast horizon</dt>
@@ -169,8 +152,7 @@ export default function IncidentPanel({
           <p className="gp-incident-human">
             <ShieldCheck size={13} />
             <span>
-              AI recommends. An identified operator must approve every
-              intervention.
+              AI recommends. Mobility Department approves; an authorised traffic-signal operator executes.
             </span>
           </p>
           {onEvidence && (

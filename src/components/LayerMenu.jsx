@@ -18,7 +18,7 @@ const layerOptions = [
     Icon: CarFront,
     tone: "cyan",
     stage: "MVP",
-    description: "Synthetic road speeds and congestion.",
+    description: "Synthetic counts and queue patterns at selected points.",
     unavailable: "Priority traffic workflow becomes available in MVP.",
   },
   {
@@ -27,7 +27,7 @@ const layerOptions = [
     Icon: Wind,
     tone: "cyan",
     stage: "MVP",
-    description: "Synthetic air-monitoring observations.",
+    description: "TARGET environmental illustration; no connected sensors.",
     unavailable: "Priority air-monitoring sources connect in MVP.",
   },
   {

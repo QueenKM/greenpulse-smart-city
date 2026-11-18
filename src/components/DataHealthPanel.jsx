@@ -52,7 +52,7 @@ const STATUS_TONES = {
   reference: "purple",
   unknown: "red",
 };
-const DEMO_CONTROLS = new Set(["traffic", "AQ-04", "AQ-07", "visitor"]);
+const DEMO_CONTROLS = new Set(["traffic", "AQ-04", "AQ-07", "visitor", "parking", "weather", "AVL"]);
 
 function Status({ status }) {
   return (
@@ -77,6 +77,7 @@ function freshness(source, status) {
 }
 
 export default function DataHealthPanel({
+  action = "signals",
   qualityState,
   onQualityChange,
   selectedSourceId,
@@ -92,7 +93,8 @@ export default function DataHealthPanel({
     QUALITY_SOURCES[0];
   const selectedStatus = getSourceStatus(state, selected.id);
   const summary = getQualitySummary(state);
-  const readiness = evaluateDataReadiness(state);
+  const readiness = evaluateDataReadiness(state, action);
+  const selectedRequired = readiness.checks.find(check => check.id === selected.id)?.required === true;
   const canControl =
     DEMO_CONTROLS.has(selected.id) &&
     (!!onQualityChange || qualityState === undefined);
@@ -145,7 +147,7 @@ export default function DataHealthPanel({
           </svg>
           <div>
             <strong>
-              {summary.qualityPercent ?? "—"}
+              {summary.qualityPercent ?? "No data"}
               {summary.qualityPercent !== null && <small>%</small>}
             </strong>
             <span>
@@ -158,7 +160,7 @@ export default function DataHealthPanel({
         <div className="quality-summary-copy">
           <span className="quality-eyebrow">TRUST & OBSERVABILITY</span>
           <h2>
-            Decision-grade data.
+            Synthetic replay data.
             <br />
             <span>Visible limitations.</span>
           </h2>
@@ -173,7 +175,7 @@ export default function DataHealthPanel({
             {summary.operational}
             <span>/ {summary.total}</span>
           </strong>
-          <span>OPERATIONAL FEEDS</span>
+          <span>SYNTHETIC REPLAY FEEDS</span>
           <small>Synthetic source state</small>
         </div>
         <div
@@ -227,7 +229,7 @@ export default function DataHealthPanel({
                     <span>
                       <strong>
                         {source.label}
-                        {source.required && (
+                        {readiness.checks.find(check => check.id === source.id)?.required && (
                           <i
                             className="quality-required-mark"
                             title="Required for H-03"
@@ -278,7 +280,7 @@ export default function DataHealthPanel({
               </h3>
             </div>
             <p>
-              17 operational feeds = traffic 7 + air quality 2 + parking 4 + AVL
+              17 synthetic replay feeds = traffic 7 + air quality 2 + parking 4 + AVL
               2 + weather 1 + visitor flow 1.{" "}
               <strong>{summary.operational}</strong> currently satisfy the
               source policy.
@@ -312,9 +314,9 @@ export default function DataHealthPanel({
           <div className="quality-inspector-top">
             <span className="quality-eyebrow">SOURCE → DECISION</span>
             <span
-              className={`quality-requirement ${selected.required ? "required" : ""}`}
+              className={`quality-requirement ${selectedRequired ? "required" : ""}`}
             >
-              {selected.required
+              {selectedRequired
                 ? "REQUIRED FOR H-03"
                 : selected.id === "reference"
                   ? "REFERENCE"
@@ -339,23 +341,23 @@ export default function DataHealthPanel({
             <p>{selected.fallback}</p>
           </section>
           <div
-            className={`quality-eligibility ${selected.required && selectedStatus !== "healthy" ? "blocked" : "ready"}`}
+            className={`quality-eligibility ${selectedRequired && !["healthy", "reference"].includes(selectedStatus) ? "blocked" : "ready"}`}
           >
-            {selected.required && selectedStatus !== "healthy" ? (
+            {selectedRequired && !["healthy", "reference"].includes(selectedStatus) ? (
               <CircleAlert size={16} />
             ) : (
               <Check size={16} />
             )}
             <span>
-              {selected.required
-                ? selectedStatus === "healthy"
+              {selectedRequired
+                ? ["healthy", "reference"].includes(selectedStatus)
                   ? "Required input available"
                   : "This source blocks H-03 approval"
                 : "Does not block H-03 approval"}
               <small>
-                {selected.required
-                  ? "Approval requires both traffic and AQ-04 to be healthy."
-                  : "Optional context never substitutes for required evidence."}
+                {selectedRequired
+                  ? `Required for the selected ${action} decision. Missing inputs cannot be replaced by a high scenario score.`
+                  : selected.id === "AQ-04" ? "TARGET K3 requires validated measured inputs. No ARPA feed is connected; Daily Traffic and ZTL decisions do not require this synthetic AQ replay." : "Optional context never substitutes for required evidence."}
               </small>
             </span>
           </div>
@@ -407,8 +409,7 @@ export default function DataHealthPanel({
             </h3>
             {readiness.canApprove ? (
               <p>
-                Traffic and AQ-04 satisfy the required source policy. AI remains
-                advisory; a human still authorises the intervention.
+                The selected workflow satisfies its synthetic review policy. This does not validate municipal access or KPI readiness. AI remains advisory; human approval and authorised execution are separate.
               </p>
             ) : (
               <ul>

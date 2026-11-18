@@ -14,10 +14,12 @@ import "./WorkspaceMenu.css";
 const destinations = [
   { label: "City overview", page: "Overview", icon: Activity },
   { label: "City map", page: "City Map", icon: Map },
-  { label: "Scenario intelligence", page: "Digital Twin", icon: Layers3 },
+  { label: "Alert Center", page: "Alert Center", icon: Activity },
+  { label: "Data Health", page: "Data Health", icon: Layers3 },
+  { label: "Selective Digital Twin · TARGET", page: "Digital Twin", icon: Layers3 },
   {
-    label: "Implementation roadmap",
-    page: "Implementation Roadmap",
+    label: "Governance & Roadmap",
+    page: "Governance & Roadmap",
     icon: GitBranch,
   },
   { label: "Presentation Demo", demo: true, icon: Play },

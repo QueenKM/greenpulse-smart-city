@@ -12,15 +12,15 @@ export const MATURITY_MAP_STAGES = {
     label: "MVP",
     shortLabel: "Priority corridor",
     description:
-      "A proposed traffic and air-quality workflow with limited corridor and monitoring coverage.",
-    availableLayers: ["traffic", "air", "heritage", "sensors"],
+      "PILOT: counts and queue patterns at selected monitoring points; timestamp linkage must be validated for corridor travel time.",
+    availableLayers: ["traffic", "heritage", "sensors"],
     viewMode: "2d",
   },
   TARGET: {
     label: "TARGET",
     shortLabel: "Integrated urban model",
     description:
-      "An integrated city view with multi-domain layers and mapped-height 3D modelling.",
+      "TARGET: selective synthetic modelling and environmental layers after data validation; no connected municipal systems.",
     availableLayers: ["traffic", "air", "heat", "heritage", "sensors"],
     viewMode: "3d",
   },
