@@ -23,7 +23,7 @@ test("the final presentation defines exactly three workflows sharing one decisio
 test("current evidence preserves supplied asset counts without pretending Leuven systems are connected", () => {
   assert.deepEqual(Object.fromEntries(REFERENCE_ASSETS.map(({ id, count }) => [id, count])), {
     "traffic-cameras": 18, "vehicle-loops": 4, "signal-controllers": 4,
-    "its-panels": 21, "ztl-gates": 10, "ocr-cameras": 16,
+    "its-panels": 21, "ztl-gates": 10, "ocr-cameras": 16, "parking-sensors": 5,
   });
   assert.ok(REFERENCE_ASSETS.every(asset => asset.sourceId === "current-final-presentation" && asset.connected === false && asset.verifiedForLeuven === false));
   assert.ok(USE_CASES.traffic.evidence.includes("Municipal GIS"));
@@ -83,4 +83,21 @@ test("the 18-to-16.2 traffic example is explicitly illustrative and mathematical
   assert.equal(TRAFFIC_PILOT_EXAMPLE.scenarioMinutes, 16.2);
   assert.ok(Math.abs((16.2 - 18) / 18 * 100 - TRAFFIC_PILOT_EXAMPLE.relativeChangePercent) < 1e-10);
   assert.equal(TRAFFIC_PILOT_EXAMPLE.boundary, "Illustrative values used to demonstrate the KPI calculation. The real baseline will be established during pilot preparation.");
+});
+
+
+test("final inventory distinguishes installed parking hardware from data access and corridor coverage", () => {
+  const loops = REFERENCE_ASSETS.find(asset => asset.id === "vehicle-loops");
+  assert.equal(loops.count, 4);
+  assert.equal(loops.publicParkingAreas, 3);
+  assert.match(loops.caveat, /not documented corridor counters/);
+  const parking = REFERENCE_ASSETS.find(asset => asset.id === "parking-sensors");
+  assert.equal(parking.count, 5);
+  assert.equal(parking.accessStatus, "supplier-contract-pending");
+  assert.match(parking.availability, /NO DATA/);
+  assert.match(parking.caveat, /Data is unavailable until the supplier contract is finalised/);
+  assert.equal(parking.connected, false);
+  assert.equal(parking.verifiedForLeuven, false);
+  assert.ok(USE_CASES.traffic.gaps.some(gap => /three public parking areas/.test(gap)));
+  assert.ok(USE_CASES.ztl.evidence.some(evidence => /traffic-fine.*subject to lawful and technically validated access/.test(evidence)));
 });

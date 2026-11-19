@@ -138,11 +138,17 @@ export function Drawer({
   );
 }
 
-export function HandoverDialog({ open, onClose, onConfirm }) {
+const handoverPlans = {
+  signals: { label: "SIGNAL PLAN H03", role: "Authorised traffic-signal operator", note: "Monitor H-03 counts and queue patterns. Retain pedestrian, bus and rollback safeguards at the next review." },
+  guidance: { label: "ROUTE GUIDANCE H03", role: "Authorised traffic-signal operator", note: "Review the guidance trial and monitored queue patterns. Preserve protected access and withdraw guidance if required by the approved plan." },
+  ztl: { label: "ZTL ACCESS REVIEW H03", role: "Municipal Police", note: "Review aggregate gate entries and the recorded legal procedure. Retain permit and exemption safeguards; no automatic access-rule changes." },
+};
+
+export function HandoverDialog({ open, action = "signals", onClose, onConfirm }) {
+  const plan = handoverPlans[action] || handoverPlans.signals;
   const [operator, setOperator] = useState("Control Room Operator #03");
-  const [note, setNote] = useState(
-    "Monitor H-03 and review the NO₂ forecast at the next checkpoint.",
-  );
+  const [note, setNote] = useState(plan.note);
+  useEffect(() => { if (open) setNote(plan.note); }, [open, plan.note]);
   return (
     <Drawer
       open={open}
@@ -169,7 +175,7 @@ export function HandoverDialog({ open, onClose, onConfirm }) {
       }
     >
       <div className="gp-dialog-action-block">
-        <span className="gp-dialog-field-label">SIGNAL PLAN H03</span>
+        <span className="gp-dialog-field-label">{plan.label}</span>
         <h3>
           Transfer responsibility.
           <br />
@@ -187,6 +193,7 @@ export function HandoverDialog({ open, onClose, onConfirm }) {
           <option>Control Room Operator #04</option>
         </select>
       </label>
+      <p className="gp-versioned-role-note">Receiving role: {plan.role}. This handover retains the recorded approval and does not authorise a new intervention.</p>
       <label className="gp-dialog-input-label">
         Handover note
         <textarea

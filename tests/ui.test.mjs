@@ -1678,6 +1678,13 @@ test("ZTL actions require Police, legal and privacy approval before separate hum
   assert.equal(screen.queryByText("MONITORING"), null);
   executeApprovedPlan();
   assert.ok(screen.getByText("MONITORING"));
+  click("Handover");
+  const handover = within(screen.getByRole("dialog", { name: "Handover intervention" }));
+  assert.ok(handover.getByText("ZTL ACCESS REVIEW H03", { exact: true }));
+  assert.match(handover.getByLabelText("Handover note").value, /aggregate gate entries.*legal procedure/);
+  assert.doesNotMatch(handover.getByLabelText("Handover note").value, /NO₂|signal plan/i);
+  assert.match(handover.getByText(/Receiving role:/).textContent, /Municipal Police/);
+  fireEvent.click(handover.getByRole("button", { name: "Confirm handover", exact: true }));
   click("Decision Log");
   assert.match(document.querySelector(".decision-log-screen").textContent, /Municipal Police/);
   assert.ok(screen.getByText("Human legal-process execution recorded · synthetic only"));
@@ -1784,5 +1791,20 @@ test("a declined recommendation records the human reason without activating an i
   click("KPI & Impact");
   selectKpi("K7");
   assert.match(document.querySelector(".kw-primary-result").textContent, /100%.*1.*complete.*1.*recorded/);
+  assertNoOperationalAuthority();
+});
+
+test("Daily Traffic KPI impact links open the requested indicator", { timeout: 12000 }, async (t) => {
+  endUiCase(t);
+  render(React.createElement(App));
+  const titles = { K1: "Pilot corridor travel time and delay", K2: "Estimated tailpipe CO₂ avoided", K4: "Alert-to-decision time", K7: "Decisions fully recorded" };
+  for (const [id, title] of Object.entries(titles)) {
+    fireEvent.click(within(screen.getByRole("navigation", { name: "Main navigation" })).getByRole("button", { name: "Daily Traffic", exact: true }));
+    const kpis = within(document.querySelector(".ucb-kpis"));
+    fireEvent.click(kpis.getByRole("button", { name: id, exact: true }));
+    assert.equal(document.querySelector(".page-heading h1").textContent, "KPI Framework");
+    assert.equal(document.querySelector(".kw-detail-heading h2").textContent, title);
+    assert.match(document.querySelector(".kw-detail-heading .kw-overline").textContent, new RegExp(`^${id} /`));
+  }
   assertNoOperationalAuthority();
 });

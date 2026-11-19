@@ -27,7 +27,7 @@
 | **ZTL / Historic-Centre Access Management** | Compare aggregate entry patterns by gate and period, using 10 ZTL gates, 16 OCR cameras and GIS. Police and permit records require lawful, technically validated access. | Municipal Police leads operational/legal action, with Mobility, IT / Data Office and an authorised privacy lead. |
 | **Heatwave Preparedness** | Use official external forecasts, demographic registry, GIS, partial tree/green-space inventory and civil-protection plans for indicative priorities and coordinated preparedness. | Civil Protection approves / activates; Environment / Urban Planning interprets environmental evidence; Social Services coordinates outreach. |
 
-The final application specification associated with **CURRENT FINAL version.pptx** takes precedence over earlier working documents. See [document integration](docs/DOCUMENT-INTEGRATION.md) for the implementation contract.
+The reviewed **CURRENT FINAL version-3.pptx** presentation (18 slides) takes precedence over earlier working documents. Its benchmark assessment covers **Trikala, Venice, Pavia and Leuven**; these precedents inform transferability, not GreenPulse performance. See [document integration](docs/DOCUMENT-INTEGRATION.md) for slide traceability and the implementation contract.
 
 ### Boundaries that stay visible
 
@@ -93,7 +93,7 @@ Prediction, Digital Twin simulation, new environmental sensors and full KPI cove
 
 The main navigation follows the final scope: **Overview · Daily Traffic · ZTL Access · Heat Preparedness · Architecture · KPI Framework · Decision Log · Governance & Roadmap · Presentation Demo**.
 
-The map keeps real Leuven streets, building footprints, green spaces and waterways. **CURRENT / MVP / TARGET** communicates maturity; **Layers** reveals overlays. The sidebar expands on hover or keyboard focus and uses a menu button on mobile. A guided presentation supports the decision narrative without bypassing approval or execution. View preferences survive navigation; operational approvals are not restored after refresh.
+The map keeps real Leuven streets, building footprints, green spaces and waterways. **CURRENT / MVP / TARGET** communicates maturity; **Layers** reveals overlays. The sidebar expands on hover or keyboard focus and uses a menu button on mobile. A guided presentation supports the decision narrative without bypassing approval or execution. View preferences survive navigation. Approvals and the Decision Log belong to the current browser demonstration session; refreshing or resetting clears them. Proposed role selection demonstrates accountability rather than authenticating a municipal official.
 
 The clock displays the actual date and time in **Europe/Sofia**, including daylight-saving adjustments. Synthetic scenarios use a separate demonstration context.
 
@@ -136,11 +136,19 @@ To regenerate the snapshot from a local OSM XML extract:
 python scripts/build-city-model.py /path/to/leuven-osm.xml
 ```
 
-The derivative geographic database retains its ODbL notice separately from application code. Source uploads and personal upload metadata are not published in this repository.
+The derivative geographic database retains its ODbL notice separately from application code. The original slide deck, source reports and personal upload metadata are not published in this repository.
+
+## Submission material
+
+This repository provides the runnable prototype, methodology and governance notes, reproducible capture automation and five final presentation PNGs. The reviewed presentation and original research reports remain separate course-delivery material; their entries in Evidence are provenance metadata, not downloadable annexes. Submit or link the authorised presentation and research annexes separately when handing in the full academic project.
+
+The presentation's infrastructure reality check also documents **5 paid-parking sensors**, with data unavailable until the supplier contract is finalised, and locates the **4 vehicle-counting loops at 3 public parking areas**. These are source-inventory facts to validate, not connected prototype feeds.
 
 ## Supporting material
 
 - [KPI definitions, formulas and readiness](docs/KPI-METHODOLOGY.md)
 - [Governance, authority and roadmap](docs/GOVERNANCE-ROADMAP.md)
 - [15-minute presentation guide](docs/PRESENTATION-GUIDE.md)
-- [Final-specification integration notes](docs/DOCUMENT-INTEGRATION.md)
+- [Reviewed presentation alignment and source traceability](docs/DOCUMENT-INTEGRATION.md)
+- [Presentation screenshot setup and capture guide](docs/PRESENTATION-SCREENSHOTS.md)
+- [Five final presentation screenshots](docs/presentation-assets/)

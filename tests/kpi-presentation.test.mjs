@@ -5,6 +5,7 @@ import { build } from 'esbuild';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
+import { calculateK3 } from '../src/kpi-framework.mjs';
 
 await mkdir(new URL('../work/', import.meta.url), { recursive: true });
 const built = new URL('../work/KpiWorkbench.presentation.test.mjs', import.meta.url);
@@ -51,6 +52,56 @@ test('K3 requires MEASURED evidence and K5 remains TARGET without local sensing'
   const heat = documentFor('K5', { heatState: { metrics: { exposure: { valid: false, value: null, reason: 'No local sensor network documented' } } } });
   assert.match(heat.querySelector('.kw-readiness').textContent, /TARGET/);
   assert.equal(heat.querySelector('.kw-primary-result .kw-result-number').textContent, 'No data');
+});
+
+const airDocument = (values) => documentFor('K3', {
+  trafficLifecycle: { status: 'measured' },
+  observations: { k3: { conditionsConfirmed: true, ...values } },
+});
+const pmChange = (doc) => doc.querySelector('.kw-pollutant-results > div strong').textContent;
+
+test('K3 input separators never invent zero-valued hourly observations', () => {
+  const expected = calculateK3({ matched: [30, 32], activated: [27, 29], conditionsConfirmed: true });
+  assert.equal(expected.activatedMean, 28);
+  assert.equal(expected.matchedMean, 31);
+  assert.equal(expected.changePercent, -9.677419);
+
+  for (const pmAfter of ['27,29,', ',,27,,29,,', ';27;;29;', ' \n27 \t29 \n', ', ; \n27,; \t29 ;,\n']) {
+    const doc = airDocument({ pmBefore: ',30;32,', pmAfter });
+    assert.equal(pmChange(doc), '−9.7%', `${JSON.stringify(pmAfter)} retains the existing one-decimal display of −9.677419%`);
+    assert.equal(doc.querySelector('.kw-primary-result .kw-result-number').textContent, 'Matched hourly means');
+  }
+});
+
+test('K3 delimiter-only input stays No data while an explicit numeric zero remains valid', () => {
+  for (const pmAfter of ['', ',', ';', ' ,;\n\t,; ']) {
+    const doc = airDocument({ pmBefore: '30,32', pmAfter });
+    assert.equal(pmChange(doc), 'No data');
+    assert.equal(doc.querySelector('.kw-primary-result .kw-result-number').textContent, 'No data');
+  }
+  for (const pmAfter of ['0', ',0;', '0e0,']) {
+    const doc = airDocument({ pmBefore: '30,32', pmAfter });
+    assert.equal(pmChange(doc), '−100%');
+    assert.equal(doc.querySelector('.kw-primary-result .kw-result-number').textContent, 'Matched hourly means');
+  }
+});
+
+test('K3 rejects an invalid non-empty entry instead of calculating a partial comparison', () => {
+  for (const pmAfter of ['27,unknown,29', '27,NaN,29', '27,Infinity,29', '27,0x10,29', '27,29µg']) {
+    const doc = airDocument({ pmBefore: '30,32', pmAfter });
+    assert.equal(pmChange(doc), 'No data', JSON.stringify(pmAfter));
+    assert.equal(doc.querySelector('.kw-primary-result .kw-result-number').textContent, 'No data');
+    assert.match(doc.querySelector('[aria-label="Air-quality observations"]').textContent, /Hourly concentration aggregates must be finite non-negative numbers/);
+  }
+});
+
+test('K1 uses the same separator-safe parser without adding a fictitious trip', () => {
+  const doc = documentFor('K1', {
+    trafficLifecycle: { status: 'measured' },
+    observations: { k1: { tripDurations: ',15;16,,17,', timestampLinkageValidated: true } },
+  });
+  assert.equal(doc.querySelector('.kw-actual-summary strong').textContent, '16 min');
+  assert.match(doc.querySelector('.kw-actual-summary small').textContent, /3 synthetic trips/);
 });
 
 test('K4 counts an identified human modification, not a later execution, against an illustrative pilot target', () => {

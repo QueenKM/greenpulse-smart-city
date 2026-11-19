@@ -1,6 +1,6 @@
 # GreenPulse KPI methodology
 
-This framework follows the final application specification associated with **CURRENT FINAL version.pptx**. No municipal systems are connected. Calculations using demonstration inputs do not establish municipal data readiness, a measured baseline or an achieved effect. Missing input returns **No data**, never zero.
+This framework follows the reviewed **CURRENT FINAL version-3.pptx**, especially slides 11–15. No municipal systems are connected. Calculations using demonstration inputs do not establish municipal data readiness, a measured baseline or an achieved effect. Missing input returns **No data**, never zero.
 
 | KPI | Formula / definition | Readiness and condition |
 | :-- | :-- | :-- |
@@ -11,6 +11,22 @@ This framework follows the final application specification associated with **CUR
 | **K5 · Heat exposure in person-hours** | Σ population in a zone × hours above a declared heat threshold, using validated local heat observations and a specified population/time basis. | **TARGET.** Requires validated local temperature/humidity sensing. Official forecasts or land-surface temperature do not create a measured exposure feed. |
 | **K6 · Vulnerable residents within reach of cooling points** | Unique vulnerable residents within the agreed accessible catchment / all vulnerable residents × 100. State inventory, opening/operability and capacity assumptions. | **PILOT.** Subject to a validated cooling-point inventory and a **pilot-defined walking-time or network-distance threshold**. Green-space distribution does not demonstrate cooling or accessibility. |
 | **K7 · Decisions fully recorded** | Decisions with all required data, model/version, recommendation, human decision and result fields / all decisions × 100. | **PILOT-READY** through the decision log. Target **100%** complete logging. Measures completeness, not decision quality or intervention success. A pending result is incomplete. |
+
+## KPI ownership, frequency and direction
+
+Slide 12 assigns the following KPI responsibilities. These are intended collection/review frequencies after the relevant inputs are validated, not a claim that the browser prototype operates those feeds. KPI ownership is distinct from the operational approval and interpretation roles on slide 16.
+
+| KPI | Owner in slide 12 | Frequency | Target / direction |
+| :-- | :-- | :-- | :-- |
+| K1 | Mobility Department | Every 15 minutes | Shorter corridor travel time when the new signal plan is on, assessed against the validated baseline. |
+| K2 | Environment / Climate Office + Mobility | Each time the plan runs; annual reporting | Report an estimate for each evaluated plan and yearly; avoid overlapping episodes when aggregating. |
+| K3 | Environment / Climate Office | Hourly | Lower than on comparable days; measured evidence must establish any difference. |
+| K4 | Control Room Manager | Every event | Under 10 minutes — illustrative pilot target. |
+| K5 | Environment / Climate Office | Every 10–15 minutes after local sensing is validated | Lower exposure in zones with shade or greening is a proposed direction to evaluate, not proof that mapped green space cools the area. |
+| K6 | Civil Protection + Social Services | Daily in summer, after inventory validation | Increase validated accessibility each season using the agreed walking-time or network-distance threshold. |
+| K7 | Data Lead | Monthly completeness review; decisions are recorded as events occur | 100% complete logging, not decision quality. |
+
+The final slide deck names ARPA as the regional air-quality agency source. That is a source-design dependency, not a claim that ARPA supplies a live Leuven feed. The reference inventory and real Leuven geometry remain separate.
 
 ## The single traffic illustration
 

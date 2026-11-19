@@ -52,6 +52,8 @@ test("Mobility approval is a recorded human decision and does not execute traffi
   assert.equal(state.logs.length, 1);
   assert.equal(state.logs[0].humanDecision, true);
   assert.equal(state.logs[0].useCase, "traffic");
+  assert.equal(state.logs[0].owner, "Mobility Department");
+  assert.equal(state.logs[0].authority, "Mobility Department");
   assert.equal(state.logs[0].timestamp, at);
   assert.match(state.logs[0].detail, /Approved by Mobility Department/);
   assert.match(state.logs[0].detail, /Authorised operator execution still required/);
@@ -89,6 +91,8 @@ test("ZTL changes cannot be automatic and require Police, legal and privacy revi
   assert.equal(approved.status, "approved");
   assert.equal(approved.approvedDecision.authority, "Municipal Police");
   assert.equal(approved.logs[0].useCase, "ztl");
+  assert.equal(approved.logs[0].owner, "Municipal Police");
+  assert.equal(approved.logs[0].authority, "Municipal Police");
   assert.equal(lifecycleReducer(approved, { type: "AI_EXECUTE" }), approved);
   assert.equal(lifecycleReducer(approved, execution("ztl", { legalProcessConfirmed: false })), approved);
   assert.equal(lifecycleReducer(approved, execution("signals")), approved);
@@ -179,6 +183,37 @@ test("human modifications and rejections always create records without execution
     assert.equal(next.logs[0].useCase, "ztl");
     assert.equal(next[type === "MODIFY" ? "modifications" : "overrides"].length, 1);
     assert.equal(calculateK7(decisionRecords(next, null)).percent, 100);
+  }
+});
+
+test("pre-approval rejections and modifications retain the selected workflow owner without claiming approval", () => {
+  for (const type of ["MODIFY", "OVERRIDE"]) for (const action of ["signals", "guidance", "ztl"]) {
+    const state = fresh();
+    Object.freeze(state.logs);
+    Object.freeze(state);
+    assert.equal(state.action, "signals", "the session starts in traffic regardless of the reviewed workflow");
+    const next = lifecycleReducer(state, {
+      type, action, humanReviewed: true, timestamp: at,
+      reason: "Request a reviewed proposal; no action has been approved or executed.",
+      authority: "Unconfirmed authority must not become an approval record",
+    });
+    const entry = next.logs[0];
+    const domain = action === "ztl" ? "ztl" : "traffic";
+    assert.equal(entry.owner, action === "ztl" ? "Municipal Police" : "Mobility Department");
+    assert.equal(entry.authority, null, "a rejection or modification does not establish an approving authority");
+    assert.equal(entry.action, action);
+    assert.equal(entry.useCase, domain);
+    assert.equal(entry.domain, domain);
+    assert.equal(entry.humanDecision, true);
+    assert.equal(next.status, "idle");
+    assert.equal(next.approvedDecision, null);
+    assert.equal(state.logs.length, 0);
+    const records = decisionRecords(next, null);
+    assert.equal(records.length, 1);
+    assert.equal(records[0].action, action);
+    assert.equal(records[0].useCase, domain);
+    assert.equal(records[0].decision.approvedOrOverride, type === "MODIFY" ? "modified" : "override");
+    assert.equal(calculateK7(records).percent, 100, "the inconclusive human decision is completely recorded, not approved");
   }
 });
 

@@ -30,30 +30,35 @@ export function lifecycleReducer(state, action) {
   const timestamp = action.timestamp === undefined ? Date.now() : action.timestamp;
   if (typeof timestamp !== "number" || !Number.isFinite(timestamp) || !Number.isFinite(new Date(timestamp).getTime())) return state;
   const recordedAt = new Date(timestamp);
-  const log = (event, next, detail = action.note || "") => ({
-    ...state,
-    ...next,
-    logs: [...state.logs, {
-      event,
-      time: action.time || formatCityTime(recordedAt),
-      date: formatCityDate(recordedAt),
-      timestamp,
-      operator: action.operator || state.operator,
-      owner: (next.action || state.action) === "ztl" ? "Municipal Police" : "Mobility Department",
-      authority: action.type === "APPROVE" ? action.authority : next.approvedDecision?.authority || state.approvedDecision?.authority || action.authority || null,
-      detail,
-      modelVersion: MODEL_VERSION,
-      action: next.action || action.action || state.action,
-      useCase: (next.action || action.action || state.action) === "ztl" ? "ztl" : "traffic",
-      domain: (next.action || action.action || state.action) === "ztl" ? "ztl" : "traffic",
-      humanDecision: ["APPROVE", "OVERRIDE", "MODIFY"].includes(action.type),
-      ...(action.type === "APPROVE" ? {
-        reviewId: next.approvedDecision.snapshot.id,
-        reviewVersion: next.approvedDecision.snapshot.version,
-        forecastScope: next.approvedDecision.snapshot.forecast.status,
-      } : {}),
-    }],
-  });
+  const log = (event, next, detail = action.note || "") => {
+    const effectiveAction = next.action || action.action || state.action;
+    const useCase = effectiveAction === "ztl" ? "ztl" : "traffic";
+    const approvedAuthority = next.approvedDecision?.authority || state.approvedDecision?.authority || null;
+    return {
+      ...state,
+      ...next,
+      logs: [...state.logs, {
+        event,
+        time: action.time || formatCityTime(recordedAt),
+        date: formatCityDate(recordedAt),
+        timestamp,
+        operator: action.operator || state.operator,
+        owner: useCase === "ztl" ? "Municipal Police" : "Mobility Department",
+        authority: action.type === "APPROVE" ? action.authority : approvedAuthority,
+        detail,
+        modelVersion: MODEL_VERSION,
+        action: effectiveAction,
+        useCase,
+        domain: useCase,
+        humanDecision: ["APPROVE", "OVERRIDE", "MODIFY"].includes(action.type),
+        ...(action.type === "APPROVE" ? {
+          reviewId: next.approvedDecision.snapshot.id,
+          reviewVersion: next.approvedDecision.snapshot.version,
+          forecastScope: next.approvedDecision.snapshot.forecast.status,
+        } : {}),
+      }],
+    };
+  };
   switch (action.type) {
     case "APPROVE": {
       const plan = {

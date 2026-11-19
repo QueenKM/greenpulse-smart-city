@@ -184,3 +184,23 @@ test("missing K1 and K2 inputs remain No data until their validation gates are e
   assert.equal(calculateK2Raw({ categories, emissionFactorsApproved: true }).avoidedKg, null);
   assert.equal(calculateK2Raw({ categories, validatedK1: true, emissionFactorsApproved: true }).avoidedKg, 20);
 });
+
+test("KPI accountability and review cadence follow the reviewed final slide 12", () => {
+  const expected = {
+    K1: ["Mobility Department", /Every 15 minutes/],
+    K2: ["Environment / Climate Office + Mobility", /Each time the plan runs.*yearly/],
+    K3: ["Environment / Climate Office", /Hourly/],
+    K4: ["Control Room Manager", /Every event/],
+    K5: ["Environment / Climate Office", /Every 10–15 minutes/],
+    K6: ["Civil Protection + Social Services", /Daily in summer/],
+    K7: ["Data Lead", /monthly/],
+  };
+  for (const definition of KPI_DEFINITIONS) {
+    const [owner, cadence] = expected[definition.id];
+    assert.equal(definition.owner, owner);
+    assert.match(definition.frequency, cadence);
+    assert.match(definition.source, /CURRENT FINAL version-3\.pptx/);
+  }
+  assert.match(KPI_DEFINITIONS.find(item => item.id === "K1").readinessNote, /timestamp linkage/);
+  assert.match(KPI_DEFINITIONS.find(item => item.id === "K5").readinessNote, /No local temperature/);
+});

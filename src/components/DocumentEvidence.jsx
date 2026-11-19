@@ -27,7 +27,7 @@ const tabs = [
   { id: "documents", label: "Source documents", Icon: FileText },
   { id: "questions", label: "Validation gates", Icon: GitBranch },
 ];
-const icons = { Tartu: Network, Leuven: UsersRound, Pavia: Landmark };
+const icons = { Trikala: Network, Venice: UsersRound, Pavia: Landmark, Leuven: UsersRound };
 
 export default function DocumentEvidence({ open, onClose, onNext }) {
   const [tab, setTab] = useState("documents");
@@ -98,7 +98,7 @@ export default function DocumentEvidence({ open, onClose, onNext }) {
         {tab === "benchmarks" && (
           <>
             <p className="de-introduction">
-              Three background city experiences inform design principles. They do not expand the final scope or verify municipal integration, readiness or numerical effects.
+              Four benchmark cases follow slide 3 of the reviewed final presentation. They inform design principles without adding operating workflows or verifying GreenPulse integration, readiness or numerical effects.
             </p>
             {BENCHMARK_REFERENCES.map((benchmark) => {
               const Icon = icons[benchmark.city] || Landmark;
@@ -130,7 +130,7 @@ export default function DocumentEvidence({ open, onClose, onNext }) {
             })}
             <div className="de-boundary">
               <BookOpen size={17} />
-              <p>Benchmark claims are interpretations of the supplied reports, not new independent research. No city comparison establishes GreenPulse's numerical effects.</p>
+              <p>These summaries trace to the reviewed presentation assessment, not an independent deployment audit. The deck supplies no separate clickable citations for these entries; no city comparison establishes GreenPulse's numerical effects.</p>
             </div>
           </>
         )}

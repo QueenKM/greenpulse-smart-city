@@ -1,6 +1,6 @@
 # GreenPulse: 15-minute presentation guide
 
-Present the method, assumptions and proposed outcomes using a few concrete examples. The application supports the final presentation; it does not replace its logic or establish real municipal integrations.
+Present the method, assumptions and proposed outcomes using a few concrete examples. The application supports the reviewed 18-slide **CURRENT FINAL version-3.pptx**; it does not replace its logic or establish real municipal integrations.
 
 | Time | Focus | Demonstrate |
 | :-- | :-- | :-- |
@@ -12,6 +12,8 @@ Present the method, assumptions and proposed outcomes using a few concrete examp
 | **10:00–12:00** | KPI readiness | K4/K7 are pilot-ready through logging; K1/K6 are conditional pilots; K2/K3/K5 require target data. Missing input is No data. |
 | **12:00–14:00** | Architecture and roadmap | Five layers. 0–6 Discover & Prepare, 6–18 Integrate & Pilot, 18–36 Extend Selectively. Zoom into one validation gate. |
 | **14:00–15:00** | Evidence and limitations | Final source authority, supporting methodology, repository/demo links and the remaining validation requirements. |
+
+The final benchmark assessment is **Trikala / Venice / Pavia / Leuven** (slide 3). Slide 4 explains unweighted 1–5 candidate scores and selects the three operating workflows. Use these examples to explain transferability and selection; do not confuse candidate scores with the synthetic intervention scores in Digital Twin.
 
 ## A reliable live narrative
 
@@ -40,6 +42,7 @@ Present the method, assumptions and proposed outcomes using a few concrete examp
 - [Repository](https://github.com/QueenKM/greenpulse-smart-city)
 - [KPI methodology](KPI-METHODOLOGY.md)
 - [Governance & Roadmap](GOVERNANCE-ROADMAP.md)
-- [Final-specification integration notes](DOCUMENT-INTEGRATION.md)
+- [Reviewed presentation traceability](DOCUMENT-INTEGRATION.md)
+- [Presentation screenshots and reproducible capture](PRESENTATION-SCREENSHOTS.md)
 
-The in-app Evidence drawer keeps benchmark research and older working documents separate from the final specification. Do not describe benchmark precedents as proof of GreenPulse performance.
+The final slide deck and original reports are delivered separately from this repository; check that the course hand-in contains or links the authorised files. The in-app Evidence drawer records the reviewed presentation and keeps older working documents separate from it. Do not describe benchmark precedents as proof of GreenPulse performance.

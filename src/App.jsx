@@ -1344,7 +1344,7 @@ export default function App() {
               forecastAnchor={forecastAnchor}
               timeline={timeline}
               readiness={readiness}
-            /> : <TrafficUseCasePanel context={trafficContext} onContextChange={setTrafficContext} readiness={readiness} onReview={openApproval} onOpenKpi={() => { setKpiFocus("K1"); navigate("KPI Framework"); }} />}</div>
+            /> : <TrafficUseCasePanel context={trafficContext} onContextChange={setTrafficContext} readiness={readiness} onReview={openApproval} onOpenKpi={id => { setKpiFocus(id || "K1"); navigate("KPI Framework"); }} />}</div>
           )}
           {page === "ZTL Access" && <ZtlWorkspace maturity={maturity} onReview={openApproval} onOpenKpi={id => { setKpiFocus(id || "K7"); navigate("KPI Framework"); }} />}
           {page === "Architecture" && <ArchitectureWorkspace />}
@@ -1446,6 +1446,7 @@ export default function App() {
       <Drawer open={Boolean(proposalAction)} onClose={() => setProposalAction(null)} title="Record departmental proposal" label="HUMAN REQUEST · NO OPERATIONAL ACTIVATION" footer={<button className="button primary" disabled={proposalNote.trim().length < 3} onClick={() => { const timestamp = Date.now(); setProposals(value => [...value, { id: `PROPOSAL-${timestamp}`, data: { useCase: "traffic", context: trafficContext }, modelVersion: MODEL_VERSION, recommendation: TRAFFIC_ACTIONS[proposalAction].label, decision: { actor: state.operator, time: new Date(timestamp).toISOString(), approvedOrOverride: "request" }, result: { status: "pending", summary: proposalNote.trim() } }]); setProposalAction(null); setToast("Departmental request recorded. No service or policy was changed."); }}>Record request</button>}><p>{proposalAction && TRAFFIC_ACTIONS[proposalAction]?.implementedScope}</p><p>Proposed decision owner: {proposalAction && TRAFFIC_ACTIONS[proposalAction]?.authority}</p><label className="document-request-note">Evidence and proposed follow-up<textarea rows={4} value={proposalNote} onChange={event => setProposalNote(event.target.value)} /></label><p>Synthetic demonstration record. This does not contact an operator, publish a message or change municipal rules.</p></Drawer>
       <HandoverDialog
         open={handover}
+        action={state.action}
         onClose={() => setHandover(false)}
         onConfirm={(operator, note) => {
           dispatch({

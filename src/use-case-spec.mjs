@@ -5,7 +5,7 @@ const freeze = value => {
   return value;
 };
 export const USE_CASE_PROVENANCE = freeze({
-  primary: { id: "current-final-presentation", title: "CURRENT FINAL version — final presentation specification", status: "Final scope; validate source access before implementation" },
+  primary: { id: "current-final-presentation", title: "CURRENT FINAL version-3.pptx — final presentation", status: "Final scope; validate source access before implementation" },
   alternative: { id: "use-cases-word", title: "Earlier working documents", status: "Superseded where they differ from the final presentation" },
   boundary: "Real Leuven geography provides spatial context only. The prototype is not connected to municipal systems. Operational examples, markers and scenario values are synthetic or modelled.",
 });
@@ -25,12 +25,13 @@ export const ALTERNATIVE_PRIORITISATION = freeze({ source: USE_CASE_PROVENANCE.a
 
 export const REFERENCE_ASSETS = freeze([
   { id: "traffic-cameras", label: "Traffic-monitoring cameras", count: 18, useCase: "traffic", caveat: "Validate detection quality, coverage and timestamp linkage between selected monitoring points." },
-  { id: "vehicle-loops", label: "Vehicle-counting loops", count: 4, useCase: "traffic", caveat: "Validate maintenance, completeness and freshness at monitored locations." },
+  { id: "vehicle-loops", label: "Vehicle-counting loops", count: 4, publicParkingAreas: 3, useCase: "traffic", caveat: "Counts at three public parking areas. Data access and output format require confirmation; these are not documented corridor counters." },
   { id: "signal-controllers", label: "Traffic-light controllers", count: 4, useCase: "traffic", caveat: "Mobility approval and an authorised traffic-signal operator are required for implementation." },
   { id: "its-panels", label: "ITS information panels", count: 21, useCase: "traffic", caveat: "Publishing rights and supplier interfaces require validation; no messages are sent." },
   { id: "ztl-gates", label: "ZTL gates", count: 10, useCase: "ztl", caveat: "Recorded entries are not automatically violations. Baselines and gate-period coverage require validation." },
   { id: "ocr-cameras", label: "OCR cameras", count: 16, useCase: "ztl", caveat: "Lawful permit/exemption linkage is conditional. Minimise personal data; no identifiable plates are displayed." },
-].map(asset => ({ ...asset, availability: "CURRENT · supplied evidence", sourceId: USE_CASE_PROVENANCE.primary.id, verifiedForLeuven: false, connected: false })));
+  { id: "parking-sensors", label: "Paid parking sensors", count: 5, useCase: "traffic", availability: "CURRENT hardware · NO DATA", accessStatus: "supplier-contract-pending", caveat: "Hardware and software are installed. Data is unavailable until the supplier contract is finalised; this does not establish occupancy monitoring or a connected feed." },
+].map(asset => ({ availability: "CURRENT · supplied evidence", ...asset, sourceId: USE_CASE_PROVENANCE.primary.id, verifiedForLeuven: false, connected: false })));
 
 export const TRAFFIC_WORKFLOW = freeze([
   "Review data", "Validate freshness & coverage", "Compare operational options", "Mobility approval", "Authorised execution", "Monitor", "Record outcome",
@@ -47,10 +48,10 @@ export const USE_CASES = freeze({
     id: "traffic", title: "Daily Traffic Management", shortTitle: "Daily Traffic", sourceId: USE_CASE_PROVENANCE.primary.id,
     objective: "Identify recurring congestion patterns at monitored locations and support targeted, time-limited traffic operations.",
     owner: "Mobility Department", approval: "Mobility Department approves; an authorised traffic-signal operator executes.",
-    evidence: ["18 traffic-monitoring cameras", "4 vehicle-counting loops", "4 traffic-light controllers", "21 ITS information panels", "Municipal GIS"],
+    evidence: ["18 traffic-monitoring cameras", "4 vehicle-counting loops at three public parking areas", "4 traffic-light controllers", "21 ITS information panels", "Municipal GIS"],
     actors: ["Mobility Department — lead and approval authority", "Municipal Police", "IT / Digital Office", "Authorised traffic-signal operator"],
     inputs: ["Counts and queue patterns at monitored locations", "Freshness, coverage and completeness", "Controller access and GIS constraints"],
-    gaps: ["Validate camera/OCR timestamp linkage between selected monitoring points before using corridor travel time", "Agree the pilot corridor, baseline, coverage and free-flow benchmark", "Confirm system access, authorised execution and rollback procedures"],
+    gaps: ["Validate camera/OCR timestamp linkage between selected monitoring points before using corridor travel time", "Agree the pilot corridor, baseline, coverage and free-flow benchmark", "Confirm system access, authorised execution and rollback procedures", "Loop data covers three public parking areas; confirm access and output format before reuse", "Data from 5 installed paid parking sensors is unavailable until the supplier contract is finalised"],
     workflow: TRAFFIC_WORKFLOW, kpis: ["K1", "K2", "K4", "K7"],
     claims: ["Review counts and queue patterns at monitored locations", "Prepare targeted, time-limited operational options for Mobility approval", "Record human decisions and authorised execution"],
     cannotClaim: ["Validated corridor travel time before timestamp-linkage validation", "Network-wide congestion coverage", "Measured emissions or causal CO₂ reductions", "Automatic execution by AI"],
@@ -60,9 +61,9 @@ export const USE_CASES = freeze({
     id: "ztl", title: "ZTL / Historic-Centre Access Management", shortTitle: "ZTL Access", sourceId: USE_CASE_PROVENANCE.primary.id,
     objective: "Understand when and where vehicles enter the historic centre and support evidence-based review of access arrangements.",
     owner: "Municipal Police", approval: "Municipal Police and the established legal process authorise operational/legal action. No rule changes are automatic.",
-    evidence: ["10 ZTL gates", "16 OCR cameras", "Municipal GIS", "Police and permit records — subject to lawful and technically validated access"],
+    evidence: ["10 ZTL gates", "16 OCR cameras", "Municipal GIS", "Police, traffic-fine and permit-related records/processes — subject to lawful and technically validated access"],
     actors: ["Municipal Police — operational lead", "Mobility Department", "IT / Data Office", "Data-protection authority or authorised privacy lead"],
-    inputs: ["Aggregate entries by gate and period", "Coverage and baseline validation", "Permit and exemption records only after lawful linkage validation"],
+    inputs: ["Aggregate entries by gate and period", "Coverage and baseline validation", "Permit and exemption records only after lawful linkage validation", "Relevant complaints and operational records, subject to validated access"],
     gaps: ["Validate lawful and technically reliable linkage to permits and exemptions", "Establish gate-period baselines and review data completeness", "Agree privacy controls, retention and the applicable legal approval process"],
     workflow: ZTL_WORKFLOW, kpis: ["K4", "K7"],
     claims: ["Compare aggregate entry patterns by gate and period", "Support human review of access arrangements", "Record approvals, rejections and evidence for post-review evaluation"],

@@ -3,3 +3,18 @@
 .document-roadmap .doc-roadmap-priority-method > .doc-roadmap-arithmetic { color: #b19c6e; border-left: 2px solid #fbbf2445; background: #fbbf2404; padding: 10px 12px; max-width: 850px; }
 
 .document-roadmap .doc-roadmap-journey{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}.document-roadmap .doc-roadmap-phase strong{font-size:21px}.document-roadmap .doc-roadmap-intro p{font-size:13px}.document-roadmap .doc-roadmap-work>ul>li,.document-roadmap .doc-roadmap-gate li{font-size:13px}.document-roadmap .doc-roadmap-owner>div,.document-roadmap .doc-roadmap-gate>p{font-size:12px}.document-roadmap .doc-roadmap-authorities{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;margin-top:22px}.document-roadmap .doc-roadmap-authorities article{border-left:1px solid #a78bfa35;padding-left:15px}.document-roadmap .doc-roadmap-authorities h3{font-size:17px;margin:0 0 10px}.document-roadmap .doc-roadmap-authorities strong{font-size:12px;color:#b6a2d4;font-weight:500;line-height:1.6}.document-roadmap .doc-roadmap-authorities p{font-size:12px;margin:10px 0 0}.document-roadmap .doc-roadmap-audit-rule{border-top:1px solid #28455450;margin:22px 0 0;padding-top:16px;font-size:12px;color:#8daaba;line-height:1.8}@media(max-width:760px){.document-roadmap .doc-roadmap-journey{grid-template-columns:1fr;gap:0}.document-roadmap .doc-roadmap-phase{padding:14px 0}.document-roadmap .doc-roadmap-phase strong{font-size:20px}.document-roadmap .doc-roadmap-authorities{grid-template-columns:1fr;gap:22px}}
+
+.document-roadmap .doc-roadmap-operating-model,
+.document-roadmap .doc-roadmap-sustainability{margin-top:20px;padding:17px 0 0;border-top:1px solid #28455450}
+.document-roadmap .doc-roadmap-governance .doc-roadmap-role-list{gap:0;margin-top:17px}
+.document-roadmap .doc-roadmap-governance .doc-roadmap-role-list>div{grid-template-columns:minmax(180px,.7fr) minmax(0,1.8fr);gap:24px;padding:13px 0;border-top:1px solid #ffffff08;font-size:12px;line-height:1.8}
+.document-roadmap .doc-roadmap-role-list dt{color:#a7c5d6;font-weight:500}
+.document-roadmap .doc-roadmap-role-list dd{color:#83a5b9}
+.document-roadmap .doc-roadmap-governance .doc-roadmap-data-principle{display:flex;align-items:flex-start;gap:16px;margin:20px 0 0;padding:14px 16px;border-left:2px solid #38bdf840;background:#38bdf805;color:#8eafc1;font-size:12px;line-height:1.8}
+.document-roadmap .doc-roadmap-data-principle strong{flex:none;color:#9cc9de;font-weight:500}
+.document-roadmap .doc-roadmap-governance .doc-roadmap-sustainability-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 30px;margin:20px 0}
+.document-roadmap .doc-roadmap-governance .doc-roadmap-sustainability-list>div{display:block;border-left:1px solid #a78bfa35;padding-left:15px;font-size:12px;line-height:1.8}
+.document-roadmap .doc-roadmap-sustainability-list dt{color:#bba8dd;font-weight:500;margin-bottom:7px}
+.document-roadmap .doc-roadmap-sustainability-list dd{color:#88a8bb}
+.document-roadmap .doc-roadmap-sustainability>p{font-size:12px;line-height:1.8;margin:0;color:#6f91a7}
+@media(max-width:760px){.document-roadmap .doc-roadmap-governance .doc-roadmap-role-list>div{grid-template-columns:1fr;gap:5px}.document-roadmap .doc-roadmap-governance .doc-roadmap-sustainability-list{grid-template-columns:1fr;gap:20px}.document-roadmap .doc-roadmap-governance .doc-roadmap-data-principle{display:block}.document-roadmap .doc-roadmap-data-principle strong{display:block;margin-bottom:7px}}
