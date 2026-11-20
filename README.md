@@ -97,6 +97,10 @@ The map keeps real Leuven streets, building footprints, green spaces and waterwa
 
 The clock displays the actual date and time in **Europe/Sofia**, including daylight-saving adjustments. Synthetic scenarios use a separate demonstration context.
 
+### Two-minute demo
+
+Open the demo and choose a synthetic scenario that has an alert. Review the evidence and recommendation, then record a human decision with its rationale. Open the decision log and compare the alert and decision timestamps. Their difference in minutes is K4. Check K7 to see whether the record contains every required field. A pending result counts as incomplete.
+
 ## Quick start
 
 Requires **Node.js 22+** and npm.
